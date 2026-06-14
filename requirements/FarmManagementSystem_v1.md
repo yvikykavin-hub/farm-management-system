@@ -62,3 +62,82 @@ Supported crops:
 - Repair expenses
 - Tyre replacement
 - Battery replacement
+
+## Version 1 Screens
+
+### Dashboard
+
+Display:
+
+- Total Lands
+- Active Crops
+- Total Expenses
+- Total Income
+
+### Lands
+
+Store:
+
+- Land Name
+- Survey Number
+- Patta Number
+- Acres
+
+### Crops
+
+Supported:
+
+- Coconut
+- Sugarcane
+- Turmeric
+- Sesame
+- Cassava
+- Onion
+- Fodder Corn
+
+### Expenses
+
+Store:
+
+- Date
+- Land
+- Crop
+- Expense Type
+- Amount
+
+### Income
+
+Store:
+
+- Date
+- Land
+- Crop
+- Quantity
+- Rate
+- Amount
+
+### Dealers / Buyers
+
+Store:
+
+- Name
+- Mobile Number
+- Notes
+
+### Cattle
+
+Store:
+
+- Feed Expenses
+- Milk Production
+- Milk Sales
+
+### Tractor
+
+Store:
+
+- Fuel
+- Service
+- Repair
+- Tyre
+- Battery
