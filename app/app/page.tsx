@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const [farms, setFarms] = useState([
@@ -133,28 +134,31 @@ export default function Home() {
 
           <div className="space-y-4">
             {farms.map((farm) => (
-              <div
+              <Link
                 key={farm.id}
-                className="bg-white p-6 rounded-xl shadow border"
+                href="/farm"
+                className="block"
               >
-                <h3 className="text-xl font-bold text-green-800 mb-3">
-                  {farm.name}
-                </h3>
+                <div className="bg-white p-6 rounded-xl shadow border hover:shadow-lg hover:border-green-500 transition">
+                  <h3 className="text-xl font-bold text-green-800 mb-3">
+                    {farm.name}
+                  </h3>
 
-                <div className="space-y-1">
-                  <p>
-                    <strong>Area:</strong> {farm.area} Acres
-                  </p>
+                  <div className="space-y-1">
+                    <p>
+                      <strong>Area:</strong> {farm.area} Acres
+                    </p>
 
-                  <p>
-                    <strong>Well:</strong> {farm.well}
-                  </p>
+                    <p>
+                      <strong>Well:</strong> {farm.well}
+                    </p>
 
-                  <p>
-                    <strong>Motor:</strong> {farm.motor}
-                  </p>
+                    <p>
+                      <strong>Motor:</strong> {farm.motor}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
