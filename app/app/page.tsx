@@ -42,120 +42,90 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-green-50 p-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-bold text-green-800 mb-2">
-          🌾 Farm Management System
+    <main className="min-h-screen bg-green-50 p-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <h1 className="text-3xl font-bold text-green-800 mb-1">
+          🌾 THUKIRA AGRO FARMS
         </h1>
 
-        <p className="text-gray-600 mb-8">
-          Manage your farms and agricultural activities
+        <p className="text-gray-600 mb-4">
+          My Family Farm Management
         </p>
 
-        {/* Add Farm Section */}
-        <div className="bg-white p-6 rounded-xl shadow mb-8">
-          <h2 className="text-2xl font-semibold mb-6">
+        {/* Add Farm */}
+        <div className="bg-white p-4 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold mb-4">
             ➕ Add Farm
           </h2>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block mb-2 font-medium">
-                Farm Name
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <input
+              type="text"
+              placeholder="Farm Name"
+              value={farmName}
+              onChange={(e) => setFarmName(e.target.value)}
+              className="border p-2 rounded-lg"
+            />
 
-              <input
-                type="text"
-                placeholder="Enter farm name"
-                value={farmName}
-                onChange={(e) => setFarmName(e.target.value)}
-                className="border p-3 w-full rounded-lg"
-              />
-            </div>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Area (Acres)"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              className="border p-2 rounded-lg"
+            />
 
-            <div>
-              <label className="block mb-2 font-medium">
-                Area (Acres)
-              </label>
+            <select
+              value={well}
+              onChange={(e) => setWell(e.target.value)}
+              className="border p-2 rounded-lg"
+            >
+              <option>Well: Yes</option>
+              <option>Well: No</option>
+            </select>
 
-              <input
-                type="text"
-                placeholder="Enter area in acres"
-                value={area}
-                onChange={(e) => setArea(e.target.value)}
-                className="border p-3 w-full rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 font-medium">
-                Well Available?
-              </label>
-
-              <select
-                value={well}
-                onChange={(e) => setWell(e.target.value)}
-                className="border p-3 w-full rounded-lg"
-              >
-                <option>Yes</option>
-                <option>No</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2 font-medium">
-                Motor Available?
-              </label>
-
-              <select
-                value={motor}
-                onChange={(e) => setMotor(e.target.value)}
-                className="border p-3 w-full rounded-lg"
-              >
-                <option>Yes</option>
-                <option>No</option>
-              </select>
-            </div>
+            <select
+              value={motor}
+              onChange={(e) => setMotor(e.target.value)}
+              className="border p-2 rounded-lg"
+            >
+              <option>Motor: Yes</option>
+              <option>Motor: No</option>
+            </select>
 
             <button
               onClick={addFarm}
-              className="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-lg"
+              className="bg-green-700 hover:bg-green-800 text-white rounded-lg px-4 py-2"
             >
               Save Farm
             </button>
           </div>
         </div>
 
-        {/* Farm List Section */}
+        {/* Farms */}
         <div>
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-xl font-semibold mb-3">
             🌾 My Farms
           </h2>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {farms.map((farm) => (
               <Link
                 key={farm.id}
                 href="/farm"
                 className="block"
               >
-                <div className="bg-white p-6 rounded-xl shadow border hover:shadow-lg hover:border-green-500 transition">
-                  <h3 className="text-xl font-bold text-green-800 mb-3">
-                    {farm.name}
-                  </h3>
+                <div className="bg-white p-4 rounded-lg shadow border hover:border-green-500 hover:shadow-md transition">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-green-800">
+                      {farm.name}
+                    </h3>
 
-                  <div className="space-y-1">
-                    <p>
-                      <strong>Area:</strong> {farm.area} Acres
-                    </p>
-
-                    <p>
-                      <strong>Well:</strong> {farm.well}
-                    </p>
-
-                    <p>
-                      <strong>Motor:</strong> {farm.motor}
-                    </p>
+                    <span className="font-semibold text-green-700">
+                      {farm.area} Acres
+                    </span>
                   </div>
                 </div>
               </Link>
