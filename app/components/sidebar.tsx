@@ -4,87 +4,72 @@ import Link from "next/link";
 
 export default function Sidebar() {
   return (
-    <div className="w-64 min-h-screen bg-green-800 text-white p-5">
+    <div className="w-52 min-h-screen bg-green-800 text-white p-4">
 
       {/* Profile Section */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-green-800 text-2xl font-bold mb-3">
+      <div className="flex flex-col items-center mb-5">
+
+        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-green-800 text-xl mb-2">
           👤
         </div>
 
-        <h2 className="text-lg font-bold text-center">
+        <h2 className="text-base font-bold text-center">
           THUKIRA AGRO FARMS
         </h2>
 
-        <p className="text-sm text-green-100 text-center">
-          Family Farm Management
+        <p className="text-xs text-green-100 text-center">
+          My Family Farm Management
         </p>
+
       </div>
 
-      {/* Menu */}
-      <nav className="space-y-2">
+      {/* Navigation */}
+      <nav className="space-y-1">
 
         <Link
           href="/"
-          className="block p-3 rounded-lg hover:bg-green-700"
+          className="block p-2 rounded-lg hover:bg-green-700 transition"
         >
           📊 Dashboard
         </Link>
 
         <Link
           href="/farm"
-          className="block p-3 rounded-lg hover:bg-green-700"
+          className="block p-2 rounded-lg hover:bg-green-700 transition"
         >
           🌾 Farms
         </Link>
 
         <Link
           href="/cultivation"
-          className="block p-3 rounded-lg hover:bg-green-700"
+          className="block p-2 rounded-lg hover:bg-green-700 transition"
         >
           🌱 Crops
         </Link>
 
-        <Link
-          href="/reports"
-          className="block p-3 rounded-lg hover:bg-green-700"
-        >
+        <div className="block p-2 rounded-lg hover:bg-green-700 transition cursor-pointer">
           📈 Reports
-        </Link>
+        </div>
 
-        <Link
-          href="/income"
-          className="block p-3 rounded-lg hover:bg-green-700"
-        >
+        <div className="block p-2 rounded-lg hover:bg-green-700 transition cursor-pointer">
           💰 Income
-        </Link>
+        </div>
 
-        <Link
-          href="/expenses"
-          className="block p-3 rounded-lg hover:bg-green-700"
-        >
+        <div className="block p-2 rounded-lg hover:bg-green-700 transition cursor-pointer">
           💸 Expenses
-        </Link>
+        </div>
 
-        <Link
-          href="/settings"
-          className="block p-3 rounded-lg hover:bg-green-700"
-        >
+        <div className="block p-2 rounded-lg hover:bg-green-700 transition cursor-pointer">
           ⚙️ Settings
-        </Link>
+        </div>
 
-        <Link
-          href="/language"
-          className="block p-3 rounded-lg hover:bg-green-700"
-        >
+        <div className="block p-2 rounded-lg hover:bg-green-700 transition cursor-pointer">
           🌐 Language
-        </Link>
+        </div>
 
-        <button
-          className="w-full text-left p-3 rounded-lg hover:bg-red-700"
-        >
+        <div className="block p-2 rounded-lg hover:bg-red-700 transition cursor-pointer">
           🚪 Logout
-        </button>
+        </div>
 
       </nav>
     </div>
