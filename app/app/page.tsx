@@ -8,7 +8,7 @@ export default function Home() {
   const [farms, setFarms] = useState([
     {
       id: 1,
-      name: "Vettuvalyam Kaadu",
+      name: "Farm 1",
       area: "4.25",
       well: "Yes",
       motor: "Yes",
