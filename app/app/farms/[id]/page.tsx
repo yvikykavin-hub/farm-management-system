@@ -555,46 +555,48 @@ export default function FarmDetail() {
                   }
 
                   return (
-                    <div
-                      key={item.id}
-                      className="group relative bg-white rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition cursor-pointer p-2 flex items-center gap-2"
-                    >
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-lg shrink-0">
-                        {crop.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-sm text-green-900 truncate">
-                          {lang === "ta" ? crop.labelTa : crop.labelEn}
-                        </h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {item.area} {t.acres}
-                        </p>
-                      </div>
-                      <span className="bg-green-100 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0">
-                        {t.active}
-                      </span>
+                    <Link key={item.id} href={`/crops/${item.id}`}>
+                      <div className="group relative bg-white rounded-xl border border-gray-100 hover:border-green-400 hover:bg-green-50 hover:shadow-md transition cursor-pointer p-2 flex items-center gap-2">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-lg shrink-0">
+                          {crop.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-sm text-green-900 truncate">
+                            {lang === "ta" ? crop.labelTa : crop.labelEn}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {item.area} {t.acres}
+                          </p>
+                        </div>
+                        <span className="bg-green-100 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0">
+                          {t.active}
+                        </span>
+                        <span className="text-gray-400 group-hover:text-green-600 text-sm shrink-0">→</span>
 
-                      <div className="absolute top-1 right-1 hidden group-hover:flex gap-1 bg-white/90 rounded-lg p-0.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEdit(item);
-                          }}
-                          className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-sm"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteCultivation(item);
-                          }}
-                          className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-100 text-sm"
-                        >
-                          🗑️
-                        </button>
+                        <div className="absolute top-1 right-1 hidden group-hover:flex gap-1 bg-white/90 rounded-lg p-0.5">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              startEdit(item);
+                            }}
+                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-sm"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deleteCultivation(item);
+                            }}
+                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-100 text-sm"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
