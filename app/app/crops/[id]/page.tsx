@@ -28,11 +28,14 @@ type IncomeRecord = {
   farm_id: string;
   income_date: string;
   category: string | null;
+  stage: string | null;
   amount: number;
   quantity: number | null;
   unit: string | null;
   price_per_unit: number | null;
   buyer_name: string | null;
+  market_name: string | null;
+  turmeric_type: string | null;
   notes: string | null;
   small_coconuts: number | null;
   large_coconuts: number | null;
@@ -47,12 +50,21 @@ type ExpenseRecord = {
   farm_id: string;
   expense_date: string;
   category: string;
+  stage: string | null;
   amount: number;
   description: string | null;
   vendor_name: string | null;
   notes: string | null;
   trees_harvested: number | null;
   price_per_tree: number | null;
+};
+
+type IrrigationRecord = {
+  id: string;
+  irrigation_date: string;
+  method: string;
+  duration_hours: number;
+  notes: string | null;
 };
 
 type HarvestRecord = {
@@ -108,11 +120,11 @@ type ActivitySubsection = {
   titleEn: string;
   titleTa: string;
   category: string;
+  stage: string;
   dateField?: string;
   fields: ActivityField[];
   computeAmount: (v: Record<string, string>) => number;
   buildDescription: (v: Record<string, string>) => string;
-  matches: (r: ExpenseRecord) => boolean;
   extra?: "fertilizer" | "weed";
 };
 
@@ -162,6 +174,7 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     titleEn: "Land Preparation",
     titleTa: "நில தயாரிப்பு",
     category: "land_preparation",
+    stage: "land_preparation",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "description", type: "text", labelEn: "Description", labelTa: "விவரம்" },
@@ -170,13 +183,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.amount),
     buildDescription: (v) => v.description?.trim() || "Land preparation",
-    matches: (r) => r.category === "land_preparation",
   },
   {
     key: "A2",
     titleEn: "Drip Irrigation",
     titleTa: "நீர்ப்பாசன அமைப்பு",
     category: "irrigation",
+    stage: "drip_irrigation",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "type", type: "select", labelEn: "Type", labelTa: "வகை", options: ["Installation", "Maintenance"] },
@@ -185,13 +198,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.amount),
     buildDescription: (v) => `Drip irrigation - ${v.type || "Installation"}`,
-    matches: (r) => r.category === "irrigation",
   },
   {
     key: "A3",
     titleEn: "Seed Rhizomes Purchase",
     titleTa: "விதை கிழங்கு கொள்முதல்",
     category: "seeds",
+    stage: "seed_purchase",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "quantity", type: "number", labelEn: "Quantity (kg)", labelTa: "அளவு (கி.கி)" },
@@ -201,13 +214,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.quantity) * num(v.price_per_kg),
     buildDescription: (v) => `Seed rhizomes purchase - ${num(v.quantity)}kg @ ₹${num(v.price_per_kg)}/kg`,
-    matches: (r) => r.category === "seeds",
   },
   {
     key: "A4",
     titleEn: "Fertilizer Application",
     titleTa: "உர பயன்பாடு",
     category: "fertilizer",
+    stage: "fertilizer",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "fertilizer_name", type: "text", labelEn: "Fertilizer Name", labelTa: "உரம் பெயர்" },
@@ -220,7 +233,6 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.cost),
     buildDescription: (v) => `${v.fertilizer_name?.trim() || "Fertilizer"} - ${num(v.quantity)}${v.unit || "kg"}`,
-    matches: (r) => r.category === "fertilizer",
     extra: "fertilizer",
   },
   {
@@ -228,6 +240,7 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     titleEn: "Weeding Operations",
     titleTa: "களை மேலாண்மை",
     category: "labour",
+    stage: "weeding",
     dateField: "start_date",
     fields: [
       { name: "start_date", type: "date", labelEn: "Start Date", labelTa: "தொடக்க தேதி" },
@@ -238,7 +251,6 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => weedDaysFromValues(v) * num(v.workers_per_day) * num(v.cost_per_day),
     buildDescription: () => "Weeding operations",
-    matches: (r) => r.category === "labour" && r.description === "Weeding operations",
     extra: "weed",
   },
   {
@@ -246,6 +258,7 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     titleEn: "Leaf Removal",
     titleTa: "இலை அகற்றல்",
     category: "labour",
+    stage: "leaf_removal",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "workers_count", type: "number", labelEn: "Workers Count", labelTa: "தொழிலாளர் எண்ணிக்கை" },
@@ -254,13 +267,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.workers_count) * num(v.cost_per_worker),
     buildDescription: () => "Turmeric leaf removal - pre harvest preparation",
-    matches: (r) => r.category === "labour" && r.description === "Turmeric leaf removal - pre harvest preparation",
   },
   {
     key: "B2",
     titleEn: "Harvesting",
     titleTa: "அறுவடை",
     category: "labour",
+    stage: "harvesting",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "area_harvested", type: "number", labelEn: "Area Harvested (acres)", labelTa: "அறுவடை பரப்பு (ஏக்கர்)" },
@@ -271,13 +284,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.workers_count) * num(v.cost_per_worker) + num(v.other_costs),
     buildDescription: () => "Turmeric harvesting",
-    matches: (r) => r.category === "labour" && r.description === "Turmeric harvesting",
   },
   {
     key: "B3",
     titleEn: "Boiling / Processing",
     titleTa: "வேகவைத்தல்",
     category: "miscellaneous",
+    stage: "boiling",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "quantity_boiled", type: "number", labelEn: "Quantity Boiled (kg)", labelTa: "வேகவைத்த அளவு (கி.கி)" },
@@ -288,13 +301,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.fuel_cost) + num(v.labour_cost) + num(v.other_cost),
     buildDescription: () => "Turmeric boiling/curing process",
-    matches: (r) => r.category === "miscellaneous" && r.description === "Turmeric boiling/curing process",
   },
   {
     key: "B4",
     titleEn: "Drying",
     titleTa: "உலர்த்துதல்",
     category: "miscellaneous",
+    stage: "drying",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "quantity_before_drying", type: "number", labelEn: "Qty Before Drying (kg)", labelTa: "உலர்த்தும் முன் அளவு (கி.கி)" },
@@ -305,13 +318,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.labour_cost),
     buildDescription: () => "Turmeric drying",
-    matches: (r) => r.category === "miscellaneous" && r.description === "Turmeric drying",
   },
   {
     key: "B5",
     titleEn: "Polishing",
     titleTa: "மெருகூட்டல்",
     category: "miscellaneous",
+    stage: "polishing",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "quantity", type: "number", labelEn: "Quantity (kg)", labelTa: "அளவு (கி.கி)" },
@@ -321,13 +334,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.polishing_cost) + num(v.labour_cost),
     buildDescription: () => "Turmeric polishing",
-    matches: (r) => r.category === "miscellaneous" && r.description === "Turmeric polishing",
   },
   {
     key: "B6",
     titleEn: "Packing",
     titleTa: "பேக்கிங்",
     category: "miscellaneous",
+    stage: "packing",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "number_of_bags", type: "number", labelEn: "Number of Bags", labelTa: "பைகள் எண்ணிக்கை" },
@@ -338,13 +351,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.packing_material_cost) + num(v.labour_cost),
     buildDescription: () => "Turmeric packing",
-    matches: (r) => r.category === "miscellaneous" && r.description === "Turmeric packing",
   },
   {
     key: "B7",
     titleEn: "Transportation",
     titleTa: "போக்குவரத்து",
     category: "transport",
+    stage: "transportation",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "destination", type: "text", labelEn: "Destination", labelTa: "இடம்" },
@@ -355,7 +368,6 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     ],
     computeAmount: (v) => num(v.transport_cost),
     buildDescription: () => "Turmeric transportation",
-    matches: (r) => r.category === "transport",
   },
 ];
 
@@ -389,8 +401,12 @@ export default function CropDetail() {
 
   // Turmeric income (crop sale)
   const [turmericSaleDate, setTurmericSaleDate] = useState("");
+  const [turmericMarketName, setTurmericMarketName] = useState("");
+  const [turmericType, setTurmericType] = useState<"bulb" | "finger">("bulb");
   const [turmericQtySold, setTurmericQtySold] = useState("");
+  const [turmericSaleUnit, setTurmericSaleUnit] = useState("kg");
   const [turmericPricePerKg, setTurmericPricePerKg] = useState("");
+  const [turmericSaleAmountOverride, setTurmericSaleAmountOverride] = useState("");
   const [turmericSaleBuyer, setTurmericSaleBuyer] = useState("");
   const [turmericSaleNotes, setTurmericSaleNotes] = useState("");
   const [savingTurmericSale, setSavingTurmericSale] = useState(false);
@@ -476,6 +492,14 @@ export default function CropDetail() {
   const [weedNotes, setWeedNotes] = useState("");
   const [savingWeed, setSavingWeed] = useState(false);
 
+  // Activities - irrigation
+  const [irrigationRecords, setIrrigationRecords] = useState<IrrigationRecord[]>([]);
+  const [irrigationDate, setIrrigationDate] = useState("");
+  const [irrigationMethod, setIrrigationMethod] = useState("Drip");
+  const [irrigationDuration, setIrrigationDuration] = useState("");
+  const [irrigationNotes, setIrrigationNotes] = useState("");
+  const [savingIrrigation, setSavingIrrigation] = useState(false);
+
   useEffect(() => {
     if (id) {
       fetchCultivation();
@@ -484,6 +508,7 @@ export default function CropDetail() {
       fetchHarvestRecords();
       fetchFertilizerRecords();
       fetchWeedRecords();
+      fetchIrrigationRecords();
     }
   }, [id]);
 
@@ -576,6 +601,15 @@ export default function CropDetail() {
       .eq("cultivation_id", id)
       .order("start_date", { ascending: false });
     if (!error && data) setWeedRecords(data);
+  };
+
+  const fetchIrrigationRecords = async () => {
+    const { data, error } = await supabase
+      .from("irrigation_records")
+      .select("*")
+      .eq("cultivation_id", id)
+      .order("irrigation_date", { ascending: false });
+    if (!error && data) setIrrigationRecords(data);
   };
 
   const reportError = (label: string, message: string) => alert(`${label}: ${message}`);
@@ -903,6 +937,34 @@ export default function CropDetail() {
     setSavingWeed(false);
   };
 
+  // ---- Irrigation ----
+  const saveIrrigation = async () => {
+    if (!irrigationDate || !irrigationDuration) {
+      alert(L("Date and duration are required", "தேதி மற்றும் கால அளவு தேவை"));
+      return;
+    }
+    setSavingIrrigation(true);
+    try {
+      const { error } = await supabase.from("irrigation_records").insert({
+        cultivation_id: id,
+        irrigation_date: irrigationDate,
+        method: irrigationMethod,
+        duration_hours: parseFloat(irrigationDuration) || 0,
+        notes: irrigationNotes.trim() || null,
+      });
+      if (error) reportError("Error saving irrigation record", error.message);
+      else {
+        setIrrigationDate("");
+        setIrrigationDuration("");
+        setIrrigationNotes("");
+        fetchIrrigationRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingIrrigation(false);
+  };
+
   // ---- Generic turmeric activity engine ----
   const setActivityValue = (key: string, field: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
@@ -913,6 +975,16 @@ export default function CropDetail() {
       const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
       else fetchExpenseRecords();
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const deleteIncomeRecord = async (recordId: string) => {
+    try {
+      const { error } = await supabase.from("income_records").delete().eq("id", recordId);
+      if (error) reportError("Error deleting record", error.message);
+      else fetchIncomeRecords();
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
@@ -930,18 +1002,23 @@ export default function CropDetail() {
     const description = sub.buildDescription(values);
     setSavingActivity((s) => ({ ...s, [sub.key]: true }));
     try {
-      const { error } = await supabase.from("expense_records").insert({
-        cultivation_id: id,
-        farm_id: cultivation.farm_id,
-        expense_date: values[dateField],
-        category: sub.category,
-        description,
-        vendor_name: values.vendor_name?.trim() || null,
-        amount,
-        notes: values.notes?.trim() || null,
-      });
-      if (error) {
-        reportError("Error saving record", error.message);
+      const { data: expData, error } = await supabase
+        .from("expense_records")
+        .insert({
+          cultivation_id: id,
+          farm_id: cultivation.farm_id,
+          expense_date: values[dateField],
+          category: sub.category,
+          stage: sub.stage,
+          description,
+          vendor_name: values.vendor_name?.trim() || null,
+          amount,
+          notes: values.notes?.trim() || null,
+        })
+        .select("id")
+        .single();
+      if (error || !expData) {
+        reportError("Error saving record", error?.message ?? "Unknown error");
         setSavingActivity((s) => ({ ...s, [sub.key]: false }));
         return;
       }
@@ -949,6 +1026,7 @@ export default function CropDetail() {
       if (sub.extra === "fertilizer") {
         await supabase.from("fertilizer_applications").insert({
           cultivation_id: id,
+          expense_record_id: expData.id,
           application_date: values.date,
           fertilizer_name: values.fertilizer_name?.trim() || "",
           quantity: num(values.quantity),
@@ -963,6 +1041,7 @@ export default function CropDetail() {
       if (sub.extra === "weed") {
         await supabase.from("weed_removals").insert({
           cultivation_id: id,
+          expense_record_id: expData.id,
           start_date: values.start_date,
           end_date: values.end_date,
           total_days: weedDaysFromValues(values),
@@ -988,7 +1067,10 @@ export default function CropDetail() {
   // ---- Turmeric crop sale income ----
   const turmericSaleQtyNum = parseFloat(turmericQtySold) || 0;
   const turmericSalePriceNum = parseFloat(turmericPricePerKg) || 0;
-  const turmericSaleTotal = turmericSaleQtyNum * turmericSalePriceNum;
+  const turmericSaleAutoTotal = turmericSaleQtyNum * turmericSalePriceNum;
+  const turmericSaleTotal = turmericSaleAmountOverride.trim()
+    ? parseFloat(turmericSaleAmountOverride) || 0
+    : turmericSaleAutoTotal;
 
   const saveTurmericIncome = async () => {
     if (!cultivation) return;
@@ -1003,18 +1085,23 @@ export default function CropDetail() {
         farm_id: cultivation.farm_id,
         income_date: turmericSaleDate,
         category: "crop_sale",
+        stage: "turmeric_sale",
         amount: turmericSaleTotal,
         quantity: turmericSaleQtyNum,
-        unit: "kg",
+        unit: turmericSaleUnit,
         price_per_unit: turmericSalePriceNum,
         buyer_name: turmericSaleBuyer.trim() || null,
+        market_name: turmericMarketName.trim() || null,
+        turmeric_type: turmericType,
         notes: turmericSaleNotes.trim() || null,
       });
       if (error) reportError("Error saving income", error.message);
       else {
         setTurmericSaleDate("");
+        setTurmericMarketName("");
         setTurmericQtySold("");
         setTurmericPricePerKg("");
+        setTurmericSaleAmountOverride("");
         setTurmericSaleBuyer("");
         setTurmericSaleNotes("");
         fetchIncomeRecords();
@@ -1065,16 +1152,23 @@ export default function CropDetail() {
   const netProfit = totalIncome - totalExpenses;
 
   const turmericTotalYield = harvestRecords.reduce((sum, r) => sum + Number(r.yield_quantity), 0);
-  const turmericTotalSold = incomeRecords
-    .filter((r) => r.category === "crop_sale")
-    .reduce((sum, r) => sum + Number(r.quantity ?? 0), 0);
+  const turmericSales = incomeRecords.filter((r) => r.stage === "turmeric_sale");
+  const turmericTotalSold = turmericSales.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0);
   const turmericRemainingStock = turmericTotalYield - turmericTotalSold;
+
+  const turmericBulbSales = turmericSales.filter((r) => r.turmeric_type === "bulb");
+  const turmericFingerSales = turmericSales.filter((r) => r.turmeric_type === "finger");
+  const turmericBulbQty = turmericBulbSales.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0);
+  const turmericBulbTotal = turmericBulbSales.reduce((sum, r) => sum + Number(r.amount), 0);
+  const turmericFingerQty = turmericFingerSales.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0);
+  const turmericFingerTotal = turmericFingerSales.reduce((sum, r) => sum + Number(r.amount), 0);
+  const turmericSalesGrandTotal = turmericBulbTotal + turmericFingerTotal;
 
   const turmericExpenseBreakdown = TURMERIC_SUBSECTIONS.map((sub) => ({
     key: sub.key,
     titleEn: sub.titleEn,
     titleTa: sub.titleTa,
-    total: expenseRecords.filter(sub.matches).reduce((sum, r) => sum + Number(r.amount), 0),
+    total: expenseRecords.filter((r) => r.stage === sub.stage).reduce((sum, r) => sum + Number(r.amount), 0),
   }));
 
   const renderField = (sub: ActivitySubsection, f: ActivityField, values: Record<string, string>) => (
@@ -1104,7 +1198,7 @@ export default function CropDetail() {
   const renderSubsection = (sub: ActivitySubsection) => {
     const isOpen = formOpen[sub.key] ?? false;
     const values = formValues[sub.key] || {};
-    const records = expenseRecords.filter(sub.matches);
+    const records = expenseRecords.filter((r) => r.stage === sub.stage);
     const total = records.reduce((s, r) => s + Number(r.amount), 0);
 
     return (
@@ -1379,31 +1473,83 @@ export default function CropDetail() {
                   </>
                 ) : isTurmeric ? (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
+                    {turmericSales.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        <div className="bg-amber-50 rounded-xl p-2 border border-white shadow-sm">
+                          <p className="text-xs font-medium text-gray-700">🟡 {L("Bulb Turmeric", "கிழங்கு மஞ்சள்")}</p>
+                          <p className="text-sm font-bold text-amber-700">{turmericBulbQty.toFixed(2)} kg — {inr(turmericBulbTotal)}</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-xl p-2 border border-white shadow-sm">
+                          <p className="text-xs font-medium text-gray-700">🟡 {L("Finger Turmeric", "விரல் மஞ்சள்")}</p>
+                          <p className="text-sm font-bold text-amber-700">{turmericFingerQty.toFixed(2)} kg — {inr(turmericFingerTotal)}</p>
+                        </div>
+                        <div className="bg-green-50 rounded-xl p-2 border border-white shadow-sm">
+                          <p className="text-xs font-medium text-gray-700">📊 {L("Grand Total Income", "மொத்த வருமானம்")}</p>
+                          <p className="text-sm font-bold text-green-700">{inr(turmericSalesGrandTotal)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                       <div>
                         <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
                         <input type="date" value={turmericSaleDate} onChange={(e) => setTurmericSaleDate(e.target.value)} className={inputCls} />
                       </div>
                       <div>
-                        <label className={labelCls}>{L("Quantity Sold (kg)", "விற்ற அளவு (கி.கி)")}</label>
+                        <label className={labelCls}>{L("Market Name", "சந்தை பெயர்")}</label>
+                        <input
+                          type="text"
+                          placeholder={L("e.g. Erode Market, Perundurai Market", "எ.கா. ஈரோடு சந்தை")}
+                          value={turmericMarketName}
+                          onChange={(e) => setTurmericMarketName(e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Turmeric Type", "மஞ்சள் வகை")}</label>
+                        <select value={turmericType} onChange={(e) => setTurmericType(e.target.value as "bulb" | "finger")} className={inputCls}>
+                          <option className="text-gray-900" value="bulb">{L("Bulb Turmeric", "கிழங்கு மஞ்சள்")}</option>
+                          <option className="text-gray-900" value="finger">{L("Finger Turmeric", "விரல் மஞ்சள்")}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Quantity Sold", "விற்பனை அளவு")}</label>
                         <input type="number" value={turmericQtySold} onChange={(e) => setTurmericQtySold(e.target.value)} className={inputCls} />
                       </div>
                       <div>
-                        <label className={labelCls}>{L("Price/kg (₹)", "விலை/கி.கி (₹)")}</label>
+                        <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                        <select value={turmericSaleUnit} onChange={(e) => setTurmericSaleUnit(e.target.value)} className={inputCls}>
+                          {["kg", "quintal", "tonne"].map((u) => (
+                            <option className="text-gray-900" key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Rate per unit (₹)", "யூனிட் விலை (₹)")}</label>
                         <input type="number" value={turmericPricePerKg} onChange={(e) => setTurmericPricePerKg(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Total Amount (₹)", "மொத்த தொகை (₹)")}</label>
+                        <input
+                          type="number"
+                          placeholder={`${L("Auto", "தானியங்கி")}: ₹${turmericSaleAutoTotal.toFixed(2)}`}
+                          value={turmericSaleAmountOverride}
+                          onChange={(e) => setTurmericSaleAmountOverride(e.target.value)}
+                          className={inputCls}
+                        />
                       </div>
                       <div>
                         <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
                         <input type="text" value={turmericSaleBuyer} onChange={(e) => setTurmericSaleBuyer(e.target.value)} className={inputCls} />
                       </div>
                       <div>
-                        <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                        <label className={labelCls}>{L("Remarks", "குறிப்புகள்")}</label>
                         <input type="text" value={turmericSaleNotes} onChange={(e) => setTurmericSaleNotes(e.target.value)} className={inputCls} />
                       </div>
                     </div>
                     {turmericSaleQtyNum > 0 && (
                       <p className="text-xs font-mono text-gray-700 mb-2">
-                        {turmericSaleQtyNum}kg × ₹{turmericSalePriceNum} = ₹{turmericSaleTotal.toFixed(2)}
+                        {turmericSaleQtyNum} {turmericSaleUnit} × ₹{turmericSalePriceNum} = ₹{turmericSaleTotal.toFixed(2)}
                       </p>
                     )}
                     <button
@@ -1456,15 +1602,54 @@ export default function CropDetail() {
                   </div>
                 )}
 
-                {incomeRecords.length > 0 && (
-                  <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
-                    {incomeRecords.map((r) => (
-                      <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
-                        <span>{r.income_date} {r.buyer_name ? `· ${r.buyer_name}` : ""}</span>
-                        <span className="font-semibold text-green-700">{inr(Number(r.amount))}</span>
-                      </div>
-                    ))}
-                  </div>
+                {isTurmeric ? (
+                  turmericSales.length > 0 && (
+                    <div className="mt-3 overflow-x-auto max-h-48 overflow-y-auto">
+                      <table className="w-full text-xs text-gray-700">
+                        <thead>
+                          <tr className="text-left text-gray-500 border-b border-gray-200">
+                            <th className="py-1 pr-2 font-medium">{L("Date", "தேதி")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Market", "சந்தை")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Type", "வகை")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Qty", "அளவு")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Rate", "விலை")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Total", "மொத்தம்")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Buyer", "வாங்குபவர்")}</th>
+                            <th className="py-1"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {turmericSales.map((r) => (
+                            <tr key={r.id} className="border-b border-gray-50">
+                              <td className="py-1 pr-2">{r.income_date}</td>
+                              <td className="py-1 pr-2">{r.market_name || "—"}</td>
+                              <td className="py-1 pr-2">
+                                {r.turmeric_type === "finger" ? L("Finger", "விரல்") : L("Bulb", "கிழங்கு")}
+                              </td>
+                              <td className="py-1 pr-2">{r.quantity} {r.unit}</td>
+                              <td className="py-1 pr-2">₹{r.price_per_unit}</td>
+                              <td className="py-1 pr-2 font-semibold text-green-700">{inr(Number(r.amount))}</td>
+                              <td className="py-1 pr-2">{r.buyer_name || "—"}</td>
+                              <td className="py-1">
+                                <button onClick={() => deleteIncomeRecord(r.id)} className="hover:text-red-600">🗑️</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                ) : (
+                  incomeRecords.length > 0 && (
+                    <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
+                      {incomeRecords.map((r) => (
+                        <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
+                          <span>{r.income_date} {r.buyer_name ? `· ${r.buyer_name}` : ""}</span>
+                          <span className="font-semibold text-green-700">{inr(Number(r.amount))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
 
@@ -1665,6 +1850,19 @@ export default function CropDetail() {
 
               {/* Summary */}
               <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                {isTurmeric && turmericSales.length > 0 && (
+                  <>
+                    <div className="flex justify-between text-xs text-gray-600 mb-1">
+                      <span>🟡 {L("Bulb Turmeric Sales", "கிழங்கு மஞ்சள் விற்பனை")}</span>
+                      <span>{inr(turmericBulbTotal)} ({turmericBulbQty.toFixed(2)} kg)</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-600 mb-1">
+                      <span>🟡 {L("Finger Turmeric Sales", "விரல் மஞ்சள் விற்பனை")}</span>
+                      <span>{inr(turmericFingerTotal)} ({turmericFingerQty.toFixed(2)} kg)</span>
+                    </div>
+                    <div className="border-t border-gray-100 my-1" />
+                  </>
+                )}
                 <div className="flex justify-between text-sm text-gray-700 font-medium mb-1">
                   <span>💰 {L("Total Income", "மொத்த வருமானம்")}</span>
                   <span>{inr(totalIncome)}</span>
@@ -1815,6 +2013,51 @@ export default function CropDetail() {
                       <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
                         <span>{r.start_date} → {r.end_date} · {r.total_days}d · {r.workers_per_day}w × ₹{r.cost_per_day}</span>
                         <span className="font-semibold text-gray-800">{inr(Number(r.total_cost))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Irrigation */}
+              <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                <h2 className="text-sm font-semibold text-gray-800 mb-2">💧 {L("Irrigation", "நீர்ப்பாசனம்")}</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                  <div>
+                    <label className={labelCls}>{L("Date", "தேதி")}</label>
+                    <input type="date" value={irrigationDate} onChange={(e) => setIrrigationDate(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Method", "முறை")}</label>
+                    <select value={irrigationMethod} onChange={(e) => setIrrigationMethod(e.target.value)} className={inputCls}>
+                      {["Drip", "Sprinkler", "Flood", "Manual"].map((m) => (
+                        <option className="text-gray-900" key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Duration (hours)", "கால அளவு (மணி)")}</label>
+                    <input type="number" value={irrigationDuration} onChange={(e) => setIrrigationDuration(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                    <input type="text" value={irrigationNotes} onChange={(e) => setIrrigationNotes(e.target.value)} className={inputCls} />
+                  </div>
+                </div>
+                <button
+                  onClick={saveIrrigation}
+                  disabled={savingIrrigation}
+                  className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                >
+                  {savingIrrigation ? "..." : L("Add", "சேர்")}
+                </button>
+
+                {irrigationRecords.length > 0 && (
+                  <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
+                    {irrigationRecords.map((r) => (
+                      <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
+                        <span>{r.irrigation_date} · {r.method} {r.notes ? `· ${r.notes}` : ""}</span>
+                        <span className="font-semibold text-gray-800">{r.duration_hours}h</span>
                       </div>
                     ))}
                   </div>
