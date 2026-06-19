@@ -1,223 +1,234 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../components/Sidebar";
+import { supabase } from "../lib/supabase";
 
-export default function Home() {
-  const [farms, setFarms] = useState([
-    {
-      id: 1,
-      name: "Farm 1",
-      area: "4.25",
-      well: "Yes",
-      motor: "Yes",
-    },
-  ]);
+type Farm = {
+  id: string;
+  name: string;
+  total_area: number;
+  has_well: boolean;
+  has_motor: boolean;
+};
 
+export default function Dashboard() {
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState<"ta" | "en">("ta");
+
+  // Add farm form
   const [farmName, setFarmName] = useState("");
   const [area, setArea] = useState("");
-  const [well, setWell] = useState("Yes");
-  const [motor, setMotor] = useState("Yes");
+  const [hasWell, setHasWell] = useState(true);
+  const [hasMotor, setHasMotor] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const addFarm = () => {
-    if (!farmName || !area) {
-      alert("Please enter Farm Name and Area");
+  useEffect(() => {
+    fetchFarms();
+  }, []);
+
+  const fetchFarms = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("farms")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) setFarms(data);
+    setLoading(false);
+  };
+
+  const addFarm = async () => {
+    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+    if (!farmName.trim() || !area) {
+      alert(lang === "ta" ? "நிலம் பெயர் மற்றும் பரப்பளவு தேவை" : "Farm name and area are required");
       return;
     }
 
-    const newFarm = {
-      id: Date.now(),
-      name: farmName,
-      area,
-      well,
-      motor,
+    const payload = {
+      name: farmName.trim(),
+      total_area: parseFloat(area),
+      has_well: hasWell,
+      has_motor: hasMotor,
     };
+    console.log("Saving farm:", payload);
 
-    setFarms([...farms, newFarm]);
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("farms").insert(payload);
+      if (error) {
+        alert("Error saving farm: " + error.message);
+      } else {
+        setFarmName("");
+        setArea("");
+        setHasWell(true);
+        setHasMotor(true);
+        fetchFarms();
+      }
+    } catch (err) {
+      console.error("Unexpected error saving farm:", err);
+      alert("Unexpected error saving farm: " + (err instanceof Error ? err.message : String(err)));
+    }
+    setSaving(false);
+  };
 
-    setFarmName("");
-    setArea("");
-    setWell("Yes");
-    setMotor("Yes");
+  const totalArea = farms.reduce((sum, f) => sum + Number(f.total_area), 0);
+
+  const t = {
+    title: lang === "ta" ? "தாய் நிலம் AGRO" : "Thaai Nilam AGRO",
+    tagline: lang === "ta" ? "நிலமே தாய், விளைவே வாழ்வு" : "Rooted in family, grown with love",
+    totalFarms: lang === "ta" ? "மொத்த நிலங்கள்" : "Total Farms",
+    totalArea: lang === "ta" ? "மொத்த பரப்பு" : "Total Area",
+    activeCrops: lang === "ta" ? "செயலில் உள்ள பயிர்கள்" : "Active Crops",
+    addFarm: lang === "ta" ? "நிலம் சேர்க்க" : "Add Farm",
+    farmName: lang === "ta" ? "நிலத்தின் பெயர்" : "Farm Name",
+    areaAcres: lang === "ta" ? "பரப்பளவு (ஏக்கர்)" : "Area (Acres)",
+    well: lang === "ta" ? "கிணறு" : "Well",
+    motor: lang === "ta" ? "மோட்டார்" : "Motor",
+    save: lang === "ta" ? "சேமி" : "Save Farm",
+    myFarms: lang === "ta" ? "என் நிலங்கள்" : "My Farms",
+    yes: lang === "ta" ? "உண்டு" : "Yes",
+    no: lang === "ta" ? "இல்லை" : "No",
+    loading: lang === "ta" ? "ஏற்றுகிறது..." : "Loading...",
+    noFarms: lang === "ta" ? "நிலங்கள் எதுவும் இல்லை. மேலே சேர்க்கவும்." : "No farms yet. Add one above.",
+    acres: lang === "ta" ? "ஏக்கர்" : "Acres",
   };
 
   return (
-    <div className="flex bg-green-50 min-h-screen">
+    <div className="flex h-screen overflow-hidden bg-green-50">
+      <Sidebar lang={lang} setLang={setLang} />
 
-      <Sidebar />
-
-      <main className="flex-1 p-4">
-
-        <div className="max-w-7xl mx-auto">
+      <main className="flex-1 p-3 overflow-hidden flex flex-col">
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-3 h-full">
 
           {/* Header */}
-          <div className="bg-white rounded-xl shadow p-3 mb-4 flex justify-between items-center">
-
+          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex justify-between items-center shrink-0">
             <div>
-              <h1 className="text-3xl font-bold text-green-800">
-                THUKIRA AGRO FARMS
-              </h1>
-
-              <p className="text-gray-600 text-sm">
-                My Family Farm Management
-              </p>
+              <h1 className="text-xl font-bold text-green-900">{t.title}</h1>
+              <p className="text-green-700 text-sm font-medium mt-0.5">{t.tagline}</p>
             </div>
-
-            {/* Future Family Photo */}
-            <div className="w-20 h-20 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center text-3xl">
-              👨‍🌾
+            <div className="flex items-center gap-3">
+              {/* Language Toggle */}
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-green-300 text-green-700 text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-green-200">
+                🧑‍🌾
+              </div>
             </div>
-
           </div>
 
-          {/* Dashboard Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-
-            <div className="bg-white rounded-xl shadow p-3">
-              <h3 className="text-gray-500 text-xs">
-                Total Farms
-              </h3>
-
-              <p className="text-2xl font-bold text-green-700">
-                {farms.length}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-3">
-              <h3 className="text-gray-500 text-xs">
-                Total Area
-              </h3>
-
-              <p className="text-2xl font-bold text-green-700">
-                4.25 Acres
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-3">
-              <h3 className="text-gray-500 text-xs">
-                Active Crops
-              </h3>
-
-              <p className="text-2xl font-bold text-green-700">
-                2
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-3">
-              <h3 className="text-gray-500 text-xs">
-                Monthly Income
-              </h3>
-
-              <p className="text-2xl font-bold text-green-700">
-                ₹0
-              </p>
-            </div>
-
+          {/* Stats Cards */}
+          <div className="grid grid-cols-3 gap-3 shrink-0">
+            {[
+              { label: t.totalFarms, value: farms.length, color: "text-green-700", bg: "bg-green-50", icon: "🌳" },
+              { label: t.totalArea, value: `${totalArea.toFixed(2)} ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
+              { label: t.activeCrops, value: "—", color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
+            ].map((card) => (
+              <div key={card.label} className={`${card.bg} rounded-2xl p-3 border border-white shadow-sm`}>
+                <div className="flex justify-between items-start mb-1">
+                  <p className="text-xs font-medium text-gray-700">{card.label}</p>
+                  <span className="text-base">{card.icon}</span>
+                </div>
+                <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+              </div>
+            ))}
           </div>
 
           {/* Add Farm */}
-          <div className="bg-white rounded-xl shadow p-3 mb-4">
-
-            <h2 className="text-xl font-semibold mb-3">
-              ➕ Add Farm
+          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 shrink-0">
+            <h2 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+              <span className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center text-xs">➕</span>
+              {t.addFarm}
             </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
               <input
                 type="text"
-                placeholder="Farm Name"
+                placeholder={t.farmName}
                 value={farmName}
                 onChange={(e) => setFarmName(e.target.value)}
-                className="border p-2 rounded-md"
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
               />
-
               <input
                 type="number"
                 step="0.01"
-                placeholder="Area (Acres)"
+                placeholder={t.areaAcres}
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                className="border p-2 rounded-md"
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
               />
-
               <select
-                value={well}
-                onChange={(e) => setWell(e.target.value)}
-                className="border p-2 rounded-md"
+                value={hasWell ? "yes" : "no"}
+                onChange={(e) => setHasWell(e.target.value === "yes")}
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
               >
-                <option>Well: Yes</option>
-                <option>Well: No</option>
+                <option className="text-gray-900" value="yes">{t.well}: {t.yes}</option>
+                <option className="text-gray-900" value="no">{t.well}: {t.no}</option>
               </select>
-
               <select
-                value={motor}
-                onChange={(e) => setMotor(e.target.value)}
-                className="border p-2 rounded-md"
+                value={hasMotor ? "yes" : "no"}
+                onChange={(e) => setHasMotor(e.target.value === "yes")}
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
               >
-                <option>Motor: Yes</option>
-                <option>Motor: No</option>
+                <option className="text-gray-900" value="yes">{t.motor}: {t.yes}</option>
+                <option className="text-gray-900" value="no">{t.motor}: {t.no}</option>
               </select>
-
               <button
                 onClick={addFarm}
-                className="bg-green-700 hover:bg-green-800 text-white rounded-md px-4 py-2"
+                disabled={saving}
+                className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-xl px-3 py-2 text-sm font-semibold transition shadow-sm"
               >
-                Save Farm
+                {saving ? "..." : t.save}
               </button>
-
             </div>
-
           </div>
 
-          {/* My Farms */}
-          <div>
-
-            <h2 className="text-xl font-semibold mb-3">
-              🌾 My Farms
+          {/* Farms List */}
+          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex-1 flex flex-col min-h-0">
+            <h2 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2 shrink-0">
+              <span className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center text-xs">🌳</span>
+              {t.myFarms}
             </h2>
 
-            <div className="space-y-2">
-
-              {farms.map((farm) => (
-                <Link
-                  key={farm.id}
-                  href="/farm"
-                  className="block"
-                >
-                  <div className="bg-white rounded-xl shadow border p-3 hover:border-green-500 hover:shadow-lg transition">
-
-                    <div className="flex justify-between items-center">
-
-                      <div>
-                        <h3 className="text-lg font-bold text-green-800">
-                          {farm.name}
-                        </h3>
-
-                        <p className="text-sm text-gray-500">
-                          Well: {farm.well} | Motor: {farm.motor}
-                        </p>
+            {loading ? (
+              <div className="text-center py-6 text-green-700 text-sm font-medium">{t.loading}</div>
+            ) : farms.length === 0 ? (
+              <div className="text-center py-6 text-gray-500 text-sm font-medium">{t.noFarms}</div>
+            ) : (
+              <div className="space-y-2 overflow-y-auto max-h-48">
+                {farms.map((farm) => (
+                  <Link key={farm.id} href={`/farms/${farm.id}`}>
+                    <div className="flex justify-between items-center p-3 rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition cursor-pointer group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center text-lg group-hover:bg-green-200 transition">
+                          🌳
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-sm text-green-900">{farm.name}</h3>
+                          <p className="text-xs text-gray-600 font-medium mt-0.5">
+                            {t.well}: {farm.has_well ? t.yes : t.no} &nbsp;|&nbsp;
+                            {t.motor}: {farm.has_motor ? t.yes : t.no}
+                          </p>
+                        </div>
                       </div>
-
-                      <div className="text-green-700 font-bold">
-                        {farm.area} Acres
+                      <div className="text-right">
+                        <span className="text-green-700 font-bold text-sm">{farm.total_area}</span>
+                        <span className="text-green-700 text-xs font-medium ml-1">{t.acres}</span>
                       </div>
-
                     </div>
-
-                  </div>
-                </Link>
-              ))}
-
-            </div>
-
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
-
       </main>
-
     </div>
   );
 }
