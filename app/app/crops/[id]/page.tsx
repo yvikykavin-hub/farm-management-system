@@ -12,6 +12,8 @@ type Cultivation = {
   crop_type: string;
   area: number;
   status: string;
+  start_date: string | null;
+  end_date: string | null;
 };
 
 type CoconutDetails = {
@@ -34,14 +36,18 @@ type IncomeRecord = {
   unit: string | null;
   price_per_unit: number | null;
   buyer_name: string | null;
+  buyer_contact: string | null;
   market_name: string | null;
   turmeric_type: string | null;
+  quantity_tons: number | null;
+  rate_per_ton: number | null;
   notes: string | null;
   small_coconuts: number | null;
   large_coconuts: number | null;
   small_price: number | null;
   large_price: number | null;
   dealer_deduction: number | null;
+  created_at?: string;
 };
 
 type ExpenseRecord = {
@@ -57,6 +63,9 @@ type ExpenseRecord = {
   notes: string | null;
   trees_harvested: number | null;
   price_per_tree: number | null;
+  rate_per_ton: number | null;
+  total_tons: number | null;
+  created_at?: string;
 };
 
 type IrrigationRecord = {
@@ -72,6 +81,7 @@ type HarvestRecord = {
   harvest_date: string;
   yield_quantity: number;
   yield_unit: string;
+  cutting_number: number | null;
   notes: string | null;
 };
 
@@ -107,6 +117,22 @@ type TurmericDetails = {
   expected_harvest_date: string | null;
 };
 
+type ElluDetails = {
+  id: string;
+  cultivation_id: string;
+  variety: string | null;
+  sowing_date: string | null;
+  seed_quantity: number | null;
+  expected_harvest_date: string | null;
+};
+
+type KuchiKilanguDetails = {
+  id: string;
+  cultivation_id: string;
+  stems_planted: number | null;
+  spacing_feet: number | null;
+};
+
 type ActivityField = {
   name: string;
   type: "date" | "text" | "number" | "select";
@@ -125,6 +151,7 @@ type ActivitySubsection = {
   fields: ActivityField[];
   computeAmount: (v: Record<string, string>) => number;
   buildDescription: (v: Record<string, string>) => string;
+  extraColumns?: (v: Record<string, string>) => Record<string, number | string | null>;
   extra?: "fertilizer" | "weed";
 };
 
@@ -152,7 +179,38 @@ const EXPENSE_CATEGORIES = [
   { value: "miscellaneous", en: "Miscellaneous", ta: "இதர செலவு" },
 ];
 
+const ELLU_EXPENSE_CATEGORIES = [
+  { value: "seeds", en: "Seeds", ta: "விதைகள்" },
+  { value: "fertilizer", en: "Fertilizer", ta: "உரம்" },
+  { value: "labour", en: "Labour", ta: "கூலி" },
+  { value: "land_preparation", en: "Land Preparation", ta: "நில தயாரிப்பு" },
+  { value: "irrigation", en: "Irrigation", ta: "நீர்ப்பாசனம்" },
+  { value: "transport", en: "Transport", ta: "போக்குவரத்து" },
+  { value: "machinery_repair", en: "Machinery Repair", ta: "இயந்திர பழுது" },
+  { value: "cultivation", en: "Cultivation", ta: "பயிரிடல்" },
+  { value: "harvest", en: "Harvest", ta: "அறுவடை" },
+  { value: "miscellaneous", en: "Miscellaneous", ta: "இதர செலவு" },
+];
+
 const YIELD_UNITS = ["kg", "tonnes", "bags", "nos"];
+
+const KUCHI_BUYER_TYPES = [
+  { value: "local_market", en: "Local Market", ta: "உள்ளூர் சந்தை" },
+  { value: "wholesale", en: "Wholesale", ta: "மொத்த விற்பனை" },
+  { value: "direct_buyer", en: "Direct Buyer", ta: "நேரடி வாங்குபவர்" },
+];
+
+const STATUS_BADGE: Record<string, string> = {
+  active: "bg-green-100 text-green-700",
+  completed: "bg-blue-100 text-blue-700",
+  finished: "bg-gray-200 text-gray-600",
+};
+
+const formatDMY = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : iso;
+};
 
 const inr = (n: number) =>
   `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })}`;
@@ -165,7 +223,7 @@ const num = (v: string | undefined) => parseFloat(v ?? "") || 0;
 
 const weedDaysFromValues = (v: Record<string, string>) =>
   v.start_date && v.end_date
-    ? Math.max(Math.floor((new Date(v.end_date).getTime() - new Date(v.start_date).getTime()) / 86400000) + 1, 0)
+    ? Math.abs(Math.ceil((new Date(v.end_date).getTime() - new Date(v.start_date).getTime()) / 86400000)) + 1
     : 0;
 
 const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
@@ -293,14 +351,14 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     stage: "boiling",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
-      { name: "quantity_boiled", type: "number", labelEn: "Quantity Boiled (kg)", labelTa: "வேகவைத்த அளவு (கி.கி)" },
-      { name: "fuel_cost", type: "number", labelEn: "Fuel Cost (₹)", labelTa: "எரிபொருள் செலவு (₹)" },
-      { name: "labour_cost", type: "number", labelEn: "Labour Cost (₹)", labelTa: "கூலி செலவு (₹)" },
-      { name: "other_cost", type: "number", labelEn: "Other Cost (₹)", labelTa: "இதர செலவு (₹)" },
+      { name: "bulb_drums", type: "number", labelEn: "No. of Drums (Bulb)", labelTa: "டிரம் எண் (கிழங்கு)" },
+      { name: "finger_drums", type: "number", labelEn: "No. of Drums (Finger)", labelTa: "டிரம் எண் (விரல்)" },
+      { name: "total_cost", type: "number", labelEn: "Total Cost (₹)", labelTa: "மொத்த செலவு (₹)" },
       { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
     ],
-    computeAmount: (v) => num(v.fuel_cost) + num(v.labour_cost) + num(v.other_cost),
+    computeAmount: (v) => num(v.total_cost),
     buildDescription: () => "Turmeric boiling/curing process",
+    extraColumns: (v) => ({ bulb_drums: num(v.bulb_drums), finger_drums: num(v.finger_drums) }),
   },
   {
     key: "B4",
@@ -310,14 +368,13 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     stage: "drying",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
-      { name: "quantity_before_drying", type: "number", labelEn: "Qty Before Drying (kg)", labelTa: "உலர்த்தும் முன் அளவு (கி.கி)" },
-      { name: "quantity_after_drying", type: "number", labelEn: "Qty After Drying (kg)", labelTa: "உலர்த்திய பின் அளவு (கி.கி)" },
       { name: "drying_days", type: "number", labelEn: "Drying Days", labelTa: "உலர்த்தும் நாட்கள்" },
       { name: "labour_cost", type: "number", labelEn: "Labour Cost (₹)", labelTa: "கூலி செலவு (₹)" },
       { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
     ],
     computeAmount: (v) => num(v.labour_cost),
     buildDescription: () => "Turmeric drying",
+    extraColumns: (v) => ({ drying_days: parseInt(v.drying_days) || 0 }),
   },
   {
     key: "B5",
@@ -343,14 +400,15 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
     stage: "packing",
     fields: [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
-      { name: "number_of_bags", type: "number", labelEn: "Number of Bags", labelTa: "பைகள் எண்ணிக்கை" },
-      { name: "weight_per_bag", type: "number", labelEn: "Weight/Bag (kg)", labelTa: "ஒரு பை எடை (கி.கி)" },
+      { name: "bulb_bags", type: "number", labelEn: "No. of Bags (Bulb)", labelTa: "பை எண் (கிழங்கு)" },
+      { name: "finger_bags", type: "number", labelEn: "No. of Bags (Finger)", labelTa: "பை எண் (விரல்)" },
       { name: "packing_material_cost", type: "number", labelEn: "Packing Material Cost (₹)", labelTa: "பேக்கிங் பொருள் செலவு (₹)" },
       { name: "labour_cost", type: "number", labelEn: "Labour Cost (₹)", labelTa: "கூலி செலவு (₹)" },
       { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
     ],
     computeAmount: (v) => num(v.packing_material_cost) + num(v.labour_cost),
     buildDescription: () => "Turmeric packing",
+    extraColumns: (v) => ({ bulb_bags: num(v.bulb_bags), finger_bags: num(v.finger_bags) }),
   },
   {
     key: "B7",
@@ -362,17 +420,70 @@ const TURMERIC_SUBSECTIONS: ActivitySubsection[] = [
       { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
       { name: "destination", type: "text", labelEn: "Destination", labelTa: "இடம்" },
       { name: "vehicle_type", type: "text", labelEn: "Vehicle Type", labelTa: "வாகன வகை" },
-      { name: "quantity_transported", type: "number", labelEn: "Quantity (kg)", labelTa: "அளவு (கி.கி)" },
+      { name: "loading_cost", type: "number", labelEn: "Loading Cost (₹)", labelTa: "ஏற்றும் செலவு (₹)" },
       { name: "transport_cost", type: "number", labelEn: "Transport Cost (₹)", labelTa: "போக்குவரத்து செலவு (₹)" },
       { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
     ],
-    computeAmount: (v) => num(v.transport_cost),
-    buildDescription: () => "Turmeric transportation",
+    computeAmount: (v) => num(v.loading_cost) + num(v.transport_cost),
+    buildDescription: (v) => {
+      const parts = [v.destination?.trim(), v.vehicle_type?.trim()].filter(Boolean);
+      return parts.length ? `Turmeric transportation - ${parts.join(", ")}` : "Turmeric transportation";
+    },
+    extraColumns: (v) => ({ loading_cost: num(v.loading_cost) }),
   },
 ];
 
 const COMMON_ACTIVITY_KEYS = ["A1", "A2", "A3", "A4", "A5"];
 const TURMERIC_ACTIVITY_KEYS = ["B1", "B2", "B3", "B4", "B5", "B6", "B7"];
+
+const ELLU_SUBSECTIONS: ActivitySubsection[] = [
+  {
+    key: "E1",
+    titleEn: "Threshing",
+    titleTa: "கதறுதல்",
+    category: "labour",
+    stage: "threshing",
+    fields: [
+      { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
+      { name: "workers_count", type: "number", labelEn: "Workers Count", labelTa: "தொழிலாளர் எண்ணிக்கை" },
+      { name: "cost_per_worker", type: "number", labelEn: "Cost/Worker (₹)", labelTa: "தொழிலாளர் செலவு (₹)" },
+      { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
+    ],
+    computeAmount: (v) => num(v.workers_count) * num(v.cost_per_worker),
+    buildDescription: () => "Ellu threshing",
+  },
+  {
+    key: "E2",
+    titleEn: "Cleaning / Winnowing",
+    titleTa: "சுத்தம் செய்தல்",
+    category: "labour",
+    stage: "cleaning",
+    fields: [
+      { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
+      { name: "workers_count", type: "number", labelEn: "Workers Count", labelTa: "தொழிலாளர் எண்ணிக்கை" },
+      { name: "cost_per_worker", type: "number", labelEn: "Cost/Worker (₹)", labelTa: "தொழிலாளர் செலவு (₹)" },
+      { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
+    ],
+    computeAmount: (v) => num(v.workers_count) * num(v.cost_per_worker),
+    buildDescription: () => "Ellu cleaning/winnowing",
+  },
+  {
+    key: "E3",
+    titleEn: "Drying",
+    titleTa: "உலர்த்துதல்",
+    category: "labour",
+    stage: "drying_ellu",
+    fields: [
+      { name: "date", type: "date", labelEn: "Date", labelTa: "தேதி" },
+      { name: "drying_days", type: "number", labelEn: "Drying Days", labelTa: "உலர்த்தும் நாட்கள்" },
+      { name: "labour_cost", type: "number", labelEn: "Labour Cost (₹)", labelTa: "கூலி செலவு (₹)" },
+      { name: "notes", type: "text", labelEn: "Notes", labelTa: "குறிப்பு" },
+    ],
+    computeAmount: (v) => num(v.labour_cost),
+    buildDescription: () => "Ellu drying",
+    extraColumns: (v) => ({ drying_days: parseInt(v.drying_days) || 0 }),
+  },
+];
 
 export default function CropDetail() {
   const params = useParams();
@@ -383,12 +494,18 @@ export default function CropDetail() {
 
   const [cultivation, setCultivation] = useState<Cultivation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [farmName, setFarmName] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "finance" | "activities">("overview");
 
   const cropType = cultivation?.crop_type ?? "";
   const isCoconut = cropType === "coconut";
   const isTurmeric = cropType === "turmeric";
-  const showHarvestSection = cropType !== "" && cropType !== "coconut" && cropType !== "fodder_corn";
+  const isSugarcane = cropType === "sugarcane";
+  const isEllu = cropType === "ellu";
+  const isFodderCorn = cropType === "fodder_corn";
+  const isOnion = cropType === "onion";
+  const isKuchiKilangu = cropType === "kuchi_kilangu";
+  const showHarvestSection = cropType !== "" && cropType !== "coconut" && cropType !== "fodder_corn" && cropType !== "turmeric";
   const crop = cropInfo(cropType);
 
   // Turmeric details
@@ -399,26 +516,74 @@ export default function CropDetail() {
   const [turmericExpectedHarvestDate, setTurmericExpectedHarvestDate] = useState("");
   const [savingTurmericDetails, setSavingTurmericDetails] = useState(false);
 
-  // Turmeric income (crop sale)
+  // Ellu details
+  const [elluDetailsId, setElluDetailsId] = useState<string | null>(null);
+  const [elluVariety, setElluVariety] = useState("");
+  const [elluSowingDate, setElluSowingDate] = useState("");
+  const [elluSeedQuantity, setElluSeedQuantity] = useState("");
+  const [elluExpectedHarvestDate, setElluExpectedHarvestDate] = useState("");
+  const [savingElluDetails, setSavingElluDetails] = useState(false);
+
+  // Ellu income
+  const [elluSaleDate, setElluSaleDate] = useState("");
+  const [elluQuantitySold, setElluQuantitySold] = useState("");
+  const [elluPricePerKg, setElluPricePerKg] = useState("");
+  const [elluBuyerName, setElluBuyerName] = useState("");
+  const [elluSaleNotes, setElluSaleNotes] = useState("");
+  const [savingElluIncome, setSavingElluIncome] = useState(false);
+
+  // Fodder corn cutting cycles
+  const [cuttingDate, setCuttingDate] = useState("");
+  const [cuttingQty, setCuttingQty] = useState("");
+  const [cuttingUnit, setCuttingUnit] = useState("kg");
+  const [cuttingSoldTo, setCuttingSoldTo] = useState("");
+  const [cuttingRate, setCuttingRate] = useState("");
+  const [cuttingNotes, setCuttingNotes] = useState("");
+  const [savingCutting, setSavingCutting] = useState(false);
+
+  // Onion storage & sales
+  const [storageStartDate, setStorageStartDate] = useState("");
+  const [storageLocation, setStorageLocation] = useState("");
+  const [storageQty, setStorageQty] = useState("");
+  const [storageUnit, setStorageUnit] = useState("kg");
+  const [storageCostPerMonth, setStorageCostPerMonth] = useState("");
+  const [savingStorage, setSavingStorage] = useState(false);
+
+  const [onionSaleDate, setOnionSaleDate] = useState("");
+  const [onionQtySold, setOnionQtySold] = useState("");
+  const [onionPricePerKg, setOnionPricePerKg] = useState("");
+  const [onionBuyerName, setOnionBuyerName] = useState("");
+  const [onionSaleNotes, setOnionSaleNotes] = useState("");
+  const [savingOnionSale, setSavingOnionSale] = useState(false);
+
+  // Kuchi kilangu details
+  const [kuchiDetailsId, setKuchiDetailsId] = useState<string | null>(null);
+  const [kuchiStemsPlanted, setKuchiStemsPlanted] = useState("");
+  const [kuchiSpacingFeet, setKuchiSpacingFeet] = useState("");
+  const [savingKuchiDetails, setSavingKuchiDetails] = useState(false);
+
+  // Kuchi kilangu income
+  const [kuchiSaleDate, setKuchiSaleDate] = useState("");
+  const [kuchiQtySold, setKuchiQtySold] = useState("");
+  const [kuchiUnit, setKuchiUnit] = useState("kg");
+  const [kuchiRatePerKg, setKuchiRatePerKg] = useState("");
+  const [kuchiBuyerType, setKuchiBuyerType] = useState("local_market");
+  const [kuchiBuyerName, setKuchiBuyerName] = useState("");
+  const [kuchiSaleNotes, setKuchiSaleNotes] = useState("");
+  const [savingKuchiSale, setSavingKuchiSale] = useState(false);
+
+  // Turmeric income (crop sale) - bulb and finger side by side
   const [turmericSaleDate, setTurmericSaleDate] = useState("");
   const [turmericMarketName, setTurmericMarketName] = useState("");
-  const [turmericType, setTurmericType] = useState<"bulb" | "finger">("bulb");
-  const [turmericQtySold, setTurmericQtySold] = useState("");
-  const [turmericSaleUnit, setTurmericSaleUnit] = useState("kg");
-  const [turmericPricePerKg, setTurmericPricePerKg] = useState("");
-  const [turmericSaleAmountOverride, setTurmericSaleAmountOverride] = useState("");
+  const [turmericBulbQtySold, setTurmericBulbQtySold] = useState("");
+  const [turmericBulbSaleUnit, setTurmericBulbSaleUnit] = useState("kg");
+  const [turmericBulbPricePerUnit, setTurmericBulbPricePerUnit] = useState("");
+  const [turmericFingerQtySold, setTurmericFingerQtySold] = useState("");
+  const [turmericFingerSaleUnit, setTurmericFingerSaleUnit] = useState("kg");
+  const [turmericFingerPricePerUnit, setTurmericFingerPricePerUnit] = useState("");
   const [turmericSaleBuyer, setTurmericSaleBuyer] = useState("");
   const [turmericSaleNotes, setTurmericSaleNotes] = useState("");
   const [savingTurmericSale, setSavingTurmericSale] = useState(false);
-
-  // Turmeric harvest
-  const [turmericHarvestDate, setTurmericHarvestDate] = useState("");
-  const [turmericRawYield, setTurmericRawYield] = useState("");
-  const [turmericAfterBoiling, setTurmericAfterBoiling] = useState("");
-  const [turmericAfterDrying, setTurmericAfterDrying] = useState("");
-  const [turmericAfterPolishing, setTurmericAfterPolishing] = useState("");
-  const [turmericHarvestNotes, setTurmericHarvestNotes] = useState("");
-  const [savingTurmericHarvest, setSavingTurmericHarvest] = useState(false);
 
   // Turmeric activities (generic engine)
   const [formValues, setFormValues] = useState<Record<string, Record<string, string>>>({});
@@ -441,13 +606,25 @@ export default function CropDetail() {
   const [largeCount, setLargeCount] = useState("");
   const [largePrice, setLargePrice] = useState("");
   const [buyerName, setBuyerName] = useState("");
+  const [buyerContact, setBuyerContact] = useState("");
   const [savingIncome, setSavingIncome] = useState(false);
 
   const [incomeDate, setIncomeDate] = useState("");
-  const [incomeCategory, setIncomeCategory] = useState("harvest");
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeBuyer, setIncomeBuyer] = useState("");
   const [incomeNotes, setIncomeNotes] = useState("");
+
+  // Sugarcane income
+  const [sugarcaneSaleDate, setSugarcaneSaleDate] = useState("");
+  const [sugarcaneBuyerName, setSugarcaneBuyerName] = useState("");
+  const [sugarcaneQuantityTons, setSugarcaneQuantityTons] = useState("");
+  const [sugarcaneRatePerTon, setSugarcaneRatePerTon] = useState("");
+  const [sugarcaneNotes, setSugarcaneNotes] = useState("");
+  const [savingSugarcaneIncome, setSavingSugarcaneIncome] = useState(false);
+
+  // Sugarcane labour expense
+  const [sugarcaneLabourRatePerTon, setSugarcaneLabourRatePerTon] = useState("");
+  const [sugarcaneLabourTotalTons, setSugarcaneLabourTotalTons] = useState("");
 
   // Expenses
   const [expenseRecords, setExpenseRecords] = useState<ExpenseRecord[]>([]);
@@ -520,10 +697,22 @@ export default function CropDetail() {
     if (isTurmeric) fetchTurmericDetails();
   }, [isTurmeric, id]);
 
+  useEffect(() => {
+    if (isEllu) fetchElluDetails();
+  }, [isEllu, id]);
+
+  useEffect(() => {
+    if (isKuchiKilangu) fetchKuchiDetails();
+  }, [isKuchiKilangu, id]);
+
   const fetchCultivation = async () => {
     setLoading(true);
     const { data, error } = await supabase.from("cultivations").select("*").eq("id", id).single();
-    if (!error && data) setCultivation(data);
+    if (!error && data) {
+      setCultivation(data);
+      const { data: farmData } = await supabase.from("farms").select("name").eq("id", data.farm_id).single();
+      if (farmData) setFarmName(farmData.name);
+    }
     setLoading(false);
   };
 
@@ -555,6 +744,36 @@ export default function CropDetail() {
       setTurmericPlantingDate(d.planting_date ?? "");
       setTurmericSeedQuantity(String(d.seed_quantity ?? ""));
       setTurmericExpectedHarvestDate(d.expected_harvest_date ?? "");
+    }
+  };
+
+  const fetchElluDetails = async () => {
+    const { data, error } = await supabase
+      .from("ellu_details")
+      .select("*")
+      .eq("cultivation_id", id)
+      .maybeSingle();
+    if (!error && data) {
+      const d = data as ElluDetails;
+      setElluDetailsId(d.id);
+      setElluVariety(d.variety ?? "");
+      setElluSowingDate(d.sowing_date ?? "");
+      setElluSeedQuantity(String(d.seed_quantity ?? ""));
+      setElluExpectedHarvestDate(d.expected_harvest_date ?? "");
+    }
+  };
+
+  const fetchKuchiDetails = async () => {
+    const { data, error } = await supabase
+      .from("kuchi_kilangu_details")
+      .select("*")
+      .eq("cultivation_id", id)
+      .maybeSingle();
+    if (!error && data) {
+      const d = data as KuchiKilanguDetails;
+      setKuchiDetailsId(d.id);
+      setKuchiStemsPlanted(String(d.stems_planted ?? ""));
+      setKuchiSpacingFeet(String(d.spacing_feet ?? ""));
     }
   };
 
@@ -671,6 +890,46 @@ export default function CropDetail() {
     setSavingTurmericDetails(false);
   };
 
+  const saveElluDetails = async () => {
+    setSavingElluDetails(true);
+    try {
+      const payload = {
+        cultivation_id: id,
+        variety: elluVariety.trim() || null,
+        sowing_date: elluSowingDate || null,
+        seed_quantity: parseFloat(elluSeedQuantity) || 0,
+        expected_harvest_date: elluExpectedHarvestDate || null,
+      };
+      const { error } = elluDetailsId
+        ? await supabase.from("ellu_details").update(payload).eq("id", elluDetailsId)
+        : await supabase.from("ellu_details").insert(payload);
+      if (error) reportError("Error saving ellu details", error.message);
+      else fetchElluDetails();
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingElluDetails(false);
+  };
+
+  const saveKuchiDetails = async () => {
+    setSavingKuchiDetails(true);
+    try {
+      const payload = {
+        cultivation_id: id,
+        stems_planted: parseInt(kuchiStemsPlanted) || 0,
+        spacing_feet: parseFloat(kuchiSpacingFeet) || 0,
+      };
+      const { error } = kuchiDetailsId
+        ? await supabase.from("kuchi_kilangu_details").update(payload).eq("id", kuchiDetailsId)
+        : await supabase.from("kuchi_kilangu_details").insert(payload);
+      if (error) reportError("Error saving kuchi kilangu details", error.message);
+      else fetchKuchiDetails();
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingKuchiDetails(false);
+  };
+
   // ---- Coconut income ----
   const smallCountNum = parseFloat(smallCount) || 0;
   const smallPriceNum = parseFloat(smallPrice) || 0;
@@ -702,12 +961,13 @@ export default function CropDetail() {
         cultivation_id: id,
         farm_id: cultivation.farm_id,
         income_date: harvestDate,
-        category: "harvest",
+        category: "crop_sale",
         amount: netRevenue,
         quantity: totalCoconutCount,
         unit: "nos",
         price_per_unit: averagePrice,
         buyer_name: buyerName.trim() || null,
+        buyer_contact: buyerContact.trim() || null,
         notes,
         small_coconuts: smallCountNum,
         large_coconuts: largeCountNum,
@@ -723,6 +983,7 @@ export default function CropDetail() {
         setLargeCount("");
         setLargePrice("");
         setBuyerName("");
+        setBuyerContact("");
         fetchIncomeRecords();
       }
     } catch (err) {
@@ -744,7 +1005,7 @@ export default function CropDetail() {
         cultivation_id: id,
         farm_id: cultivation.farm_id,
         income_date: incomeDate,
-        category: incomeCategory.trim() || null,
+        category: "crop_sale",
         amount: parseFloat(incomeAmount) || 0,
         buyer_name: incomeBuyer.trim() || null,
         notes: incomeNotes.trim() || null,
@@ -763,10 +1024,267 @@ export default function CropDetail() {
     setSavingIncome(false);
   };
 
+  // ---- Sugarcane income ----
+  const sugarcaneQuantityTonsNum = parseFloat(sugarcaneQuantityTons) || 0;
+  const sugarcaneRatePerTonNum = parseFloat(sugarcaneRatePerTon) || 0;
+  const sugarcaneSaleTotal = sugarcaneQuantityTonsNum * sugarcaneRatePerTonNum;
+
+  const saveSugarcaneIncome = async () => {
+    if (!cultivation) return;
+    if (!sugarcaneSaleDate || sugarcaneQuantityTonsNum <= 0) {
+      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      return;
+    }
+    setSavingSugarcaneIncome(true);
+    try {
+      const { error } = await supabase.from("income_records").insert({
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        income_date: sugarcaneSaleDate,
+        category: "crop_sale",
+        buyer_name: sugarcaneBuyerName.trim() || null,
+        quantity_tons: sugarcaneQuantityTonsNum,
+        rate_per_ton: sugarcaneRatePerTonNum,
+        amount: sugarcaneSaleTotal,
+        notes: sugarcaneNotes.trim() || null,
+      });
+      if (error) reportError("Error saving income", error.message);
+      else {
+        setSugarcaneSaleDate("");
+        setSugarcaneBuyerName("");
+        setSugarcaneQuantityTons("");
+        setSugarcaneRatePerTon("");
+        setSugarcaneNotes("");
+        fetchIncomeRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingSugarcaneIncome(false);
+  };
+
+  // ---- Ellu income ----
+  const elluQuantitySoldNum = parseFloat(elluQuantitySold) || 0;
+  const elluPricePerKgNum = parseFloat(elluPricePerKg) || 0;
+  const elluSaleTotal = elluQuantitySoldNum * elluPricePerKgNum;
+
+  const saveElluIncome = async () => {
+    if (!cultivation) return;
+    if (!elluSaleDate || elluQuantitySoldNum <= 0) {
+      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      return;
+    }
+    setSavingElluIncome(true);
+    try {
+      const { error } = await supabase.from("income_records").insert({
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        income_date: elluSaleDate,
+        category: "crop_sale",
+        quantity: elluQuantitySoldNum,
+        unit: "kg",
+        price_per_unit: elluPricePerKgNum,
+        amount: elluSaleTotal,
+        buyer_name: elluBuyerName.trim() || null,
+        notes: elluSaleNotes.trim() || null,
+      });
+      if (error) reportError("Error saving income", error.message);
+      else {
+        setElluSaleDate("");
+        setElluQuantitySold("");
+        setElluPricePerKg("");
+        setElluBuyerName("");
+        setElluSaleNotes("");
+        fetchIncomeRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingElluIncome(false);
+  };
+
+  // ---- Fodder corn cutting cycles ----
+  const cuttingQtyNum = parseFloat(cuttingQty) || 0;
+  const cuttingRateNum = parseFloat(cuttingRate) || 0;
+  const cuttingAmount = cuttingQtyNum * cuttingRateNum;
+  const nextCutNumber = harvestRecords.length + 1;
+
+  const saveCutting = async () => {
+    if (!cultivation) return;
+    if (!cuttingDate || cuttingQtyNum <= 0) {
+      alert(L("Cutting date and quantity are required", "வெட்டும் தேதி மற்றும் அளவு தேவை"));
+      return;
+    }
+    setSavingCutting(true);
+    try {
+      const { error: harvestError } = await supabase.from("harvest_records").insert({
+        cultivation_id: id,
+        harvest_date: cuttingDate,
+        yield_quantity: cuttingQtyNum,
+        yield_unit: cuttingUnit,
+        cutting_number: nextCutNumber,
+        notes: cuttingNotes.trim() || null,
+      });
+      if (harvestError) {
+        reportError("Error saving cutting record", harvestError.message);
+        setSavingCutting(false);
+        return;
+      }
+      const { error: incomeError } = await supabase.from("income_records").insert({
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        income_date: cuttingDate,
+        category: "crop_sale",
+        stage: "fodder_cutting",
+        amount: cuttingAmount,
+        quantity: cuttingQtyNum,
+        unit: cuttingUnit,
+        price_per_unit: cuttingRateNum,
+        buyer_name: cuttingSoldTo.trim() || null,
+      });
+      if (incomeError) reportError("Error saving income", incomeError.message);
+      setCuttingDate("");
+      setCuttingQty("");
+      setCuttingSoldTo("");
+      setCuttingRate("");
+      setCuttingNotes("");
+      fetchHarvestRecords();
+      fetchIncomeRecords();
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingCutting(false);
+  };
+
+  // ---- Onion storage & sales ----
+  const saveStorage = async () => {
+    if (!cultivation) return;
+    if (!storageStartDate || !storageLocation.trim() || !storageCostPerMonth) {
+      alert(L("Storage date, location, and cost are required", "சேமிப்பு தேதி, இடம் மற்றும் செலவு தேவை"));
+      return;
+    }
+    setSavingStorage(true);
+    try {
+      const { error } = await supabase.from("expense_records").insert({
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        expense_date: storageStartDate,
+        category: "miscellaneous",
+        stage: "storage",
+        amount: parseFloat(storageCostPerMonth) || 0,
+        description: `Storage at ${storageLocation.trim()} - ${storageQty || 0} ${storageUnit}`,
+      });
+      if (error) reportError("Error saving storage record", error.message);
+      else {
+        setStorageStartDate("");
+        setStorageLocation("");
+        setStorageQty("");
+        setStorageCostPerMonth("");
+        fetchExpenseRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingStorage(false);
+  };
+
+  const onionQtySoldNum = parseFloat(onionQtySold) || 0;
+  const onionPricePerKgNum = parseFloat(onionPricePerKg) || 0;
+  const onionSaleTotal = onionQtySoldNum * onionPricePerKgNum;
+
+  const saveOnionSale = async () => {
+    if (!cultivation) return;
+    if (!onionSaleDate || onionQtySoldNum <= 0) {
+      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      return;
+    }
+    setSavingOnionSale(true);
+    try {
+      const { error } = await supabase.from("income_records").insert({
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        income_date: onionSaleDate,
+        category: "crop_sale",
+        stage: "onion_sale",
+        quantity: onionQtySoldNum,
+        unit: "kg",
+        price_per_unit: onionPricePerKgNum,
+        amount: onionSaleTotal,
+        buyer_name: onionBuyerName.trim() || null,
+        notes: onionSaleNotes.trim() || null,
+      });
+      if (error) reportError("Error saving income", error.message);
+      else {
+        setOnionSaleDate("");
+        setOnionQtySold("");
+        setOnionPricePerKg("");
+        setOnionBuyerName("");
+        setOnionSaleNotes("");
+        fetchIncomeRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingOnionSale(false);
+  };
+
+  // ---- Kuchi kilangu income ----
+  const kuchiQtySoldNum = parseFloat(kuchiQtySold) || 0;
+  const kuchiRatePerKgNum = parseFloat(kuchiRatePerKg) || 0;
+  const kuchiSaleTotal = kuchiQtySoldNum * kuchiRatePerKgNum;
+
+  const saveKuchiIncome = async () => {
+    if (!cultivation) return;
+    if (!kuchiSaleDate || kuchiQtySoldNum <= 0) {
+      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      return;
+    }
+    setSavingKuchiSale(true);
+    try {
+      const buyerTypeLabel = KUCHI_BUYER_TYPES.find((b) => b.value === kuchiBuyerType)?.en ?? kuchiBuyerType;
+      const notes = `Buyer Type: ${buyerTypeLabel}${kuchiSaleNotes.trim() ? ` · ${kuchiSaleNotes.trim()}` : ""}`;
+      const { error } = await supabase.from("income_records").insert({
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        income_date: kuchiSaleDate,
+        category: "crop_sale",
+        stage: "kilangu_sale",
+        quantity: kuchiQtySoldNum,
+        unit: kuchiUnit,
+        price_per_unit: kuchiRatePerKgNum,
+        amount: kuchiSaleTotal,
+        buyer_name: kuchiBuyerName.trim() || null,
+        notes,
+      });
+      if (error) reportError("Error saving income", error.message);
+      else {
+        setKuchiSaleDate("");
+        setKuchiQtySold("");
+        setKuchiRatePerKg("");
+        setKuchiBuyerName("");
+        setKuchiSaleNotes("");
+        fetchIncomeRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingKuchiSale(false);
+  };
+
   // ---- Generic expense ----
+  const isSugarcaneLabour = isSugarcane && expenseCategory === "labour";
+  const sugarcaneLabourRateNum = parseFloat(sugarcaneLabourRatePerTon) || 0;
+  const sugarcaneLabourTonsNum = parseFloat(sugarcaneLabourTotalTons) || 0;
+  const sugarcaneLabourTotal = sugarcaneLabourRateNum * sugarcaneLabourTonsNum;
+
   const saveExpense = async () => {
     if (!cultivation) return;
-    if (!expenseDate || !expenseAmount) {
+    if (isSugarcaneLabour) {
+      if (!expenseDate || sugarcaneLabourRateNum <= 0 || sugarcaneLabourTonsNum <= 0) {
+        alert(L("Date, rate per ton, and total tons are required", "தேதி, டன் விலை மற்றும் டன் அளவு தேவை"));
+        return;
+      }
+    } else if (!expenseDate || !expenseAmount) {
       alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
@@ -779,7 +1297,10 @@ export default function CropDetail() {
         category: expenseCategory,
         description: expenseDescription.trim() || null,
         vendor_name: expenseVendorName.trim() || null,
-        amount: parseFloat(expenseAmount) || 0,
+        amount: isSugarcaneLabour ? sugarcaneLabourTotal : parseFloat(expenseAmount) || 0,
+        ...(isSugarcaneLabour
+          ? { rate_per_ton: sugarcaneLabourRateNum, total_tons: sugarcaneLabourTonsNum }
+          : {}),
       });
       if (error) reportError("Error saving expense", error.message);
       else {
@@ -787,6 +1308,8 @@ export default function CropDetail() {
         setExpenseDescription("");
         setExpenseVendorName("");
         setExpenseAmount("");
+        setSugarcaneLabourRatePerTon("");
+        setSugarcaneLabourTotalTons("");
         fetchExpenseRecords();
       }
     } catch (err) {
@@ -899,7 +1422,7 @@ export default function CropDetail() {
   // ---- Weed removal ----
   const weedDays =
     weedStart && weedEnd
-      ? Math.max(Math.floor((new Date(weedEnd).getTime() - new Date(weedStart).getTime()) / 86400000) + 1, 0)
+      ? Math.abs(Math.ceil((new Date(weedEnd).getTime() - new Date(weedStart).getTime()) / 86400000)) + 1
       : 0;
   const weedWorkersNum = parseFloat(weedWorkers) || 0;
   const weedCostPerDayNum = parseFloat(weedCostPerDay) || 0;
@@ -971,6 +1494,7 @@ export default function CropDetail() {
   };
 
   const deleteExpenseRecord = async (recordId: string) => {
+    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
     try {
       const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
@@ -981,6 +1505,7 @@ export default function CropDetail() {
   };
 
   const deleteIncomeRecord = async (recordId: string) => {
+    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
     try {
       const { error } = await supabase.from("income_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
@@ -1014,6 +1539,7 @@ export default function CropDetail() {
           vendor_name: values.vendor_name?.trim() || null,
           amount,
           notes: values.notes?.trim() || null,
+          ...(sub.extraColumns ? sub.extraColumns(values) : {}),
         })
         .select("id")
         .single();
@@ -1064,44 +1590,67 @@ export default function CropDetail() {
     setSavingActivity((s) => ({ ...s, [sub.key]: false }));
   };
 
-  // ---- Turmeric crop sale income ----
-  const turmericSaleQtyNum = parseFloat(turmericQtySold) || 0;
-  const turmericSalePriceNum = parseFloat(turmericPricePerKg) || 0;
-  const turmericSaleAutoTotal = turmericSaleQtyNum * turmericSalePriceNum;
-  const turmericSaleTotal = turmericSaleAmountOverride.trim()
-    ? parseFloat(turmericSaleAmountOverride) || 0
-    : turmericSaleAutoTotal;
+  // ---- Turmeric crop sale income (bulb + finger side by side) ----
+  const turmericBulbQtyNum = parseFloat(turmericBulbQtySold) || 0;
+  const turmericBulbPriceNum = parseFloat(turmericBulbPricePerUnit) || 0;
+  const turmericBulbSaleTotal = turmericBulbQtyNum * turmericBulbPriceNum;
+  const turmericFingerQtyNum = parseFloat(turmericFingerQtySold) || 0;
+  const turmericFingerPriceNum = parseFloat(turmericFingerPricePerUnit) || 0;
+  const turmericFingerSaleTotal = turmericFingerQtyNum * turmericFingerPriceNum;
+  const turmericGrandSaleTotal = turmericBulbSaleTotal + turmericFingerSaleTotal;
 
   const saveTurmericIncome = async () => {
     if (!cultivation) return;
-    if (!turmericSaleDate || turmericSaleQtyNum <= 0) {
-      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+    if (!turmericSaleDate || (turmericBulbQtyNum <= 0 && turmericFingerQtyNum <= 0)) {
+      alert(L("Sale date and at least one quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingTurmericSale(true);
     try {
-      const { error } = await supabase.from("income_records").insert({
-        cultivation_id: id,
-        farm_id: cultivation.farm_id,
-        income_date: turmericSaleDate,
-        category: "crop_sale",
-        stage: "turmeric_sale",
-        amount: turmericSaleTotal,
-        quantity: turmericSaleQtyNum,
-        unit: turmericSaleUnit,
-        price_per_unit: turmericSalePriceNum,
-        buyer_name: turmericSaleBuyer.trim() || null,
-        market_name: turmericMarketName.trim() || null,
-        turmeric_type: turmericType,
-        notes: turmericSaleNotes.trim() || null,
-      });
+      const rows = [];
+      if (turmericBulbQtyNum > 0) {
+        rows.push({
+          cultivation_id: id,
+          farm_id: cultivation.farm_id,
+          income_date: turmericSaleDate,
+          category: "crop_sale",
+          stage: "turmeric_sale",
+          turmeric_type: "bulb",
+          quantity: turmericBulbQtyNum,
+          unit: turmericBulbSaleUnit,
+          price_per_unit: turmericBulbPriceNum,
+          amount: turmericBulbSaleTotal,
+          market_name: turmericMarketName.trim() || null,
+          buyer_name: turmericSaleBuyer.trim() || null,
+          notes: turmericSaleNotes.trim() || null,
+        });
+      }
+      if (turmericFingerQtyNum > 0) {
+        rows.push({
+          cultivation_id: id,
+          farm_id: cultivation.farm_id,
+          income_date: turmericSaleDate,
+          category: "crop_sale",
+          stage: "turmeric_sale",
+          turmeric_type: "finger",
+          quantity: turmericFingerQtyNum,
+          unit: turmericFingerSaleUnit,
+          price_per_unit: turmericFingerPriceNum,
+          amount: turmericFingerSaleTotal,
+          market_name: turmericMarketName.trim() || null,
+          buyer_name: turmericSaleBuyer.trim() || null,
+          notes: turmericSaleNotes.trim() || null,
+        });
+      }
+      const { error } = await supabase.from("income_records").insert(rows);
       if (error) reportError("Error saving income", error.message);
       else {
         setTurmericSaleDate("");
         setTurmericMarketName("");
-        setTurmericQtySold("");
-        setTurmericPricePerKg("");
-        setTurmericSaleAmountOverride("");
+        setTurmericBulbQtySold("");
+        setTurmericBulbPricePerUnit("");
+        setTurmericFingerQtySold("");
+        setTurmericFingerPricePerUnit("");
         setTurmericSaleBuyer("");
         setTurmericSaleNotes("");
         fetchIncomeRecords();
@@ -1112,50 +1661,41 @@ export default function CropDetail() {
     setSavingTurmericSale(false);
   };
 
-  // ---- Turmeric harvest ----
-  const saveTurmericHarvest = async () => {
-    if (!turmericHarvestDate || !turmericAfterDrying) {
-      alert(L("Harvest date and after-drying weight are required", "அறுவடை தேதி மற்றும் உலர் எடை தேவை"));
-      return;
-    }
-    setSavingTurmericHarvest(true);
+  const deleteTurmericSaleGroup = async (group: TurmericSaleGroup) => {
+    const confirmMsg = L("Delete this sale entry?", "இந்த விற்பனை பதிவை நீக்கவா?");
+    if (!confirm(confirmMsg)) return;
+    const ids = [group.bulb?.id, group.finger?.id].filter((v): v is string => !!v);
+    if (ids.length === 0) return;
     try {
-      const notes =
-        `Raw: ${turmericRawYield || 0}kg, After boiling: ${turmericAfterBoiling || 0}kg, ` +
-        `After drying: ${turmericAfterDrying || 0}kg (final), After polishing: ${turmericAfterPolishing || 0}kg` +
-        (turmericHarvestNotes.trim() ? ` · ${turmericHarvestNotes.trim()}` : "");
-      const { error } = await supabase.from("harvest_records").insert({
-        cultivation_id: id,
-        harvest_date: turmericHarvestDate,
-        yield_quantity: parseFloat(turmericAfterDrying) || 0,
-        yield_unit: "kg",
-        notes,
-      });
-      if (error) reportError("Error saving harvest", error.message);
-      else {
-        setTurmericHarvestDate("");
-        setTurmericRawYield("");
-        setTurmericAfterBoiling("");
-        setTurmericAfterDrying("");
-        setTurmericAfterPolishing("");
-        setTurmericHarvestNotes("");
-        fetchHarvestRecords();
-      }
+      const { error } = await supabase.from("income_records").delete().in("id", ids);
+      if (error) reportError("Error deleting record", error.message);
+      else fetchIncomeRecords();
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
-    setSavingTurmericHarvest(false);
   };
 
   const totalIncome = incomeRecords.reduce((sum, r) => sum + Number(r.amount), 0);
   const totalExpenses = expenseRecords.reduce((sum, r) => sum + Number(r.amount), 0);
   const netProfit = totalIncome - totalExpenses;
 
-  const turmericTotalYield = harvestRecords.reduce((sum, r) => sum + Number(r.yield_quantity), 0);
-  const turmericSales = incomeRecords.filter((r) => r.stage === "turmeric_sale");
-  const turmericTotalSold = turmericSales.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0);
-  const turmericRemainingStock = turmericTotalYield - turmericTotalSold;
+  const lastActivityTimestamps = [
+    ...incomeRecords.map((r) => r.created_at),
+    ...expenseRecords.map((r) => r.created_at),
+  ].filter((v): v is string => !!v);
+  const lastActivityDays = lastActivityTimestamps.length
+    ? Math.floor((Date.now() - Math.max(...lastActivityTimestamps.map((t) => new Date(t).getTime()))) / 86400000)
+    : null;
 
+  const cultivationStatusLabel = (() => {
+    const s = cultivation?.status ?? "active";
+    return s === "completed" ? L("Completed", "முடிந்தது") : s === "finished" ? L("Finished", "நிறைவு") : L("Active", "செயலில்");
+  })();
+  const cultivationDays = cultivation?.start_date
+    ? Math.floor((Date.now() - new Date(cultivation.start_date).getTime()) / 86400000)
+    : null;
+
+  const turmericSales = incomeRecords.filter((r) => r.stage === "turmeric_sale");
   const turmericBulbSales = turmericSales.filter((r) => r.turmeric_type === "bulb");
   const turmericFingerSales = turmericSales.filter((r) => r.turmeric_type === "finger");
   const turmericBulbQty = turmericBulbSales.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0);
@@ -1164,12 +1704,43 @@ export default function CropDetail() {
   const turmericFingerTotal = turmericFingerSales.reduce((sum, r) => sum + Number(r.amount), 0);
   const turmericSalesGrandTotal = turmericBulbTotal + turmericFingerTotal;
 
+  type TurmericSaleGroup = {
+    key: string;
+    date: string;
+    market: string | null;
+    buyer: string | null;
+    bulb?: IncomeRecord;
+    finger?: IncomeRecord;
+  };
+  const turmericSaleGroups: TurmericSaleGroup[] = (() => {
+    const map = new Map<string, TurmericSaleGroup>();
+    turmericSales.forEach((r) => {
+      const key = `${r.income_date}__${r.market_name ?? ""}`;
+      const group = map.get(key) ?? { key, date: r.income_date, market: r.market_name, buyer: r.buyer_name };
+      if (r.turmeric_type === "bulb") group.bulb = r;
+      else if (r.turmeric_type === "finger") group.finger = r;
+      map.set(key, group);
+    });
+    return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+  })();
+
   const turmericExpenseBreakdown = TURMERIC_SUBSECTIONS.map((sub) => ({
     key: sub.key,
     titleEn: sub.titleEn,
     titleTa: sub.titleTa,
     total: expenseRecords.filter((r) => r.stage === sub.stage).reduce((sum, r) => sum + Number(r.amount), 0),
   }));
+
+  const fodderCuttings = [...harvestRecords]
+    .sort((a, b) => (a.cutting_number ?? 0) - (b.cutting_number ?? 0))
+    .map((h) => ({
+      harvest: h,
+      income: incomeRecords.find((r) => r.stage === "fodder_cutting" && r.income_date === h.harvest_date),
+    }));
+
+  const totalStorageCost = expenseRecords.filter((r) => r.stage === "storage").reduce((sum, r) => sum + Number(r.amount), 0);
+  const totalOnionSalesIncome = incomeRecords.filter((r) => r.stage === "onion_sale").reduce((sum, r) => sum + Number(r.amount), 0);
+  const netAfterStorage = totalOnionSalesIncome - totalStorageCost;
 
   const renderField = (sub: ActivitySubsection, f: ActivityField, values: Record<string, string>) => (
     <div key={f.name}>
@@ -1277,22 +1848,69 @@ export default function CropDetail() {
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
           {/* Header */}
-          <div className="bg-white rounded-xl shadow-sm py-2 px-4 flex items-center justify-between shrink-0">
-            <Link
-              href={cultivation ? `/farms/${cultivation.farm_id}` : "/farms"}
-              className="text-green-700 hover:text-green-800 text-sm font-semibold"
-            >
-              ← {L("Back to Farm", "நிலத்திற்கு திரும்பு")}
-            </Link>
-            <h1 className="text-base font-bold text-green-800">
-              {crop.icon} {lang === "ta" ? crop.labelTa : crop.labelEn} · {cultivation?.area} {L("Acres", "ஏக்கர்")}
-            </h1>
-            <button
-              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-              className="px-3 py-1.5 rounded-lg border border-green-300 text-green-700 text-sm font-medium hover:bg-green-50 transition"
-            >
-              {lang === "ta" ? "English" : "தமிழ்"}
-            </button>
+          <div className="bg-white rounded-xl shadow-sm py-2 px-4 shrink-0">
+            <div className="flex items-center justify-between">
+              <Link
+                href={cultivation ? `/farms/${cultivation.farm_id}` : "/farms"}
+                className="text-green-700 hover:text-green-800 text-sm font-semibold"
+              >
+                ← {L("Back to Farm", "நிலத்திற்கு திரும்பு")}
+              </Link>
+              <h1 className="text-lg font-bold text-green-800">
+                {crop.icon} {lang === "ta" ? crop.labelTa : crop.labelEn}
+              </h1>
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-green-300 text-green-700 text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <span className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                🌳 {farmName}
+              </span>
+              <span className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                📐 {cultivation?.area} {L("Acres", "ஏக்கர்")}
+              </span>
+              <span className={`${STATUS_BADGE[cultivation?.status ?? "active"] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+                {cultivationStatusLabel}
+              </span>
+              {cultivation?.start_date && (
+                <span className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  📅 {L("Started", "தொடக்கம்")}: {formatDMY(cultivation.start_date)}
+                  {cultivationDays !== null && ` · ${L("Day", "நாள்")} ${cultivationDays}`}
+                </span>
+              )}
+              {cultivation?.end_date && (
+                <span className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  → {L("Ended", "முடிவு")}: {formatDMY(cultivation.end_date)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
+            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
+              <p className="text-xs font-medium text-gray-700">💸 {L("Total Spent", "மொத்த செலவு")}</p>
+              <p className="text-lg font-bold text-red-600">{inr(totalExpenses)}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
+              <p className="text-xs font-medium text-gray-700">💰 {L("Total Earned", "மொத்த வருமானம்")}</p>
+              <p className="text-lg font-bold text-green-700">{inr(totalIncome)}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
+              <p className="text-xs font-medium text-gray-700">📈 {L("Net P/L", "நிகர")}</p>
+              <p className={`text-lg font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-600"}`}>{inr(netProfit)}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
+              <p className="text-xs font-medium text-gray-700">🕐 {L("Last Activity", "கடைசி செயல்பாடு")}</p>
+              <p className="text-lg font-bold text-gray-700">
+                {lastActivityDays === null ? "—" : `${lastActivityDays} ${L("days ago", "நாட்கள் முன்பு")}`}
+              </p>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -1407,6 +2025,72 @@ export default function CropDetail() {
                     {savingTurmericDetails ? "..." : L("Save", "சேமி")}
                   </button>
                 </>
+              ) : isEllu ? (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🌾 {L("Ellu Cultivation Details", "எள்ளு பயிர் விவரங்கள்")}
+                  </h2>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Seed Variety Name", "விதை வகை பெயர்")}</label>
+                      <input type="text" value={elluVariety} onChange={(e) => setElluVariety(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Sowing Date", "விதைப்பு தேதி")}</label>
+                      <input type="date" value={elluSowingDate} onChange={(e) => setElluSowingDate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Seed Quantity (kg)", "விதை அளவு (கி.கி)")}</label>
+                      <input type="number" step="0.01" value={elluSeedQuantity} onChange={(e) => setElluSeedQuantity(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Expected Harvest Date", "எதிர்பார்க்கும் அறுவடை தேதி")}</label>
+                      <input type="date" value={elluExpectedHarvestDate} onChange={(e) => setElluExpectedHarvestDate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Area Under Cultivation", "பயிரிடப்பட்ட பரப்பு")}</label>
+                      <input type="text" disabled value={`${cultivation?.area ?? ""} ${L("Acres", "ஏக்கர்")}`} className={`${inputCls} bg-gray-100 text-gray-500`} />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={saveElluDetails}
+                    disabled={savingElluDetails}
+                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingElluDetails ? "..." : L("Save", "சேமி")}
+                  </button>
+                </>
+              ) : isKuchiKilangu ? (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🥔 {L("Kuchi Kilangu Cultivation Details", "கூச்சிக்கிழங்கு பயிர் விவரங்கள்")}
+                  </h2>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Stems/Cuttings Planted", "தண்டு/குச்சி எண்ணிக்கை")}</label>
+                      <input type="number" value={kuchiStemsPlanted} onChange={(e) => setKuchiStemsPlanted(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Spacing (feet)", "இடைவெளி (அடி)")}</label>
+                      <input type="number" step="0.1" value={kuchiSpacingFeet} onChange={(e) => setKuchiSpacingFeet(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Area Under Cultivation", "பயிரிடப்பட்ட பரப்பு")}</label>
+                      <input type="text" disabled value={`${cultivation?.area ?? ""} ${L("Acres", "ஏக்கர்")}`} className={`${inputCls} bg-gray-100 text-gray-500`} />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={saveKuchiDetails}
+                    disabled={savingKuchiDetails}
+                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingKuchiDetails ? "..." : L("Save", "சேமி")}
+                  </button>
+                </>
               ) : (
                 <div className="text-sm text-gray-600">
                   {L("Cultivation", "பயிர் தகவல்")}: {lang === "ta" ? crop.labelTa : crop.labelEn} ·{" "}
@@ -1451,6 +2135,16 @@ export default function CropDetail() {
                         <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
                         <input type="text" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} className={inputCls} />
                       </div>
+                      <div>
+                        <label className={labelCls}>{L("Buyer Contact", "வாங்குபவர் தொடர்பு")}</label>
+                        <input
+                          type="text"
+                          placeholder={L("Phone number (optional)", "தொலைபேசி எண் (விருப்பம்)")}
+                          value={buyerContact}
+                          onChange={(e) => setBuyerContact(e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
                     </div>
 
                     {totalCoconutCount > 0 && (
@@ -1490,6 +2184,54 @@ export default function CropDetail() {
                       </div>
                     )}
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                      <div className="bg-amber-50 rounded-xl p-2">
+                        <p className="text-xs font-semibold text-gray-700 mb-1.5">🟡 {L("Bulb Turmeric", "கிழங்கு மஞ்சள்")}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className={labelCls}>{L("Quantity", "அளவு")}</label>
+                            <input type="number" value={turmericBulbQtySold} onChange={(e) => setTurmericBulbQtySold(e.target.value)} className={inputCls} />
+                          </div>
+                          <div>
+                            <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                            <select value={turmericBulbSaleUnit} onChange={(e) => setTurmericBulbSaleUnit(e.target.value)} className={inputCls}>
+                              {["kg", "quintal", "tonne"].map((u) => (
+                                <option className="text-gray-900" key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <label className={labelCls}>{L("Price per unit (₹)", "யூனிட் விலை (₹)")}</label>
+                            <input type="number" value={turmericBulbPricePerUnit} onChange={(e) => setTurmericBulbPricePerUnit(e.target.value)} className={inputCls} />
+                          </div>
+                        </div>
+                        <p className="text-xs font-mono text-gray-700 mt-1.5">{L("Total", "மொத்தம்")}: {inr(turmericBulbSaleTotal)}</p>
+                      </div>
+
+                      <div className="bg-amber-50 rounded-xl p-2">
+                        <p className="text-xs font-semibold text-gray-700 mb-1.5">🟡 {L("Finger Turmeric", "விரல் மஞ்சள்")}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className={labelCls}>{L("Quantity", "அளவு")}</label>
+                            <input type="number" value={turmericFingerQtySold} onChange={(e) => setTurmericFingerQtySold(e.target.value)} className={inputCls} />
+                          </div>
+                          <div>
+                            <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                            <select value={turmericFingerSaleUnit} onChange={(e) => setTurmericFingerSaleUnit(e.target.value)} className={inputCls}>
+                              {["kg", "quintal", "tonne"].map((u) => (
+                                <option className="text-gray-900" key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <label className={labelCls}>{L("Price per unit (₹)", "யூனிட் விலை (₹)")}</label>
+                            <input type="number" value={turmericFingerPricePerUnit} onChange={(e) => setTurmericFingerPricePerUnit(e.target.value)} className={inputCls} />
+                          </div>
+                        </div>
+                        <p className="text-xs font-mono text-gray-700 mt-1.5">{L("Total", "மொத்தம்")}: {inr(turmericFingerSaleTotal)}</p>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                       <div>
                         <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
@@ -1506,39 +2248,6 @@ export default function CropDetail() {
                         />
                       </div>
                       <div>
-                        <label className={labelCls}>{L("Turmeric Type", "மஞ்சள் வகை")}</label>
-                        <select value={turmericType} onChange={(e) => setTurmericType(e.target.value as "bulb" | "finger")} className={inputCls}>
-                          <option className="text-gray-900" value="bulb">{L("Bulb Turmeric", "கிழங்கு மஞ்சள்")}</option>
-                          <option className="text-gray-900" value="finger">{L("Finger Turmeric", "விரல் மஞ்சள்")}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Quantity Sold", "விற்பனை அளவு")}</label>
-                        <input type="number" value={turmericQtySold} onChange={(e) => setTurmericQtySold(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
-                        <select value={turmericSaleUnit} onChange={(e) => setTurmericSaleUnit(e.target.value)} className={inputCls}>
-                          {["kg", "quintal", "tonne"].map((u) => (
-                            <option className="text-gray-900" key={u} value={u}>{u}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Rate per unit (₹)", "யூனிட் விலை (₹)")}</label>
-                        <input type="number" value={turmericPricePerKg} onChange={(e) => setTurmericPricePerKg(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Total Amount (₹)", "மொத்த தொகை (₹)")}</label>
-                        <input
-                          type="number"
-                          placeholder={`${L("Auto", "தானியங்கி")}: ₹${turmericSaleAutoTotal.toFixed(2)}`}
-                          value={turmericSaleAmountOverride}
-                          onChange={(e) => setTurmericSaleAmountOverride(e.target.value)}
-                          className={inputCls}
-                        />
-                      </div>
-                      <div>
                         <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
                         <input type="text" value={turmericSaleBuyer} onChange={(e) => setTurmericSaleBuyer(e.target.value)} className={inputCls} />
                       </div>
@@ -1547,29 +2256,154 @@ export default function CropDetail() {
                         <input type="text" value={turmericSaleNotes} onChange={(e) => setTurmericSaleNotes(e.target.value)} className={inputCls} />
                       </div>
                     </div>
-                    {turmericSaleQtyNum > 0 && (
-                      <p className="text-xs font-mono text-gray-700 mb-2">
-                        {turmericSaleQtyNum} {turmericSaleUnit} × ₹{turmericSalePriceNum} = ₹{turmericSaleTotal.toFixed(2)}
-                      </p>
-                    )}
+
+                    <p className="text-sm font-bold text-green-700 mb-2">
+                      {L("Grand Total", "மொத்தம்")}: {inr(turmericGrandSaleTotal)}
+                    </p>
+
                     <button
                       onClick={saveTurmericIncome}
                       disabled={savingTurmericSale}
                       className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
-                      {savingTurmericSale ? "..." : L("Save Income", "வருமானம் சேமி")}
+                      {savingTurmericSale ? "..." : L("Save Sale", "விற்பனை சேமி")}
+                    </button>
+                  </>
+                ) : isSugarcane ? (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
+                        <input type="date" value={sugarcaneSaleDate} onChange={(e) => setSugarcaneSaleDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Buyer Name (Mill/Company)", "வாங்குபவர் (ஆலை/நிறுவனம்)")}</label>
+                        <input type="text" value={sugarcaneBuyerName} onChange={(e) => setSugarcaneBuyerName(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Quantity (Tons)", "அளவு (டன்)")}</label>
+                        <input type="number" value={sugarcaneQuantityTons} onChange={(e) => setSugarcaneQuantityTons(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Rate per Ton (₹)", "டன் விலை (₹)")}</label>
+                        <input type="number" value={sugarcaneRatePerTon} onChange={(e) => setSugarcaneRatePerTon(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                        <input type="text" value={sugarcaneNotes} onChange={(e) => setSugarcaneNotes(e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                    {sugarcaneQuantityTonsNum > 0 && (
+                      <p className="text-xs font-mono text-gray-700 mb-2">
+                        {sugarcaneQuantityTonsNum} tons × ₹{sugarcaneRatePerTonNum} = {L("Total Amount", "மொத்த தொகை")}: {inr(sugarcaneSaleTotal)}
+                      </p>
+                    )}
+                    <button
+                      onClick={saveSugarcaneIncome}
+                      disabled={savingSugarcaneIncome}
+                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    >
+                      {savingSugarcaneIncome ? "..." : L("Save Income", "வருமானம் சேமி")}
+                    </button>
+                  </>
+                ) : isEllu ? (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
+                        <input type="date" value={elluSaleDate} onChange={(e) => setElluSaleDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Quantity Sold (kg)", "விற்ற அளவு (கி.கி)")}</label>
+                        <input type="number" value={elluQuantitySold} onChange={(e) => setElluQuantitySold(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Price per kg (₹)", "விலை/கி.கி (₹)")}</label>
+                        <input type="number" value={elluPricePerKg} onChange={(e) => setElluPricePerKg(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
+                        <input type="text" value={elluBuyerName} onChange={(e) => setElluBuyerName(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                        <input type="text" value={elluSaleNotes} onChange={(e) => setElluSaleNotes(e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                    {elluQuantitySoldNum > 0 && (
+                      <p className="text-xs font-mono text-gray-700 mb-2">
+                        {elluQuantitySoldNum}kg × ₹{elluPricePerKgNum} = {L("Total Amount", "மொத்த தொகை")}: {inr(elluSaleTotal)}
+                      </p>
+                    )}
+                    <button
+                      onClick={saveElluIncome}
+                      disabled={savingElluIncome}
+                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    >
+                      {savingElluIncome ? "..." : L("Save Income", "வருமானம் சேமி")}
+                    </button>
+                  </>
+                ) : isKuchiKilangu ? (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
+                        <input type="date" value={kuchiSaleDate} onChange={(e) => setKuchiSaleDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Quantity Sold", "விற்ற அளவு")}</label>
+                        <input type="number" value={kuchiQtySold} onChange={(e) => setKuchiQtySold(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                        <select value={kuchiUnit} onChange={(e) => setKuchiUnit(e.target.value)} className={inputCls}>
+                          {["kg", "tonne"].map((u) => (
+                            <option className="text-gray-900" key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Rate per kg (₹)", "கி.கி விலை (₹)")}</label>
+                        <input type="number" value={kuchiRatePerKg} onChange={(e) => setKuchiRatePerKg(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Buyer Type", "வாங்குபவர் வகை")}</label>
+                        <select value={kuchiBuyerType} onChange={(e) => setKuchiBuyerType(e.target.value)} className={inputCls}>
+                          {KUCHI_BUYER_TYPES.map((b) => (
+                            <option className="text-gray-900" key={b.value} value={b.value}>
+                              {lang === "ta" ? b.ta : b.en}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
+                        <input type="text" value={kuchiBuyerName} onChange={(e) => setKuchiBuyerName(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                        <input type="text" value={kuchiSaleNotes} onChange={(e) => setKuchiSaleNotes(e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                    {kuchiQtySoldNum > 0 && (
+                      <p className="text-xs font-mono text-gray-700 mb-2">
+                        {kuchiQtySoldNum} {kuchiUnit} × ₹{kuchiRatePerKgNum} = {L("Total Amount", "மொத்த தொகை")}: {inr(kuchiSaleTotal)}
+                      </p>
+                    )}
+                    <button
+                      onClick={saveKuchiIncome}
+                      disabled={savingKuchiSale}
+                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    >
+                      {savingKuchiSale ? "..." : L("Save Income", "வருமானம் சேமி")}
                     </button>
                   </>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                       <div>
                         <label className={labelCls}>{L("Date", "தேதி")}</label>
                         <input type="date" value={incomeDate} onChange={(e) => setIncomeDate(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Category", "வகை")}</label>
-                        <input type="text" value={incomeCategory} onChange={(e) => setIncomeCategory(e.target.value)} className={inputCls} />
                       </div>
                       <div>
                         <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")}</label>
@@ -1594,44 +2428,36 @@ export default function CropDetail() {
                   </>
                 )}
 
-                {isTurmeric && turmericTotalYield > 0 && (
-                  <div className="mt-3 bg-gray-50 rounded-lg p-2 text-xs text-gray-700 space-y-0.5">
-                    <p>{L("Total Yield", "மொத்த விளைச்சல்")}: {turmericTotalYield.toFixed(2)} kg</p>
-                    <p>{L("Total Sold", "மொத்த விற்பனை")}: {turmericTotalSold.toFixed(2)} kg</p>
-                    <p className="font-semibold text-green-700">{L("Remaining Stock", "மீதமுள்ள இருப்பு")}: {turmericRemainingStock.toFixed(2)} kg</p>
-                  </div>
-                )}
-
                 {isTurmeric ? (
-                  turmericSales.length > 0 && (
+                  turmericSaleGroups.length > 0 && (
                     <div className="mt-3 overflow-x-auto max-h-48 overflow-y-auto">
                       <table className="w-full text-xs text-gray-700">
                         <thead>
                           <tr className="text-left text-gray-500 border-b border-gray-200">
                             <th className="py-1 pr-2 font-medium">{L("Date", "தேதி")}</th>
                             <th className="py-1 pr-2 font-medium">{L("Market", "சந்தை")}</th>
-                            <th className="py-1 pr-2 font-medium">{L("Type", "வகை")}</th>
-                            <th className="py-1 pr-2 font-medium">{L("Qty", "அளவு")}</th>
-                            <th className="py-1 pr-2 font-medium">{L("Rate", "விலை")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Bulb", "கிழங்கு")}</th>
+                            <th className="py-1 pr-2 font-medium">{L("Finger", "விரல்")}</th>
                             <th className="py-1 pr-2 font-medium">{L("Total", "மொத்தம்")}</th>
-                            <th className="py-1 pr-2 font-medium">{L("Buyer", "வாங்குபவர்")}</th>
                             <th className="py-1"></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {turmericSales.map((r) => (
-                            <tr key={r.id} className="border-b border-gray-50">
-                              <td className="py-1 pr-2">{r.income_date}</td>
-                              <td className="py-1 pr-2">{r.market_name || "—"}</td>
+                          {turmericSaleGroups.map((g) => (
+                            <tr key={g.key} className="border-b border-gray-50">
+                              <td className="py-1 pr-2">{formatDMY(g.date)}</td>
+                              <td className="py-1 pr-2">{g.market || "—"}</td>
                               <td className="py-1 pr-2">
-                                {r.turmeric_type === "finger" ? L("Finger", "விரல்") : L("Bulb", "கிழங்கு")}
+                                {g.bulb ? `${g.bulb.quantity}${g.bulb.unit} @ ₹${g.bulb.price_per_unit} = ${inr(Number(g.bulb.amount))}` : "—"}
                               </td>
-                              <td className="py-1 pr-2">{r.quantity} {r.unit}</td>
-                              <td className="py-1 pr-2">₹{r.price_per_unit}</td>
-                              <td className="py-1 pr-2 font-semibold text-green-700">{inr(Number(r.amount))}</td>
-                              <td className="py-1 pr-2">{r.buyer_name || "—"}</td>
+                              <td className="py-1 pr-2">
+                                {g.finger ? `${g.finger.quantity}${g.finger.unit} @ ₹${g.finger.price_per_unit} = ${inr(Number(g.finger.amount))}` : "—"}
+                              </td>
+                              <td className="py-1 pr-2 font-semibold text-green-700">
+                                {inr(Number(g.bulb?.amount ?? 0) + Number(g.finger?.amount ?? 0))}
+                              </td>
                               <td className="py-1">
-                                <button onClick={() => deleteIncomeRecord(r.id)} className="hover:text-red-600">🗑️</button>
+                                <button onClick={() => deleteTurmericSaleGroup(g)} className="hover:text-red-600">🗑️</button>
                               </td>
                             </tr>
                           ))}
@@ -1643,9 +2469,12 @@ export default function CropDetail() {
                   incomeRecords.length > 0 && (
                     <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
                       {incomeRecords.map((r) => (
-                        <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
+                        <div key={r.id} className="flex justify-between items-center text-xs text-gray-700 border-b border-gray-100 py-1">
                           <span>{r.income_date} {r.buyer_name ? `· ${r.buyer_name}` : ""}</span>
-                          <span className="font-semibold text-green-700">{inr(Number(r.amount))}</span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="font-semibold text-green-700">{inr(Number(r.amount))}</span>
+                            <button onClick={() => deleteIncomeRecord(r.id)} className="hover:text-red-600">🗑️</button>
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -1718,7 +2547,7 @@ export default function CropDetail() {
                       <div>
                         <label className={labelCls}>{L("Category", "வகை")}</label>
                         <select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} className={inputCls}>
-                          {EXPENSE_CATEGORIES.map((c) => (
+                          {(isEllu ? ELLU_EXPENSE_CATEGORIES : EXPENSE_CATEGORIES).map((c) => (
                             <option className="text-gray-900" key={c.value} value={c.value}>
                               {lang === "ta" ? c.ta : c.en}
                             </option>
@@ -1733,11 +2562,29 @@ export default function CropDetail() {
                         <label className={labelCls}>{L("Vendor Name", "விற்பனையாளர் பெயர்")}</label>
                         <input type="text" value={expenseVendorName} onChange={(e) => setExpenseVendorName(e.target.value)} className={inputCls} />
                       </div>
-                      <div>
-                        <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")}</label>
-                        <input type="number" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} className={inputCls} />
-                      </div>
+                      {isSugarcaneLabour ? (
+                        <>
+                          <div>
+                            <label className={labelCls}>{L("Rate per Ton (₹)", "டன் விலை (₹)")}</label>
+                            <input type="number" value={sugarcaneLabourRatePerTon} onChange={(e) => setSugarcaneLabourRatePerTon(e.target.value)} className={inputCls} />
+                          </div>
+                          <div>
+                            <label className={labelCls}>{L("Total Tons", "மொத்த டன்")}</label>
+                            <input type="number" value={sugarcaneLabourTotalTons} onChange={(e) => setSugarcaneLabourTotalTons(e.target.value)} className={inputCls} />
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")}</label>
+                          <input type="number" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} className={inputCls} />
+                        </div>
+                      )}
                     </div>
+                    {isSugarcaneLabour && (
+                      <p className="text-xs font-mono text-gray-700 mb-2">
+                        {L("Total Labour Cost", "மொத்த கூலி செலவு")}: {inr(sugarcaneLabourTotal)}
+                      </p>
+                    )}
                     <button
                       onClick={saveExpense}
                       disabled={savingExpense}
@@ -1765,75 +2612,35 @@ export default function CropDetail() {
                 <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
                   <h2 className="text-sm font-semibold text-gray-800 mb-2">🌾 {L("Harvest", "அறுவடை")}</h2>
 
-                  {isTurmeric ? (
-                    <>
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
-                        <div>
-                          <label className={labelCls}>{L("Harvest Date", "அறுவடை தேதி")}</label>
-                          <input type="date" value={turmericHarvestDate} onChange={(e) => setTurmericHarvestDate(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("Raw Yield (kg)", "பச்சை விளைச்சல் (கி.கி)")}</label>
-                          <input type="number" value={turmericRawYield} onChange={(e) => setTurmericRawYield(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("After Boiling (kg)", "வேகவைத்த பின் (கி.கி)")}</label>
-                          <input type="number" value={turmericAfterBoiling} onChange={(e) => setTurmericAfterBoiling(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("After Drying (kg)", "உலர்த்திய பின் (கி.கி)")}</label>
-                          <input type="number" value={turmericAfterDrying} onChange={(e) => setTurmericAfterDrying(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("After Polishing (kg)", "மெருகூட்டிய பின் (கி.கி)")}</label>
-                          <input type="number" value={turmericAfterPolishing} onChange={(e) => setTurmericAfterPolishing(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
-                          <input type="text" value={turmericHarvestNotes} onChange={(e) => setTurmericHarvestNotes(e.target.value)} className={inputCls} />
-                        </div>
-                      </div>
-                      <button
-                        onClick={saveTurmericHarvest}
-                        disabled={savingTurmericHarvest}
-                        className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
-                      >
-                        {savingTurmericHarvest ? "..." : L("Save Harvest", "அறுவடை சேமி")}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
-                        <div>
-                          <label className={labelCls}>{L("Harvest Date", "அறுவடை தேதி")}</label>
-                          <input type="date" value={harvestRecordDate} onChange={(e) => setHarvestRecordDate(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("Yield Quantity", "அளவு")}</label>
-                          <input type="number" value={yieldQuantity} onChange={(e) => setYieldQuantity(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
-                          <select value={yieldUnit} onChange={(e) => setYieldUnit(e.target.value)} className={inputCls}>
-                            {YIELD_UNITS.map((u) => (
-                              <option className="text-gray-900" key={u} value={u}>{u}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
-                          <input type="text" value={harvestNotes} onChange={(e) => setHarvestNotes(e.target.value)} className={inputCls} />
-                        </div>
-                      </div>
-                      <button
-                        onClick={saveHarvest}
-                        disabled={savingHarvest}
-                        className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
-                      >
-                        {savingHarvest ? "..." : L("Save Harvest", "அறுவடை சேமி")}
-                      </button>
-                    </>
-                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Harvest Date", "அறுவடை தேதி")}</label>
+                      <input type="date" value={harvestRecordDate} onChange={(e) => setHarvestRecordDate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Yield Quantity", "அளவு")}</label>
+                      <input type="number" value={yieldQuantity} onChange={(e) => setYieldQuantity(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                      <select value={yieldUnit} onChange={(e) => setYieldUnit(e.target.value)} className={inputCls}>
+                        {YIELD_UNITS.map((u) => (
+                          <option className="text-gray-900" key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                      <input type="text" value={harvestNotes} onChange={(e) => setHarvestNotes(e.target.value)} className={inputCls} />
+                    </div>
+                  </div>
+                  <button
+                    onClick={saveHarvest}
+                    disabled={savingHarvest}
+                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingHarvest ? "..." : L("Save Harvest", "அறுவடை சேமி")}
+                  </button>
 
                   {harvestRecords.length > 0 && (
                     <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
@@ -1845,6 +2652,98 @@ export default function CropDetail() {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Storage & Sales (Onion) */}
+              {isOnion && (
+                <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">🧅 {L("Storage & Sales", "சேமிப்பு & விற்பனை")}</h2>
+
+                  <div className="bg-amber-50 rounded-xl p-2 mb-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-1.5">{L("Storage Record", "சேமிப்பு பதிவு")}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-1">
+                      <div>
+                        <label className={labelCls}>{L("Storage Start Date", "சேமிப்பு தொடக்க தேதி")}</label>
+                        <input type="date" value={storageStartDate} onChange={(e) => setStorageStartDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Storage Location", "சேமிப்பு இடம்")}</label>
+                        <input type="text" value={storageLocation} onChange={(e) => setStorageLocation(e.target.value)} className={inputCls} />
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className={labelCls}>{L("Quantity Stored", "சேமித்த அளவு")}</label>
+                          <input type="number" value={storageQty} onChange={(e) => setStorageQty(e.target.value)} className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                          <select value={storageUnit} onChange={(e) => setStorageUnit(e.target.value)} className={inputCls}>
+                            {["kg", "bags"].map((u) => (
+                              <option className="text-gray-900" key={u} value={u}>{u}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Storage Cost/Month (₹)", "மாத சேமிப்பு செலவு (₹)")}</label>
+                        <input type="number" value={storageCostPerMonth} onChange={(e) => setStorageCostPerMonth(e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                    <button
+                      onClick={saveStorage}
+                      disabled={savingStorage}
+                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    >
+                      {savingStorage ? "..." : L("Save Storage", "சேமிப்பு சேமி")}
+                    </button>
+                  </div>
+
+                  <div className="bg-green-50 rounded-xl p-2 mb-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-1.5">{L("Sales Record", "விற்பனை பதிவு")}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-1">
+                      <div>
+                        <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
+                        <input type="date" value={onionSaleDate} onChange={(e) => setOnionSaleDate(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Quantity Sold (kg)", "விற்ற அளவு (கி.கி)")}</label>
+                        <input type="number" value={onionQtySold} onChange={(e) => setOnionQtySold(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Price per kg (₹)", "விலை/கி.கி (₹)")}</label>
+                        <input type="number" value={onionPricePerKg} onChange={(e) => setOnionPricePerKg(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
+                        <input type="text" value={onionBuyerName} onChange={(e) => setOnionBuyerName(e.target.value)} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                        <input type="text" value={onionSaleNotes} onChange={(e) => setOnionSaleNotes(e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                    {onionQtySoldNum > 0 && (
+                      <p className="text-xs font-mono text-gray-700 mb-1">
+                        {onionQtySoldNum}kg × ₹{onionPricePerKgNum} = {L("Total Amount", "மொத்த தொகை")}: {inr(onionSaleTotal)}
+                      </p>
+                    )}
+                    <button
+                      onClick={saveOnionSale}
+                      disabled={savingOnionSale}
+                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    >
+                      {savingOnionSale ? "..." : L("Save Sale", "விற்பனை சேமி")}
+                    </button>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-2 text-xs text-gray-700 space-y-0.5">
+                    <p>{L("Total Storage Cost", "மொத்த சேமிப்பு செலவு")}: {inr(totalStorageCost)}</p>
+                    <p>{L("Total Sales Income", "மொத்த விற்பனை வருமானம்")}: {inr(totalOnionSalesIncome)}</p>
+                    <p className={`font-semibold ${netAfterStorage >= 0 ? "text-green-700" : "text-red-600"}`}>
+                      {L("Net after storage", "சேமிப்புக்குப் பின் நிகரம்")}: {inr(netAfterStorage)}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -1900,6 +2799,85 @@ export default function CropDetail() {
                     {TURMERIC_SUBSECTIONS.filter((s) => TURMERIC_ACTIVITY_KEYS.includes(s.key)).map(renderSubsection)}
                   </div>
                 </>
+              )}
+
+              {isEllu && (
+                <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🌾 {L("Post-Harvest Activities", "அறுவடைக்கு பின் செயல்பாடுகள்")}
+                  </h2>
+                  {ELLU_SUBSECTIONS.map(renderSubsection)}
+                </div>
+              )}
+
+              {isFodderCorn && (
+                <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🌽 {L("Cutting Records", "வெட்டு பதிவுகள்")} · {L("Cut", "வெட்டு")} #{nextCutNumber}
+                  </h2>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Cutting Date", "வெட்டும் தேதி")}</label>
+                      <input type="date" value={cuttingDate} onChange={(e) => setCuttingDate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Quantity Cut", "வெட்டிய அளவு")}</label>
+                      <input type="number" value={cuttingQty} onChange={(e) => setCuttingQty(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
+                      <select value={cuttingUnit} onChange={(e) => setCuttingUnit(e.target.value)} className={inputCls}>
+                        {["kg", "bundles"].map((u) => (
+                          <option className="text-gray-900" key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Sold To", "விற்றது")}</label>
+                      <input type="text" value={cuttingSoldTo} onChange={(e) => setCuttingSoldTo(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Rate per unit (₹)", "யூனிட் விலை (₹)")}</label>
+                      <input type="number" value={cuttingRate} onChange={(e) => setCuttingRate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                      <input type="text" value={cuttingNotes} onChange={(e) => setCuttingNotes(e.target.value)} className={inputCls} />
+                    </div>
+                  </div>
+
+                  {cuttingQtyNum > 0 && (
+                    <p className="text-xs font-mono text-gray-700 mb-2">
+                      {L("Amount Received", "பெறப்பட்ட தொகை")}: {cuttingQtyNum}{cuttingUnit} × ₹{cuttingRateNum} = {inr(cuttingAmount)}
+                    </p>
+                  )}
+
+                  <button
+                    onClick={saveCutting}
+                    disabled={savingCutting}
+                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingCutting ? "..." : L("Save Cutting", "வெட்டு சேமி")}
+                  </button>
+
+                  {fodderCuttings.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 overflow-x-auto">
+                      {fodderCuttings.map(({ harvest, income }, idx) => (
+                        <div key={harvest.id} className="flex items-center gap-2">
+                          <div className="bg-green-50 rounded-xl p-2 border border-white shadow-sm min-w-[140px]">
+                            <p className="text-xs font-bold text-green-800">{L("Cut", "வெட்டு")} #{harvest.cutting_number}</p>
+                            <p className="text-xs text-gray-600 mt-0.5">{harvest.harvest_date}</p>
+                            <p className="text-xs text-gray-600">{harvest.yield_quantity}{harvest.yield_unit}{income ? ` @ ₹${income.price_per_unit}` : ""}</p>
+                            {income && <p className="text-xs font-semibold text-green-700">{inr(Number(income.amount))}</p>}
+                            {income?.buyer_name && <p className="text-xs text-gray-500">{income.buyer_name}</p>}
+                          </div>
+                          {idx < fodderCuttings.length - 1 && <span className="text-gray-400">→</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
 
               {!isTurmeric && (

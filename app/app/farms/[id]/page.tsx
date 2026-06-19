@@ -24,6 +24,16 @@ type Cultivation = {
   crop_type: string;
   area: number;
   status: string;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+type Financials = { spent: number; earned: number };
+
+const STATUS_BADGE: Record<string, string> = {
+  active: "bg-green-100 text-green-700",
+  completed: "bg-blue-100 text-blue-700",
+  finished: "bg-gray-200 text-gray-600",
 };
 
 const CROP_TYPES = [
@@ -97,13 +107,20 @@ export default function FarmDetail() {
   // Add cultivation form
   const [cropType, setCropType] = useState("");
   const [cropArea, setCropArea] = useState("");
+  const [cropStartDate, setCropStartDate] = useState("");
+  const [cropEndDate, setCropEndDate] = useState("");
   const [addingCultivation, setAddingCultivation] = useState(false);
 
   // Inline edit cultivation
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCropType, setEditCropType] = useState("");
   const [editArea, setEditArea] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editStatus, setEditStatus] = useState("active");
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const [financials, setFinancials] = useState<Record<string, Financials>>({});
 
   useEffect(() => {
     if (id) {
@@ -138,7 +155,32 @@ export default function FarmDetail() {
       .from("cultivations")
       .select("*")
       .eq("farm_id", id);
-    if (!error && data) setCultivations(data);
+    if (!error && data) {
+      setCultivations(data);
+      fetchFinancials(data.map((c: Cultivation) => c.id));
+    }
+  };
+
+  const fetchFinancials = async (cultivationIds: string[]) => {
+    if (cultivationIds.length === 0) {
+      setFinancials({});
+      return;
+    }
+    const [{ data: expenses }, { data: incomes }] = await Promise.all([
+      supabase.from("expense_records").select("cultivation_id, amount").in("cultivation_id", cultivationIds),
+      supabase.from("income_records").select("cultivation_id, amount").in("cultivation_id", cultivationIds),
+    ]);
+    const map: Record<string, Financials> = {};
+    cultivationIds.forEach((cid) => {
+      map[cid] = { spent: 0, earned: 0 };
+    });
+    (expenses || []).forEach((e: { cultivation_id: string; amount: number }) => {
+      map[e.cultivation_id].spent += Number(e.amount);
+    });
+    (incomes || []).forEach((i: { cultivation_id: string; amount: number }) => {
+      map[i.cultivation_id].earned += Number(i.amount);
+    });
+    setFinancials(map);
   };
 
   const saveFarm = async () => {
@@ -178,8 +220,8 @@ export default function FarmDetail() {
       : `Not enough area! Only ${remaining.toFixed(2)} acres remaining in this farm.`;
 
   const addCultivation = async () => {
-    if (!cropType || !cropArea) {
-      alert(lang === "ta" ? "பயிர் மற்றும் பரப்பளவு தேவை" : "Crop and area are required");
+    if (!cropType || !cropArea || !cropStartDate) {
+      alert(lang === "ta" ? "பயிர், பரப்பளவு மற்றும் தொடக்க தேதி தேவை" : "Crop, area, and start date are required");
       return;
     }
     const newArea = parseFloat(cropArea);
@@ -194,12 +236,16 @@ export default function FarmDetail() {
         crop_type: cropType,
         area: newArea,
         status: "active",
+        start_date: cropStartDate,
+        end_date: cropEndDate || null,
       });
       if (error) {
         alert("Error adding cultivation: " + error.message);
       } else {
         setCropType("");
         setCropArea("");
+        setCropStartDate("");
+        setCropEndDate("");
         fetchCultivations();
       }
     } catch (err) {
@@ -212,12 +258,18 @@ export default function FarmDetail() {
     setEditingId(item.id);
     setEditCropType(item.crop_type);
     setEditArea(String(item.area));
+    setEditStartDate(item.start_date ?? "");
+    setEditEndDate(item.end_date ?? "");
+    setEditStatus(item.status || "active");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditCropType("");
     setEditArea("");
+    setEditStartDate("");
+    setEditEndDate("");
+    setEditStatus("active");
   };
 
   const saveEdit = async (item: Cultivation) => {
@@ -238,7 +290,13 @@ export default function FarmDetail() {
     try {
       const { error } = await supabase
         .from("cultivations")
-        .update({ crop_type: editCropType, area: newArea })
+        .update({
+          crop_type: editCropType,
+          area: newArea,
+          start_date: editStartDate || null,
+          end_date: editEndDate || null,
+          status: editStatus,
+        })
         .eq("id", item.id);
       if (error) {
         alert("Error updating cultivation: " + error.message);
@@ -290,7 +348,7 @@ export default function FarmDetail() {
     motorDetails: lang === "ta" ? "மோட்டார் விவரம்" : "Motor Details",
     motorDetailsPlaceholder: lang === "ta" ? "மோட்டார் தகவல்" : "Motor info",
     saveChanges: lang === "ta" ? "மாற்றங்களை சேமி" : "Save Changes",
-    cultivations: lang === "ta" ? "தற்போதைய பயிர்கள்" : "Current Cultivations",
+    cultivations: lang === "ta" ? "பயிர்கள்" : "Cultivations",
     addCultivation: lang === "ta" ? "பயிர் சேர்க்க" : "Add",
     selectCrop: lang === "ta" ? "பயிர் தேர்வு செய்க" : "Select Crop",
     areaAcres: lang === "ta" ? "பரப்பளவு (ஏக்கர்)" : "Area (Acres)",
@@ -307,6 +365,15 @@ export default function FarmDetail() {
     cancel: lang === "ta" ? "ரத்து" : "Cancel",
     used: lang === "ta" ? "பயன்படுத்தியது" : "used",
     remaining: lang === "ta" ? "மீதம்" : "remaining",
+    startDate: lang === "ta" ? "தொடக்க தேதி" : "Start Date",
+    endDate: lang === "ta" ? "முடிவு தேதி" : "End Date",
+    status: lang === "ta" ? "நிலை" : "Status",
+    statusActive: lang === "ta" ? "செயலில்" : "Active",
+    statusCompleted: lang === "ta" ? "முடிந்தது" : "Completed",
+    statusFinished: lang === "ta" ? "நிறைவு" : "Finished",
+    spent: lang === "ta" ? "செலவு" : "Spent",
+    earned: lang === "ta" ? "வருமானம்" : "Earned",
+    net: lang === "ta" ? "நிகர" : "Net",
   };
 
   if (loading) {
@@ -446,7 +513,7 @@ export default function FarmDetail() {
               </h2>
 
               <div className="flex flex-col items-end gap-0.5">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end">
                   <select
                     value={cropType}
                     onChange={(e) => setCropType(e.target.value)}
@@ -468,6 +535,22 @@ export default function FarmDetail() {
                     value={cropArea}
                     onChange={(e) => setCropArea(e.target.value)}
                     className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-24 truncate placeholder:text-xs placeholder:text-gray-500 placeholder:truncate focus:outline-none focus:ring-2 focus:ring-green-400"
+                  />
+
+                  <input
+                    type="date"
+                    title={t.startDate}
+                    value={cropStartDate}
+                    onChange={(e) => setCropStartDate(e.target.value)}
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
+                  />
+
+                  <input
+                    type="date"
+                    title={t.endDate}
+                    value={cropEndDate}
+                    onChange={(e) => setCropEndDate(e.target.value)}
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
                   />
 
                   <button
@@ -535,6 +618,31 @@ export default function FarmDetail() {
                           onChange={(e) => setEditArea(e.target.value)}
                           className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
                         />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            title={t.startDate}
+                            value={editStartDate}
+                            onChange={(e) => setEditStartDate(e.target.value)}
+                            className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+                          />
+                          <input
+                            type="date"
+                            title={t.endDate}
+                            value={editEndDate}
+                            onChange={(e) => setEditEndDate(e.target.value)}
+                            className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <select
+                          value={editStatus}
+                          onChange={(e) => setEditStatus(e.target.value)}
+                          className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
+                        >
+                          <option className="text-gray-900" value="active">{t.statusActive}</option>
+                          <option className="text-gray-900" value="completed">{t.statusCompleted}</option>
+                          <option className="text-gray-900" value="finished">{t.statusFinished}</option>
+                        </select>
                         <div className="flex gap-2">
                           <button
                             onClick={() => saveEdit(item)}
@@ -554,6 +662,17 @@ export default function FarmDetail() {
                     );
                   }
 
+                  const fin = financials[item.id];
+                  const net = fin ? fin.earned - fin.spent : 0;
+                  const netColor = !fin || (fin.spent === 0 && fin.earned === 0)
+                    ? "text-gray-400"
+                    : net >= 0 ? "text-green-700" : "text-red-600";
+                  const statusLabel =
+                    item.status === "completed" ? t.statusCompleted
+                    : item.status === "finished" ? t.statusFinished
+                    : t.statusActive;
+                  const statusCls = STATUS_BADGE[item.status] ?? STATUS_BADGE.active;
+
                   return (
                     <Link key={item.id} href={`/crops/${item.id}`}>
                       <div className="group relative bg-white rounded-xl border border-gray-100 hover:border-green-400 hover:bg-green-50 hover:shadow-md transition cursor-pointer p-2 flex items-center gap-2">
@@ -566,10 +685,18 @@ export default function FarmDetail() {
                           </h3>
                           <p className="text-xs text-gray-500 mt-0.5">
                             {item.area} {t.acres}
+                            {item.start_date && (
+                              <> · {item.start_date}{item.end_date ? ` → ${item.end_date}` : ""}</>
+                            )}
                           </p>
+                          {fin && (
+                            <p className={`text-[10px] mt-0.5 ${netColor}`}>
+                              💸 {t.spent}: ₹{fin.spent.toFixed(0)} · 💰 {t.earned}: ₹{fin.earned.toFixed(0)} · {t.net}: ₹{net.toFixed(0)}
+                            </p>
+                          )}
                         </div>
-                        <span className="bg-green-100 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0">
-                          {t.active}
+                        <span className={`${statusCls} text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0`}>
+                          {statusLabel}
                         </span>
                         <span className="text-gray-400 group-hover:text-green-600 text-sm shrink-0">→</span>
 
