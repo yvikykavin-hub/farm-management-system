@@ -16,7 +16,8 @@ type Farm = {
 export default function Dashboard() {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lang, setLang] = useState<"ta" | "en">("ta");
+  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [activeCropsCount, setActiveCropsCount] = useState<number>(0);
 
   // Add farm form
   const [farmName, setFarmName] = useState("");
@@ -27,6 +28,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchFarms();
+    fetchActiveCropsCount();
   }, []);
 
   const fetchFarms = async () => {
@@ -37,6 +39,14 @@ export default function Dashboard() {
       .order("created_at", { ascending: false });
     if (!error && data) setFarms(data);
     setLoading(false);
+  };
+
+  const fetchActiveCropsCount = async () => {
+    const { count: cropCount } = await supabase
+      .from("cultivations")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active");
+    setActiveCropsCount(cropCount || 0);
   };
 
   const addFarm = async () => {
@@ -128,7 +138,7 @@ export default function Dashboard() {
             {[
               { label: t.totalFarms, value: farms.length, color: "text-green-700", bg: "bg-green-50", icon: "🌳" },
               { label: t.totalArea, value: `${totalArea.toFixed(2)} ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
-              { label: t.activeCrops, value: "—", color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
+              { label: t.activeCrops, value: activeCropsCount, color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
             ].map((card) => (
               <div key={card.label} className={`${card.bg} rounded-2xl p-3 border border-white shadow-sm`}>
                 <div className="flex justify-between items-start mb-1">

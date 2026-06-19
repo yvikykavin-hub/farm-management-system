@@ -21,7 +21,7 @@ type SidebarProps = {
   setLang?: (lang: "ta" | "en") => void;
 };
 
-export default function Sidebar({ lang = "ta", setLang }: SidebarProps) {
+export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -41,10 +41,10 @@ export default function Sidebar({ lang = "ta", setLang }: SidebarProps) {
           🌾
         </div>
         <h1 className="text-sm font-bold text-center text-white leading-tight">
-          தாய் நிலம் AGRO
+          {lang === "ta" ? "தாய் நிலம் AGRO" : "Thaai Nilam AGRO"}
         </h1>
         <p className="text-[11px] text-green-200 text-center mt-1 leading-tight font-medium">
-          நிலமே தாய், விளைவே வாழ்வு
+          {lang === "ta" ? "நிலமே தாய், விளைவே வாழ்வு" : "Our Land, Our Legacy"}
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export default function Sidebar({ lang = "ta", setLang }: SidebarProps) {
           className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium text-white hover:bg-green-700 w-full transition-all"
         >
           <span>🌐</span>
-          <span>{lang === "ta" ? "மொழி மாற்று" : "Language"}</span>
+          <span>{lang === "ta" ? "English" : "தமிழ்"}</span>
         </button>
         <button
           onClick={logout}
