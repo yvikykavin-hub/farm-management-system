@@ -35,7 +35,7 @@ type MilkPayment = {
   total_litres: number;
   expected_amount: number;
   received_amount: number;
-  status: string;
+  payment_status: string;
   remarks: string | null;
 };
 type CowExpense = {
@@ -421,7 +421,7 @@ export default function CowDetailPage() {
     setPmLitres(String(p.total_litres));
     setPmRate(Number(p.total_litres) ? String(Number(p.expected_amount) / Number(p.total_litres)) : "");
     setPmReceived(String(p.received_amount));
-    setPmStatus(p.status);
+    setPmStatus(p.payment_status);
     setPmRemarks(p.remarks ?? "");
     setPaymentModalOpen(true);
   };
@@ -443,7 +443,7 @@ export default function CowDetailPage() {
         total_litres: parseFloat(pmLitres) || 0,
         expected_amount: pmExpected,
         received_amount: parseFloat(pmReceived) || 0,
-        status: pmStatus,
+        payment_status: pmStatus,
         remarks: pmRemarks.trim() || null,
       };
       const { error } = editingPaymentId
@@ -949,8 +949,8 @@ export default function CowDetailPage() {
                               <td className="py-1 px-1 font-medium text-success">{inr(Number(p.received_amount))}</td>
                               <td className={`py-1 px-1 font-medium ${diff < 0 ? "text-danger" : "text-success"}`}>{inr(diff)}</td>
                               <td className="py-1 px-1">
-                                <span className={`${PAYMENT_STATUS_BADGE[p.status] ?? PAYMENT_STATUS_BADGE.pending} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
-                                  {p.status.replace("_", " ")}
+                                <span className={`${PAYMENT_STATUS_BADGE[p.payment_status] ?? PAYMENT_STATUS_BADGE.pending} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+                                  {p.payment_status.replace("_", " ")}
                                 </span>
                               </td>
                               <td className="py-1 px-1 whitespace-nowrap">
