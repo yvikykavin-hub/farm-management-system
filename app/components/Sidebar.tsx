@@ -17,7 +17,6 @@ const navItems = [
 ];
 
 const livestockLink = { href: "/livestock", icon: "🐄", label: "Livestock", labelTa: "கால்நடை" };
-const generalExpensesLink = { href: "/livestock/general-expenses", icon: "🏦", label: "General Expenses", labelTa: "பொது செலவுகள்" };
 
 type SidebarProps = {
   lang?: "ta" | "en";
@@ -100,26 +99,13 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
             title={livestockLink.label}
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all ${
-              pathname.startsWith("/livestock") && !pathname.startsWith(generalExpensesLink.href)
+              pathname.startsWith("/livestock")
                 ? "bg-accent text-white font-semibold shadow"
                 : "text-white opacity-100 hover:bg-white/15"
             }`}
           >
             <span className="text-base">{livestockLink.icon}</span>
             <span>{lang === "ta" ? livestockLink.labelTa : livestockLink.label}</span>
-          </Link>
-          <Link
-            href={generalExpensesLink.href}
-            title={generalExpensesLink.label}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-2.5 pl-7 pr-2.5 py-2 rounded-lg text-sm font-medium transition-all ${
-              pathname.startsWith(generalExpensesLink.href)
-                ? "bg-accent text-white font-semibold shadow"
-                : "text-white opacity-100 hover:bg-white/15"
-            }`}
-          >
-            <span className="text-base">{generalExpensesLink.icon}</span>
-            <span>{lang === "ta" ? generalExpensesLink.labelTa : generalExpensesLink.label}</span>
           </Link>
 
           {navItems.slice(3).map((item) => {

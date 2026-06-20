@@ -16,7 +16,7 @@ type Goat = {
   purchase_date: string | null;
   purchase_price: number | null;
   weight: number | null;
-  status: string;
+  current_status: string;
   sold_date: string | null;
   sold_price: number | null;
   notes: string | null;
@@ -46,7 +46,7 @@ const emptyForm = {
   purchase_date: "",
   purchase_price: "",
   weight: "",
-  status: "active",
+  current_status: "active",
   notes: "",
 };
 
@@ -85,9 +85,9 @@ export default function GoatsListPage() {
   };
 
   const totalGoats = goats.length;
-  const activeGoats = goats.filter((g) => g.status === "active").length;
-  const soldGoats = goats.filter((g) => g.status === "sold").length;
-  const deceasedGoats = goats.filter((g) => g.status === "deceased").length;
+  const activeGoats = goats.filter((g) => g.current_status === "active").length;
+  const soldGoats = goats.filter((g) => g.current_status === "sold").length;
+  const deceasedGoats = goats.filter((g) => g.current_status === "deceased").length;
 
   const totalIncome = sales.reduce((sum, s) => sum + Number(s.total_amount), 0);
   const totalExpense = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -122,7 +122,7 @@ export default function GoatsListPage() {
         purchase_date: form.purchase_date || null,
         purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
         weight: form.weight ? parseFloat(form.weight) : null,
-        status: form.status,
+        current_status: form.current_status,
         notes: form.notes.trim() || null,
       });
       if (error) alert("Error saving goat: " + error.message);
@@ -142,6 +142,10 @@ export default function GoatsListPage() {
 
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
+
+          <Link href="/livestock" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {t(lang, "backToLivestock")}
+          </Link>
 
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
@@ -208,8 +212,8 @@ export default function GoatsListPage() {
                         <h3 className="text-sm font-bold text-gray-900">🐐 {goat.name}</h3>
                         <p className="text-xs text-gray-500">{goat.tag_number || "—"}</p>
                       </div>
-                      <span className={`${STATUS_BADGE[goat.status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
-                        {goat.status}
+                      <span className={`${STATUS_BADGE[goat.current_status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+                        {goat.current_status}
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{goat.breed || "—"} · {goat.gender || "—"}</p>
@@ -280,7 +284,7 @@ export default function GoatsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "status")}</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputCls}>
+                <select value={form.current_status} onChange={(e) => setForm({ ...form, current_status: e.target.value })} className={inputCls}>
                   <option value="active">{t(lang, "active")}</option>
                   <option value="sold">{t(lang, "sold")}</option>
                   <option value="deceased">{t(lang, "deceased")}</option>

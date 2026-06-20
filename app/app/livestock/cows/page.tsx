@@ -15,7 +15,7 @@ type Cow = {
   gender: string | null;
   purchase_date: string | null;
   purchase_price: number | null;
-  status: string;
+  current_status: string;
   sold_date: string | null;
   sold_price: number | null;
   notes: string | null;
@@ -45,7 +45,7 @@ const emptyForm = {
   gender: "",
   purchase_date: "",
   purchase_price: "",
-  status: "active",
+  current_status: "active",
   notes: "",
 };
 
@@ -92,9 +92,9 @@ export default function CowsListPage() {
   };
 
   const totalCows = cows.length;
-  const activeCows = cows.filter((c) => c.status === "active").length;
-  const soldCows = cows.filter((c) => c.status === "sold").length;
-  const deceasedCows = cows.filter((c) => c.status === "deceased").length;
+  const activeCows = cows.filter((c) => c.current_status === "active").length;
+  const soldCows = cows.filter((c) => c.current_status === "sold").length;
+  const deceasedCows = cows.filter((c) => c.current_status === "deceased").length;
 
   const now = new Date();
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -148,7 +148,7 @@ export default function CowsListPage() {
         gender: form.gender,
         purchase_date: form.purchase_date || null,
         purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
-        status: form.status,
+        current_status: form.current_status,
         notes: form.notes.trim() || null,
       });
       if (error) {
@@ -169,6 +169,11 @@ export default function CowsListPage() {
 
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
+
+          {/* Back */}
+          <Link href="/livestock" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {t(lang, "backToLivestock")}
+          </Link>
 
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -238,8 +243,8 @@ export default function CowsListPage() {
                         <h3 className="text-sm font-bold text-gray-900">🐄 {cow.name}</h3>
                         <p className="text-xs text-gray-500">{cow.tag_number || "—"}</p>
                       </div>
-                      <span className={`${STATUS_BADGE[cow.status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
-                        {cow.status}
+                      <span className={`${STATUS_BADGE[cow.current_status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+                        {cow.current_status}
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{cow.breed || "—"}</p>
@@ -307,7 +312,7 @@ export default function CowsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "status")}</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputCls}>
+                <select value={form.current_status} onChange={(e) => setForm({ ...form, current_status: e.target.value })} className={inputCls}>
                   <option value="active">{t(lang, "active")}</option>
                   <option value="sold">{t(lang, "sold")}</option>
                   <option value="deceased">{t(lang, "deceased")}</option>

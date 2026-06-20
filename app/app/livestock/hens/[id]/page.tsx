@@ -17,7 +17,7 @@ type Hen = {
   purchase_date: string | null;
   purchase_price: number | null;
   weight: number | null;
-  status: string;
+  current_status: string;
   sold_date: string | null;
   sold_price: number | null;
   notes: string | null;
@@ -122,7 +122,7 @@ export default function HenDetailPage() {
       purchase_date: hen.purchase_date ?? "",
       purchase_price: hen.purchase_price != null ? String(hen.purchase_price) : "",
       weight: hen.weight != null ? String(hen.weight) : "",
-      status: hen.status,
+      current_status: hen.current_status,
       sold_date: hen.sold_date ?? "",
       sold_price: hen.sold_price != null ? String(hen.sold_price) : "",
       notes: hen.notes ?? "",
@@ -148,9 +148,9 @@ export default function HenDetailPage() {
           purchase_date: ovForm.purchase_date || null,
           purchase_price: ovForm.purchase_price ? parseFloat(ovForm.purchase_price) : null,
           weight: ovForm.weight ? parseFloat(ovForm.weight) : null,
-          status: ovForm.status,
-          sold_date: ovForm.status === "sold" ? ovForm.sold_date || null : null,
-          sold_price: ovForm.status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
+          current_status: ovForm.current_status,
+          sold_date: ovForm.current_status === "sold" ? ovForm.sold_date || null : null,
+          sold_price: ovForm.current_status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
           notes: ovForm.notes.trim() || null,
         })
         .eq("id", id);
@@ -309,13 +309,14 @@ export default function HenDetailPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
+          <Link href="/livestock/hens" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {t(lang, "backToHens")}
+          </Link>
+
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <Link href="/livestock/hens" className="text-primary hover:text-primary/80 text-sm font-semibold">
-              ← {t(lang, "backToHens")}
-            </Link>
             <h1 className="text-xl font-bold text-primary">🐔 {hen?.name}</h1>
-            <span className={`${STATUS_BADGE[hen?.status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
-              {hen?.status}
+            <span className={`${STATUS_BADGE[hen?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
+              {hen?.current_status}
             </span>
           </div>
 
@@ -363,7 +364,7 @@ export default function HenDetailPage() {
                   <div><span className="text-gray-500">{t(lang, "weight")}:</span> <span className="font-medium text-gray-800">{hen?.weight != null ? `${hen.weight} kg` : "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchaseDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(hen?.purchase_date)}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchasePrice")}:</span> <span className="font-medium text-gray-800">{hen?.purchase_price != null ? inr(Number(hen.purchase_price)) : "—"}</span></div>
-                  {hen?.status === "sold" && (
+                  {hen?.current_status === "sold" && (
                     <>
                       <div><span className="text-gray-500">{t(lang, "soldDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(hen?.sold_date)}</span></div>
                       <div><span className="text-gray-500">{t(lang, "soldPrice")}:</span> <span className="font-medium text-gray-800">{hen?.sold_price != null ? inr(Number(hen.sold_price)) : "—"}</span></div>
@@ -411,13 +412,13 @@ export default function HenDetailPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "status")}</label>
-                    <select value={ovForm.status} onChange={(e) => setOvForm({ ...ovForm, status: e.target.value })} className={inputCls}>
+                    <select value={ovForm.current_status} onChange={(e) => setOvForm({ ...ovForm, current_status: e.target.value })} className={inputCls}>
                       <option value="active">{t(lang, "active")}</option>
                       <option value="sold">{t(lang, "sold")}</option>
                       <option value="deceased">{t(lang, "deceased")}</option>
                     </select>
                   </div>
-                  {ovForm.status === "sold" && (
+                  {ovForm.current_status === "sold" && (
                     <>
                       <div>
                         <label className={labelCls}>{t(lang, "soldDate")}</label>
@@ -469,7 +470,7 @@ export default function HenDetailPage() {
                         <th className="py-1 px-1">{t(lang, "saleType")}</th>
                         <th className="py-1 px-1">{t(lang, "weightOrBirds")}</th>
                         <th className="py-1 px-1">{t(lang, "rate")}</th>
-                        <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
+                        <th className="py-1 px-1">{t(lang, "total")}</th>
                         <th className="py-1 px-1">{t(lang, "buyerName")}</th>
                         <th className="py-1 px-1">{t(lang, "remarks")}</th>
                         <th className="py-1 px-1"></th>

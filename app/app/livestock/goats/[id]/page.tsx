@@ -17,7 +17,7 @@ type Goat = {
   purchase_date: string | null;
   purchase_price: number | null;
   weight: number | null;
-  status: string;
+  current_status: string;
   sold_date: string | null;
   sold_price: number | null;
   notes: string | null;
@@ -119,7 +119,7 @@ export default function GoatDetailPage() {
       purchase_date: goat.purchase_date ?? "",
       purchase_price: goat.purchase_price != null ? String(goat.purchase_price) : "",
       weight: goat.weight != null ? String(goat.weight) : "",
-      status: goat.status,
+      current_status: goat.current_status,
       sold_date: goat.sold_date ?? "",
       sold_price: goat.sold_price != null ? String(goat.sold_price) : "",
       notes: goat.notes ?? "",
@@ -145,9 +145,9 @@ export default function GoatDetailPage() {
           purchase_date: ovForm.purchase_date || null,
           purchase_price: ovForm.purchase_price ? parseFloat(ovForm.purchase_price) : null,
           weight: ovForm.weight ? parseFloat(ovForm.weight) : null,
-          status: ovForm.status,
-          sold_date: ovForm.status === "sold" ? ovForm.sold_date || null : null,
-          sold_price: ovForm.status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
+          current_status: ovForm.current_status,
+          sold_date: ovForm.current_status === "sold" ? ovForm.sold_date || null : null,
+          sold_price: ovForm.current_status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
           notes: ovForm.notes.trim() || null,
         })
         .eq("id", id);
@@ -294,13 +294,14 @@ export default function GoatDetailPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
+          <Link href="/livestock/goats" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {t(lang, "backToGoats")}
+          </Link>
+
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <Link href="/livestock/goats" className="text-primary hover:text-primary/80 text-sm font-semibold">
-              ← {t(lang, "backToGoats")}
-            </Link>
             <h1 className="text-xl font-bold text-primary">🐐 {goat?.name}</h1>
-            <span className={`${STATUS_BADGE[goat?.status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
-              {goat?.status}
+            <span className={`${STATUS_BADGE[goat?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
+              {goat?.current_status}
             </span>
           </div>
 
@@ -348,7 +349,7 @@ export default function GoatDetailPage() {
                   <div><span className="text-gray-500">{t(lang, "weight")}:</span> <span className="font-medium text-gray-800">{goat?.weight != null ? `${goat.weight} kg` : "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchaseDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(goat?.purchase_date)}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchasePrice")}:</span> <span className="font-medium text-gray-800">{goat?.purchase_price != null ? inr(Number(goat.purchase_price)) : "—"}</span></div>
-                  {goat?.status === "sold" && (
+                  {goat?.current_status === "sold" && (
                     <>
                       <div><span className="text-gray-500">{t(lang, "soldDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(goat?.sold_date)}</span></div>
                       <div><span className="text-gray-500">{t(lang, "soldPrice")}:</span> <span className="font-medium text-gray-800">{goat?.sold_price != null ? inr(Number(goat.sold_price)) : "—"}</span></div>
@@ -396,13 +397,13 @@ export default function GoatDetailPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "status")}</label>
-                    <select value={ovForm.status} onChange={(e) => setOvForm({ ...ovForm, status: e.target.value })} className={inputCls}>
+                    <select value={ovForm.current_status} onChange={(e) => setOvForm({ ...ovForm, current_status: e.target.value })} className={inputCls}>
                       <option value="active">{t(lang, "active")}</option>
                       <option value="sold">{t(lang, "sold")}</option>
                       <option value="deceased">{t(lang, "deceased")}</option>
                     </select>
                   </div>
-                  {ovForm.status === "sold" && (
+                  {ovForm.current_status === "sold" && (
                     <>
                       <div>
                         <label className={labelCls}>{t(lang, "soldDate")}</label>
@@ -453,7 +454,7 @@ export default function GoatDetailPage() {
                         <th className="py-1 px-1">{t(lang, "date")}</th>
                         <th className="py-1 px-1">{t(lang, "weight")}</th>
                         <th className="py-1 px-1">{t(lang, "rateperKg")}</th>
-                        <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
+                        <th className="py-1 px-1">{t(lang, "total")}</th>
                         <th className="py-1 px-1">{t(lang, "buyerName")}</th>
                         <th className="py-1 px-1">{t(lang, "remarks")}</th>
                         <th className="py-1 px-1"></th>
@@ -549,6 +550,10 @@ export default function GoatDetailPage() {
               <button onClick={() => setSaleModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
+              <div>
+                <label className={labelCls}>{t(lang, "name")}</label>
+                <input type="text" value={goat?.name ?? ""} disabled className={`${inputCls} bg-gray-50 text-gray-500`} />
+              </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
                 <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className={inputCls} />

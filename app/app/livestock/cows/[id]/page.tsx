@@ -17,7 +17,7 @@ type Cow = {
   gender: string | null;
   purchase_date: string | null;
   purchase_price: number | null;
-  status: string;
+  current_status: string;
   sold_date: string | null;
   sold_price: number | null;
   notes: string | null;
@@ -32,6 +32,8 @@ type MilkPayment = {
   period_from: string;
   period_to: string;
   milkman_name: string;
+  total_litres: number;
+  rate_per_litre: number;
   expected_amount: number;
   received_amount: number;
   status: string;
@@ -43,6 +45,7 @@ type CowExpense = {
   expense_date: string;
   type: string;
   quantity: number | null;
+  unit: string | null;
   amount: number;
   vendor_name: string | null;
   description: string | null;
@@ -58,8 +61,10 @@ const PAYMENT_STATUS_BADGE: Record<string, string> = {
   partially_paid: "bg-amber-100 text-amber-700",
   pending: "bg-red-100 text-red-700",
 };
-const OTHER_EXPENSE_TYPE_KEYS = ["veterinary", "medicine", "vaccination", "ai", "shedMaintenance", "other"] as const;
-const OTHER_EXPENSE_TYPE_VALUES: Record<typeof OTHER_EXPENSE_TYPE_KEYS[number], string> = {
+const EXPENSE_TYPE_KEYS = ["riceFeed", "normalFeed", "veterinary", "medicine", "vaccination", "ai", "shedMaintenance", "other"] as const;
+const EXPENSE_TYPE_VALUES: Record<typeof EXPENSE_TYPE_KEYS[number], string> = {
+  riceFeed: "rice_feed",
+  normalFeed: "normal_feed",
   veterinary: "veterinary",
   medicine: "medicine",
   vaccination: "vaccination",
@@ -67,6 +72,7 @@ const OTHER_EXPENSE_TYPE_VALUES: Record<typeof OTHER_EXPENSE_TYPE_KEYS[number], 
   shedMaintenance: "shed_maintenance",
   other: "other",
 };
+const FEED_TYPE_KEYS = ["riceFeed", "normalFeed"] as const;
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const formatDMY = (iso: string | null | undefined) => {
@@ -100,7 +106,7 @@ export default function CowDetailPage() {
   const [lang, setLang] = useState<"ta" | "en">("en");
   const [cow, setCow] = useState<Cow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "milk" | "payments" | "expenses">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "milk" | "income" | "expenses">("overview");
 
   const [rates, setRates] = useState<MilkRate[]>([]);
   const [collections, setCollections] = useState<MilkCollection[]>([]);
@@ -161,7 +167,7 @@ export default function CowDetailPage() {
       gender: cow.gender ?? "",
       purchase_date: cow.purchase_date ?? "",
       purchase_price: cow.purchase_price != null ? String(cow.purchase_price) : "",
-      status: cow.status,
+      current_status: cow.current_status,
       sold_date: cow.sold_date ?? "",
       sold_price: cow.sold_price != null ? String(cow.sold_price) : "",
       notes: cow.notes ?? "",
@@ -186,9 +192,9 @@ export default function CowDetailPage() {
           gender: ovForm.gender,
           purchase_date: ovForm.purchase_date || null,
           purchase_price: ovForm.purchase_price ? parseFloat(ovForm.purchase_price) : null,
-          status: ovForm.status,
-          sold_date: ovForm.status === "sold" ? ovForm.sold_date || null : null,
-          sold_price: ovForm.status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
+          current_status: ovForm.current_status,
+          sold_date: ovForm.current_status === "sold" ? ovForm.sold_date || null : null,
+          sold_price: ovForm.current_status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
           notes: ovForm.notes.trim() || null,
         })
         .eq("id", id);
@@ -358,29 +364,22 @@ export default function CowDetailPage() {
     else fetchCollections();
   };
 
-  // ---------------- Payments ----------------
+  // ---------------- Income (Milk Sales / Payments) ----------------
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [pmDate, setPmDate] = useState("");
   const [pmFrom, setPmFrom] = useState("");
   const [pmTo, setPmTo] = useState("");
   const [pmMilkman, setPmMilkman] = useState("");
-  const [pmExpected, setPmExpected] = useState("");
+  const [pmLitres, setPmLitres] = useState("");
+  const [pmRate, setPmRate] = useState("");
   const [pmReceived, setPmReceived] = useState("");
   const [pmStatus, setPmStatus] = useState("pending");
   const [pmRemarks, setPmRemarks] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
 
-  const computeExpectedForPeriod = (from: string, to: string) => {
-    if (!from || !to) return 0;
-    return collections
-      .filter((c) => c.collection_date >= from && c.collection_date <= to)
-      .reduce((s, c) => s + (Number(c.morning_litres) + Number(c.evening_litres)) * rateForDate(c.collection_date), 0);
-  };
-
-  const liveExpected = computeExpectedForPeriod(pmFrom, pmTo);
-  const displayedExpected = editingPaymentId ? parseFloat(pmExpected) || 0 : liveExpected;
-  const pmDifference = (parseFloat(pmReceived) || 0) - displayedExpected;
+  const pmExpected = (parseFloat(pmLitres) || 0) * (parseFloat(pmRate) || 0);
+  const pmDifference = (parseFloat(pmReceived) || 0) - pmExpected;
 
   const openAddPayment = () => {
     setEditingPaymentId(null);
@@ -388,7 +387,8 @@ export default function CowDetailPage() {
     setPmFrom("");
     setPmTo("");
     setPmMilkman("");
-    setPmExpected("");
+    setPmLitres("");
+    setPmRate(currentRate ? String(currentRate) : "");
     setPmReceived("");
     setPmStatus("pending");
     setPmRemarks("");
@@ -401,7 +401,8 @@ export default function CowDetailPage() {
     setPmFrom(p.period_from);
     setPmTo(p.period_to);
     setPmMilkman(p.milkman_name);
-    setPmExpected(String(p.expected_amount));
+    setPmLitres(String(p.total_litres));
+    setPmRate(String(p.rate_per_litre));
     setPmReceived(String(p.received_amount));
     setPmStatus(p.status);
     setPmRemarks(p.remarks ?? "");
@@ -421,7 +422,9 @@ export default function CowDetailPage() {
         period_from: pmFrom,
         period_to: pmTo,
         milkman_name: pmMilkman.trim(),
-        expected_amount: displayedExpected,
+        total_litres: parseFloat(pmLitres) || 0,
+        rate_per_litre: parseFloat(pmRate) || 0,
+        expected_amount: pmExpected,
         received_amount: parseFloat(pmReceived) || 0,
         status: pmStatus,
         remarks: pmRemarks.trim() || null,
@@ -450,66 +453,55 @@ export default function CowDetailPage() {
   const totalExpected = payments.reduce((s, p) => s + Number(p.expected_amount), 0);
   const totalReceived = payments.reduce((s, p) => s + Number(p.received_amount), 0);
   const outstanding = totalExpected - totalReceived;
+  const thisMonthPaymentLitres = payments
+    .filter((p) => p.payment_date.startsWith(monthPrefix))
+    .reduce((s, p) => s + Number(p.total_litres), 0);
 
   // ---------------- Expenses ----------------
-  const [feedModalType, setFeedModalType] = useState<"rice_feed" | "normal_feed" | "other" | null>(null);
-  const [feedDate, setFeedDate] = useState("");
-  const [feedQty, setFeedQty] = useState("");
-  const [feedAmount, setFeedAmount] = useState("");
-  const [otherType, setOtherType] = useState<typeof OTHER_EXPENSE_TYPE_KEYS[number]>("veterinary");
-  const [otherVendor, setOtherVendor] = useState("");
-  const [otherDescription, setOtherDescription] = useState("");
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [expType, setExpType] = useState<typeof EXPENSE_TYPE_KEYS[number]>("riceFeed");
+  const [expDate, setExpDate] = useState("");
+  const [expQty, setExpQty] = useState("");
+  const [expUnit, setExpUnit] = useState("");
+  const [expAmount, setExpAmount] = useState("");
+  const [expVendor, setExpVendor] = useState("");
+  const [expDescription, setExpDescription] = useState("");
   const [savingExpense, setSavingExpense] = useState(false);
 
-  const openFeedModal = (type: "rice_feed" | "normal_feed" | "other") => {
-    setFeedModalType(type);
-    setFeedDate("");
-    setFeedQty("");
-    setFeedAmount("");
-    setOtherType("veterinary");
-    setOtherVendor("");
-    setOtherDescription("");
+  const isFeedType = (FEED_TYPE_KEYS as readonly string[]).includes(expType);
+
+  const openAddExpense = () => {
+    setExpType("riceFeed");
+    setExpDate("");
+    setExpQty("");
+    setExpUnit("");
+    setExpAmount("");
+    setExpVendor("");
+    setExpDescription("");
+    setExpenseModalOpen(true);
   };
 
   const saveExpense = async () => {
-    if (!feedModalType || !feedDate || !feedAmount) {
+    if (!expDate || !expAmount) {
       alert(t(lang, "dateAmountRequired"));
       return;
     }
     setSavingExpense(true);
     try {
-      const payload: {
-        cow_id: string;
-        expense_date: string;
-        type: string;
-        quantity: number | null;
-        amount: number;
-        vendor_name: string | null;
-        description: string | null;
-      } =
-        feedModalType === "other"
-          ? {
-              cow_id: id,
-              expense_date: feedDate,
-              type: OTHER_EXPENSE_TYPE_VALUES[otherType],
-              quantity: null,
-              amount: parseFloat(feedAmount) || 0,
-              vendor_name: otherVendor.trim() || null,
-              description: otherDescription.trim() || null,
-            }
-          : {
-              cow_id: id,
-              expense_date: feedDate,
-              type: feedModalType,
-              quantity: feedQty ? parseFloat(feedQty) : null,
-              amount: parseFloat(feedAmount) || 0,
-              vendor_name: null,
-              description: null,
-            };
+      const payload = {
+        cow_id: id,
+        expense_date: expDate,
+        type: EXPENSE_TYPE_VALUES[expType],
+        quantity: isFeedType && expQty ? parseFloat(expQty) : null,
+        unit: isFeedType ? expUnit.trim() || null : null,
+        amount: parseFloat(expAmount) || 0,
+        vendor_name: expVendor.trim() || null,
+        description: expDescription.trim() || null,
+      };
       const { error } = await supabase.from("cow_expenses").insert(payload);
       if (error) alert("Error saving expense: " + error.message);
       else {
-        setFeedModalType(null);
+        setExpenseModalOpen(false);
         fetchExpenses();
       }
     } catch (err) {
@@ -526,12 +518,11 @@ export default function CowDetailPage() {
   };
 
   const monthExpenses = cowExpenses.filter((e) => e.expense_date.startsWith(monthPrefix));
-  const riceFeedTotal = monthExpenses.filter((e) => e.type === "rice_feed").reduce((s, e) => s + Number(e.amount), 0);
-  const normalFeedTotal = monthExpenses.filter((e) => e.type === "normal_feed").reduce((s, e) => s + Number(e.amount), 0);
-  const otherExpenseTotal = monthExpenses
-    .filter((e) => e.type !== "rice_feed" && e.type !== "normal_feed")
-    .reduce((s, e) => s + Number(e.amount), 0);
-  const totalExpenseAll = riceFeedTotal + normalFeedTotal + otherExpenseTotal;
+  const totalExpenseAll = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const expenseTotalsByType = EXPENSE_TYPE_KEYS.map((key) => ({
+    key,
+    total: monthExpenses.filter((e) => e.type === EXPENSE_TYPE_VALUES[key]).reduce((s, e) => s + Number(e.amount), 0),
+  })).filter((e) => e.total > 0);
 
   if (loading) {
     return (
@@ -552,14 +543,16 @@ export default function CowDetailPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
+          {/* Back */}
+          <Link href="/livestock/cows" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {t(lang, "backToCows")}
+          </Link>
+
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <Link href="/livestock/cows" className="text-primary hover:text-primary/80 text-sm font-semibold">
-              ← {t(lang, "backToCows")}
-            </Link>
             <h1 className="text-xl font-bold text-primary">🐄 {cow?.name}</h1>
-            <span className={`${STATUS_BADGE[cow?.status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
-              {cow?.status}
+            <span className={`${STATUS_BADGE[cow?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
+              {cow?.current_status}
             </span>
           </div>
 
@@ -568,7 +561,7 @@ export default function CowDetailPage() {
             {([
               ["overview", t(lang, "overview")],
               ["milk", t(lang, "milkCollection")],
-              ["payments", t(lang, "payments")],
+              ["income", t(lang, "income")],
               ["expenses", t(lang, "expenses")],
             ] as const).map(([key, label]) => (
               <button
@@ -603,7 +596,7 @@ export default function CowDetailPage() {
                   <div><span className="text-gray-500">{t(lang, "dateOfBirth")}:</span> <span className="font-medium text-gray-800">{formatDMY(cow?.date_of_birth)}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchaseDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(cow?.purchase_date)}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchasePrice")}:</span> <span className="font-medium text-gray-800">{cow?.purchase_price != null ? inr(Number(cow.purchase_price)) : "—"}</span></div>
-                  {cow?.status === "sold" && (
+                  {cow?.current_status === "sold" && (
                     <>
                       <div><span className="text-gray-500">{t(lang, "soldDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(cow?.sold_date)}</span></div>
                       <div><span className="text-gray-500">{t(lang, "soldPrice")}:</span> <span className="font-medium text-gray-800">{cow?.sold_price != null ? inr(Number(cow.sold_price)) : "—"}</span></div>
@@ -647,13 +640,13 @@ export default function CowDetailPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "status")}</label>
-                    <select value={ovForm.status} onChange={(e) => setOvForm({ ...ovForm, status: e.target.value })} className={inputCls}>
+                    <select value={ovForm.current_status} onChange={(e) => setOvForm({ ...ovForm, current_status: e.target.value })} className={inputCls}>
                       <option value="active">{t(lang, "active")}</option>
                       <option value="sold">{t(lang, "sold")}</option>
                       <option value="deceased">{t(lang, "deceased")}</option>
                     </select>
                   </div>
-                  {ovForm.status === "sold" && (
+                  {ovForm.current_status === "sold" && (
                     <>
                       <div>
                         <label className={labelCls}>{t(lang, "soldDate")}</label>
@@ -856,7 +849,7 @@ export default function CowDetailPage() {
                   <span className="font-medium text-gray-700">
                     {t(lang, "thisMonth")}: {monthTotalLitres.toFixed(1)} L | {inr(monthExpectedAmount)}
                   </span>
-                  <button onClick={() => setActiveTab("payments")} className="text-primary font-semibold hover:text-primary/80">
+                  <button onClick={() => setActiveTab("income")} className="text-primary font-semibold hover:text-primary/80">
                     {t(lang, "goToPayments")} →
                   </button>
                 </div>
@@ -864,10 +857,10 @@ export default function CowDetailPage() {
             </div>
           )}
 
-          {/* PAYMENTS TAB */}
-          {activeTab === "payments" && (
+          {/* INCOME TAB */}
+          {activeTab === "income" && (
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="bg-white rounded-xl shadow-sm p-3">
                   <p className="text-xs text-gray-500">{t(lang, "totalExpected")}</p>
                   <p className="text-lg font-bold text-gray-800">{inr(totalExpected)}</p>
@@ -880,11 +873,15 @@ export default function CowDetailPage() {
                   <p className="text-xs text-gray-500">{t(lang, "outstanding")}</p>
                   <p className={`text-lg font-bold ${outstanding > 0 ? "text-danger" : "text-success"}`}>{inr(outstanding)}</p>
                 </div>
+                <div className="bg-white rounded-xl shadow-sm p-3">
+                  <p className="text-xs text-gray-500">{t(lang, "thisMonth")} {t(lang, "totalLitres")}</p>
+                  <p className="text-lg font-bold text-gray-800">{thisMonthPaymentLitres.toFixed(1)} L</p>
+                </div>
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-semibold text-gray-800">{t(lang, "payments")}</h2>
+                  <h2 className="text-sm font-semibold text-gray-800">{t(lang, "income")}</h2>
                   <button onClick={openAddPayment} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
                     + {t(lang, "addPayment")}
                   </button>
@@ -896,6 +893,8 @@ export default function CowDetailPage() {
                         <th className="py-1 px-1">{t(lang, "date")}</th>
                         <th className="py-1 px-1">{t(lang, "periodFrom")}</th>
                         <th className="py-1 px-1">{t(lang, "milkmanName")}</th>
+                        <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
+                        <th className="py-1 px-1">{t(lang, "rate")}</th>
                         <th className="py-1 px-1">{t(lang, "expectedAmount")}</th>
                         <th className="py-1 px-1">{t(lang, "receivedAmount")}</th>
                         <th className="py-1 px-1">{t(lang, "difference")}</th>
@@ -905,7 +904,7 @@ export default function CowDetailPage() {
                     </thead>
                     <tbody>
                       {payments.length === 0 ? (
-                        <tr><td colSpan={8} className="text-center py-6 text-gray-500">🐄 {t(lang, "noPaymentsYet")}</td></tr>
+                        <tr><td colSpan={10} className="text-center py-6 text-gray-500">🐄 {t(lang, "noPaymentsYet")}</td></tr>
                       ) : (
                         payments.map((p) => {
                           const diff = Number(p.received_amount) - Number(p.expected_amount);
@@ -914,8 +913,10 @@ export default function CowDetailPage() {
                               <td className="py-1 px-1">{formatDMY(p.payment_date)}</td>
                               <td className="py-1 px-1">{formatDMY(p.period_from)} → {formatDMY(p.period_to)}</td>
                               <td className="py-1 px-1">{p.milkman_name}</td>
+                              <td className="py-1 px-1">{Number(p.total_litres).toFixed(1)} L</td>
+                              <td className="py-1 px-1">{inr(Number(p.rate_per_litre))}</td>
                               <td className="py-1 px-1">{inr(Number(p.expected_amount))}</td>
-                              <td className="py-1 px-1">{inr(Number(p.received_amount))}</td>
+                              <td className="py-1 px-1 font-medium text-success">{inr(Number(p.received_amount))}</td>
                               <td className={`py-1 px-1 font-medium ${diff < 0 ? "text-danger" : "text-success"}`}>{inr(diff)}</td>
                               <td className="py-1 px-1">
                                 <span className={`${PAYMENT_STATUS_BADGE[p.status] ?? PAYMENT_STATUS_BADGE.pending} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
@@ -940,36 +941,25 @@ export default function CowDetailPage() {
           {/* EXPENSES TAB */}
           {activeTab === "expenses" && (
             <div className="flex flex-col gap-3">
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => openFeedModal("rice_feed")} className="bg-white hover:bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 transition">
-                  + {t(lang, "riceFeed")}
-                </button>
-                <button onClick={() => openFeedModal("normal_feed")} className="bg-white hover:bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 transition">
-                  + {t(lang, "normalFeed")}
-                </button>
-                <button onClick={() => openFeedModal("other")} className="bg-white hover:bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 transition">
-                  + {t(lang, "otherExpense")}
+              <div className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="text-xs text-gray-500">{t(lang, "thisMonth")} {t(lang, "totalExpense")}</p>
+                  <p className="text-lg font-bold text-danger">{inr(totalExpenseAll)}</p>
+                </div>
+                <button onClick={openAddExpense} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                  + {t(lang, "addExpense")}
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{t(lang, "riceFeed")}</p>
-                  <p className="text-base font-bold text-danger">{inr(riceFeedTotal)}</p>
+              {expenseTotalsByType.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {expenseTotalsByType.map(({ key, total }) => (
+                    <span key={key} className="bg-red-50 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-red-100">
+                      {t(lang, key)}: {inr(total)}
+                    </span>
+                  ))}
                 </div>
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{t(lang, "normalFeed")}</p>
-                  <p className="text-base font-bold text-danger">{inr(normalFeedTotal)}</p>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{t(lang, "other")}</p>
-                  <p className="text-base font-bold text-danger">{inr(otherExpenseTotal)}</p>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{t(lang, "total")}</p>
-                  <p className="text-base font-bold text-danger">{inr(totalExpenseAll)}</p>
-                </div>
-              </div>
+              )}
 
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                 <h2 className="text-sm font-semibold text-gray-800 mb-2">{t(lang, "expenseRecords")}</h2>
@@ -980,27 +970,34 @@ export default function CowDetailPage() {
                         <th className="py-1 px-1">{t(lang, "date")}</th>
                         <th className="py-1 px-1">{t(lang, "type")}</th>
                         <th className="py-1 px-1">{t(lang, "qty")}</th>
+                        <th className="py-1 px-1">{t(lang, "unit")}</th>
                         <th className="py-1 px-1">{t(lang, "amount")}</th>
+                        <th className="py-1 px-1">{t(lang, "vendor")}</th>
                         <th className="py-1 px-1">{t(lang, "description")}</th>
                         <th className="py-1 px-1"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {cowExpenses.length === 0 ? (
-                        <tr><td colSpan={6} className="text-center py-6 text-gray-500">🐄 {t(lang, "noExpensesYet")}</td></tr>
+                        <tr><td colSpan={8} className="text-center py-6 text-gray-500">🐄 {t(lang, "noExpensesYet")}</td></tr>
                       ) : (
-                        cowExpenses.map((e) => (
-                          <tr key={e.id} className="border-b border-gray-50">
-                            <td className="py-1 px-1">{formatDMY(e.expense_date)}</td>
-                            <td className="py-1 px-1">{e.type.replace("_", " ")}</td>
-                            <td className="py-1 px-1">{e.quantity ?? "—"}</td>
-                            <td className="py-1 px-1 text-danger font-medium">{inr(Number(e.amount))}</td>
-                            <td className="py-1 px-1">{e.vendor_name ? `${e.vendor_name} · ` : ""}{e.description ?? "—"}</td>
-                            <td className="py-1 px-1">
-                              <button onClick={() => deleteExpense(e.id)} className="hover:text-danger">🗑️</button>
-                            </td>
-                          </tr>
-                        ))
+                        cowExpenses.map((e) => {
+                          const typeKey = EXPENSE_TYPE_KEYS.find((k) => EXPENSE_TYPE_VALUES[k] === e.type);
+                          return (
+                            <tr key={e.id} className="border-b border-gray-50">
+                              <td className="py-1 px-1">{formatDMY(e.expense_date)}</td>
+                              <td className="py-1 px-1">{typeKey ? t(lang, typeKey) : e.type}</td>
+                              <td className="py-1 px-1">{e.quantity ?? "—"}</td>
+                              <td className="py-1 px-1">{e.unit ?? "—"}</td>
+                              <td className="py-1 px-1 text-danger font-medium">{inr(Number(e.amount))}</td>
+                              <td className="py-1 px-1">{e.vendor_name ?? "—"}</td>
+                              <td className="py-1 px-1">{e.description ?? "—"}</td>
+                              <td className="py-1 px-1">
+                                <button onClick={() => deleteExpense(e.id)} className="hover:text-danger">🗑️</button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1074,12 +1071,16 @@ export default function CowDetailPage() {
                 <input type="date" value={pmTo} onChange={(e) => setPmTo(e.target.value)} className={inputCls} />
               </div>
               <div>
+                <label className={labelCls}>{t(lang, "totalLitres")}</label>
+                <input type="number" value={pmLitres} onChange={(e) => setPmLitres(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{t(lang, "rate")} ({t(lang, "perLitre")}, ₹)</label>
+                <input type="number" value={pmRate} onChange={(e) => setPmRate(e.target.value)} className={inputCls} />
+              </div>
+              <div>
                 <label className={labelCls}>{t(lang, "expectedAmount")}</label>
-                {editingPaymentId ? (
-                  <input type="number" value={pmExpected} onChange={(e) => setPmExpected(e.target.value)} className={inputCls} />
-                ) : (
-                  <input type="number" value={liveExpected.toFixed(2)} disabled className={`${inputCls} bg-gray-50 text-gray-500`} />
-                )}
+                <input type="number" value={pmExpected.toFixed(2)} disabled className={`${inputCls} bg-gray-50 text-gray-500`} />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "receivedAmount")}</label>
@@ -1115,58 +1116,54 @@ export default function CowDetailPage() {
         </div>
       )}
 
-      {/* Feed / Other Expense Modal */}
-      {feedModalType && (
+      {/* Add Expense Modal */}
+      {expenseModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">
-                {feedModalType === "rice_feed" ? t(lang, "riceFeed")
-                  : feedModalType === "normal_feed" ? t(lang, "normalFeed")
-                  : t(lang, "otherExpense")}
-              </h2>
-              <button onClick={() => setFeedModalType(null)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+              <h2 className="text-lg font-bold text-primary">{t(lang, "addExpense")}</h2>
+              <button onClick={() => setExpenseModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
-              {feedModalType === "other" && (
-                <div>
-                  <label className={labelCls}>{t(lang, "expenseType")}</label>
-                  <select value={otherType} onChange={(e) => setOtherType(e.target.value as typeof OTHER_EXPENSE_TYPE_KEYS[number])} className={inputCls}>
-                    {OTHER_EXPENSE_TYPE_KEYS.map((k) => <option key={k} value={k}>{t(lang, k)}</option>)}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className={labelCls}>{t(lang, "expenseType")}</label>
+                <select value={expType} onChange={(e) => setExpType(e.target.value as typeof EXPENSE_TYPE_KEYS[number])} className={inputCls}>
+                  {EXPENSE_TYPE_KEYS.map((k) => <option key={k} value={k}>{t(lang, k)}</option>)}
+                </select>
+              </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
-                <input type="date" value={feedDate} onChange={(e) => setFeedDate(e.target.value)} className={inputCls} />
+                <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className={inputCls} />
               </div>
-              {feedModalType !== "other" && (
-                <div>
-                  <label className={labelCls}>{t(lang, "quantityOptional")}</label>
-                  <input type="number" value={feedQty} onChange={(e) => setFeedQty(e.target.value)} className={inputCls} />
-                </div>
-              )}
-              {feedModalType === "other" && (
-                <div>
-                  <label className={labelCls}>{t(lang, "vendorName")}</label>
-                  <input type="text" value={otherVendor} onChange={(e) => setOtherVendor(e.target.value)} className={inputCls} />
+              {isFeedType && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>{t(lang, "quantityOptional")}</label>
+                    <input type="number" value={expQty} onChange={(e) => setExpQty(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t(lang, "unit")}</label>
+                    <input type="text" value={expUnit} onChange={(e) => setExpUnit(e.target.value)} className={inputCls} placeholder="kg" />
+                  </div>
                 </div>
               )}
               <div>
                 <label className={labelCls}>{t(lang, "amount")}</label>
-                <input type="number" value={feedAmount} onChange={(e) => setFeedAmount(e.target.value)} className={inputCls} />
+                <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={inputCls} />
               </div>
-              {feedModalType === "other" && (
-                <div>
-                  <label className={labelCls}>{t(lang, "description")}</label>
-                  <input type="text" value={otherDescription} onChange={(e) => setOtherDescription(e.target.value)} className={inputCls} />
-                </div>
-              )}
+              <div>
+                <label className={labelCls}>{t(lang, "vendorName")}</label>
+                <input type="text" value={expVendor} onChange={(e) => setExpVendor(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{t(lang, "description")}</label>
+                <input type="text" value={expDescription} onChange={(e) => setExpDescription(e.target.value)} className={inputCls} />
+              </div>
               <div className="flex gap-2">
                 <button onClick={saveExpense} disabled={savingExpense} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
                   {savingExpense ? "..." : t(lang, "save")}
                 </button>
-                <button onClick={() => setFeedModalType(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setExpenseModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
                   {t(lang, "cancel")}
                 </button>
               </div>
