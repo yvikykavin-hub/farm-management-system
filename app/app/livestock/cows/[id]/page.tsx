@@ -198,13 +198,16 @@ export default function CowDetailPage() {
           notes: ovForm.notes.trim() || null,
         })
         .eq("id", id);
-      if (error) alert("Error saving: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setEditingOverview(false);
         fetchCow();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingOverview(false);
   };
@@ -230,8 +233,10 @@ export default function CowDetailPage() {
         effective_from: newRateDate,
         notes: newRateNotes.trim() || null,
       });
-      if (error) alert("Error saving rate: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving rate: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setRateModalOpen(false);
         setNewRate("");
         setNewRateDate("");
@@ -239,7 +244,8 @@ export default function CowDetailPage() {
         fetchRates();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingRate(false);
   };
@@ -254,8 +260,8 @@ export default function CowDetailPage() {
   const manualIncome = manualTotal * (manualDate ? rateForDate(manualDate) : currentRate);
 
   const saveManualCollection = async () => {
-    if (!manualDate) {
-      alert(t(lang, "dateRequired"));
+    if (!manualDate || !manualMorning || !manualEvening) {
+      alert(t(lang, "collectionFieldsRequired"));
       return;
     }
     setSavingManual(true);
@@ -267,15 +273,18 @@ export default function CowDetailPage() {
         morning_litres: parseFloat(manualMorning) || 0,
         evening_litres: parseFloat(manualEvening) || 0,
       });
-      if (error) alert("Error saving collection: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving collection: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setManualDate("");
         setManualMorning("");
         setManualEvening("");
         fetchCollections();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingManual(false);
   };
@@ -325,15 +334,18 @@ export default function CowDetailPage() {
         evening_litres: row.evening,
       }));
       const { error } = await supabase.from("milk_collections").insert(payload);
-      if (error) alert("Error saving rows: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving rows: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setOcrRows([]);
         setOcrImage(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         fetchCollections();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingOcr(false);
   };
@@ -363,7 +375,10 @@ export default function CowDetailPage() {
   const deleteCollection = async (cid: string) => {
     if (!confirm(t(lang, "deleteConfirmRecord"))) return;
     const { error } = await supabase.from("milk_collections").delete().eq("id", cid);
-    if (error) alert("Error: " + error.message);
+    if (error) {
+      console.error("Error: ", error);
+      alert(t(lang, "saveFailedMessage"));
+    }
     else fetchCollections();
   };
 
@@ -413,8 +428,8 @@ export default function CowDetailPage() {
   };
 
   const savePayment = async () => {
-    if (!pmDate || !pmFrom || !pmTo || !pmMilkman.trim()) {
-      alert(t(lang, "periodMilkmanRequired"));
+    if (!pmDate || !pmReceived) {
+      alert(t(lang, "paymentFieldsRequired"));
       return;
     }
     setSavingPayment(true);
@@ -436,13 +451,16 @@ export default function CowDetailPage() {
       const { error } = editingPaymentId
         ? await supabase.from("milk_payments").update(payload).eq("id", editingPaymentId)
         : await supabase.from("milk_payments").insert(payload);
-      if (error) alert("Error saving payment: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving payment: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setPaymentModalOpen(false);
         fetchPayments();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingPayment(false);
   };
@@ -450,7 +468,10 @@ export default function CowDetailPage() {
   const deletePayment = async (pid: string) => {
     if (!confirm(t(lang, "deleteConfirmPayment"))) return;
     const { error } = await supabase.from("milk_payments").delete().eq("id", pid);
-    if (error) alert("Error: " + error.message);
+    if (error) {
+      console.error("Error: ", error);
+      alert(t(lang, "saveFailedMessage"));
+    }
     else fetchPayments();
   };
 
@@ -504,13 +525,16 @@ export default function CowDetailPage() {
         description: expDescription.trim() || null,
       };
       const { error } = await supabase.from("cow_expenses").insert(payload);
-      if (error) alert("Error saving expense: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving expense: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setExpenseModalOpen(false);
         fetchExpenses();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingExpense(false);
   };
@@ -518,7 +542,10 @@ export default function CowDetailPage() {
   const deleteExpense = async (eid: string) => {
     if (!confirm(t(lang, "deleteConfirmExpense"))) return;
     const { error } = await supabase.from("cow_expenses").delete().eq("id", eid);
-    if (error) alert("Error: " + error.message);
+    if (error) {
+      console.error("Error: ", error);
+      alert(t(lang, "saveFailedMessage"));
+    }
     else fetchExpenses();
   };
 

@@ -5,8 +5,10 @@ export type MilkCardRow = {
 };
 
 export async function extractMilkCardData(imageBase64: string): Promise<MilkCardRow[]> {
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -21,25 +23,40 @@ export async function extractMilkCardData(imageBase64: string): Promise<MilkCard
                 },
               },
               {
-                text: `This is a printed milk collection card/table with English numbers.
-Extract every row from the table.
-Each row has: date, morning milk litres, evening milk litres.
-Return ONLY a raw JSON array. No markdown. No explanation. No backticks.
-Format: [{"date":"01/06/2026","morning":4.5,"evening":3.0}]
-If a value is unclear, make best guess based on surrounding context.`,
+                text: `This is a milk collection table.
+Extract each row with date, morning litres, evening litres.
+Return ONLY valid JSON array like this example:
+[{"date":"01/06/2026","morning":4.5,"evening":3.0}]
+No explanation. No markdown. Just the JSON array.`,
               },
             ],
           },
         ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 2048,
+        },
       }),
     }
   );
 
   const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    throw new Error("Gemini OCR returned no readable content");
+
+  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+    console.error("Gemini error response:", JSON.stringify(data));
+    throw new Error("Could not read image. Please try a clearer photo.");
   }
+
+  const text = data.candidates[0].content.parts[0].text;
   const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
+
+  try {
+    const parsed = JSON.parse(clean);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error("No data found in image.");
+    }
+    return parsed;
+  } catch {
+    throw new Error("Could not read table. Please try a clearer photo.");
+  }
 }

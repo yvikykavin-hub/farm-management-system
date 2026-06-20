@@ -152,13 +152,16 @@ export default function GoatDetailPage() {
           notes: ovForm.notes.trim() || null,
         })
         .eq("id", id);
-      if (error) alert("Error saving: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setEditingOverview(false);
         fetchGoat();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingOverview(false);
   };
@@ -205,13 +208,16 @@ export default function GoatDetailPage() {
         buyer_name: saleBuyer.trim() || null,
         remarks: saleRemarks.trim() || null,
       });
-      if (error) alert("Error saving sale: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving sale: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setSaleModalOpen(false);
         fetchSales();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingSale(false);
   };
@@ -219,7 +225,10 @@ export default function GoatDetailPage() {
   const deleteSale = async (sid: string) => {
     if (!confirm(t(lang, "deleteConfirmSale"))) return;
     const { error } = await supabase.from("goat_income").delete().eq("id", sid);
-    if (error) alert("Error: " + error.message);
+    if (error) {
+      console.error("Error: ", error);
+      alert(t(lang, "saveFailedMessage"));
+    }
     else fetchSales();
   };
 
@@ -261,13 +270,16 @@ export default function GoatDetailPage() {
         description: expDescription.trim() || null,
         notes: null,
       });
-      if (error) alert("Error saving expense: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving expense: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setExpenseModalOpen(false);
         fetchExpenses();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSavingExpense(false);
   };
@@ -275,7 +287,10 @@ export default function GoatDetailPage() {
   const deleteExpense = async (eid: string) => {
     if (!confirm(t(lang, "deleteConfirmExpense"))) return;
     const { error } = await supabase.from("goat_expenses").delete().eq("id", eid);
-    if (error) alert("Error: " + error.message);
+    if (error) {
+      console.error("Error: ", error);
+      alert(t(lang, "saveFailedMessage"));
+    }
     else fetchExpenses();
   };
 

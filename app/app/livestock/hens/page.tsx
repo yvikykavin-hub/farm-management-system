@@ -124,13 +124,16 @@ export default function HensListPage() {
         current_status: form.current_status,
         notes: form.notes.trim() || null,
       });
-      if (error) alert("Error saving hen: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving hen: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setModalOpen(false);
         fetchAll();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSaving(false);
   };

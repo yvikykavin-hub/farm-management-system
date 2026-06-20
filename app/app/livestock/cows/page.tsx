@@ -152,13 +152,15 @@ export default function CowsListPage() {
         notes: form.notes.trim() || null,
       });
       if (error) {
-        alert("Error saving cow: " + error.message);
+        console.error("Error saving cow: ", error);
+        alert(t(lang, "saveFailedMessage"));
       } else {
         setModalOpen(false);
         fetchAll();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSaving(false);
   };

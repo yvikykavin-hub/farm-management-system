@@ -139,13 +139,16 @@ export default function GeneralExpensesPage() {
       const { error } = editingId
         ? await supabase.from("livestock_general_expenses").update(payload).eq("id", editingId)
         : await supabase.from("livestock_general_expenses").insert(payload);
-      if (error) alert("Error saving expense: " + error.message);
-      else {
+      if (error) {
+        console.error("Error saving expense: ", error);
+        alert(t(lang, "saveFailedMessage"));
+      } else {
         setModalOpen(false);
         fetchAll();
       }
     } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Unexpected error:", err);
+      alert(t(lang, "saveFailedMessage"));
     }
     setSaving(false);
   };
@@ -153,7 +156,10 @@ export default function GeneralExpensesPage() {
   const deleteExpense = async (id: string) => {
     if (!confirm(t(lang, "deleteConfirmExpense"))) return;
     const { error } = await supabase.from("livestock_general_expenses").delete().eq("id", id);
-    if (error) alert("Error: " + error.message);
+    if (error) {
+      console.error("Error: ", error);
+      alert(t(lang, "saveFailedMessage"));
+    }
     else fetchAll();
   };
 
