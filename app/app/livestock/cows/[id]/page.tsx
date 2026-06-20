@@ -294,11 +294,13 @@ export default function CowDetailPage() {
   const [ocrImage, setOcrImage] = useState<string | null>(null);
   const [ocrRows, setOcrRows] = useState<MilkCardRow[]>([]);
   const [savingOcr, setSavingOcr] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSelectedFileName(file.name);
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -340,6 +342,7 @@ export default function CowDetailPage() {
       } else {
         setOcrRows([]);
         setOcrImage(null);
+        setSelectedFileName(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         fetchCollections();
       }
@@ -781,7 +784,24 @@ export default function CowDetailPage() {
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                   <h2 className="text-sm font-semibold text-gray-800 mb-2">📷 {t(lang, "uploadMilkCard")}</h2>
-                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="text-xs mb-2 w-full" />
+                  <div className="relative mb-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 hover:bg-green-50 transition-colors duration-200">
+                      <div className="text-3xl mb-2">📷</div>
+                      <p className="text-gray-700 font-medium text-sm">
+                        {t(lang, "clickToUploadPhoto")}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        {selectedFileName ? `✅ ${selectedFileName}` : t(lang, "jpgPngSupported")}
+                      </p>
+                    </div>
+                  </div>
                   {ocrLoading && <p className="text-xs text-gray-500">{t(lang, "readingMilkCard")}</p>}
                   {ocrImage && (
                     <img src={ocrImage} alt="Milk card" className="w-full max-h-32 object-contain rounded-lg border border-gray-200 mb-2" />

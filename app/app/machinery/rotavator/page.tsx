@@ -123,6 +123,7 @@ export default function RotavatorPage() {
                 { key: "blade_size", en: "Blade Size", ta: "பிளேடு அளவு", type: "text" },
                 { key: "cost", en: "Cost (₹)", ta: "செலவு (₹)", type: "number", required: true, isCost: true },
               ]}
+              onChanged={fetchOverview}
             />
           )}
 
@@ -139,6 +140,7 @@ export default function RotavatorPage() {
                 { key: "description", en: "Description", ta: "விவரம்", type: "text", required: true },
                 { key: "cost", en: "Cost (₹)", ta: "செலவு (₹)", type: "number", required: true, isCost: true },
               ]}
+              onChanged={fetchOverview}
             />
           )}
 

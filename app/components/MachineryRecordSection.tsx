@@ -24,6 +24,7 @@ type Props = {
   fields: MachineryField[]; // all columns in display/input order, excluding notes
   hasNotes?: boolean;
   showLastDate?: boolean;
+  onChanged?: () => void;
 };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -47,6 +48,7 @@ export default function MachineryRecordSection({
   fields,
   hasNotes = true,
   showLastDate = false,
+  onChanged,
 }: Props) {
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
@@ -122,6 +124,7 @@ export default function MachineryRecordSection({
       } else {
         setModalOpen(false);
         fetchRecords();
+        onChanged?.();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -138,6 +141,7 @@ export default function MachineryRecordSection({
       alert(L("Could not delete. Please try again.", "நீக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     } else {
       fetchRecords();
+      onChanged?.();
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import MachineryRecordSection from "../../../components/MachineryRecordSection";
@@ -53,9 +53,21 @@ const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
 const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
-const timeToMinutes = (t: string) => {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
+const computeDurationHours = (startTime: string, endTime: string) => {
+  const start = new Date(`2000-01-01T${startTime}`);
+  const end = new Date(`2000-01-01T${endTime}`);
+  return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+};
+
+const MAX_RECOMMENDED_PHOTO_BYTES = 2 * 1024 * 1024;
+
+const convertToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 };
 
 export default function TractorPage() {
@@ -518,10 +530,10 @@ function UsageTab({
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const durationMinutes = startTime && endTime ? timeToMinutes(endTime) - timeToMinutes(startTime) : 0;
-  const durationValid = durationMinutes > 0;
-  const durationHrs = Math.floor(durationMinutes / 60);
-  const durationMins = durationMinutes % 60;
+  const durationHoursRaw = startTime && endTime ? computeDurationHours(startTime, endTime) : 0;
+  const durationValid = durationHoursRaw > 0;
+  const durationHrs = Math.floor(durationHoursRaw);
+  const durationMins = Math.round((durationHoursRaw - durationHrs) * 60);
 
   const openAdd = () => {
     setEditingId(null);
@@ -545,18 +557,21 @@ function UsageTab({
       alert(L("Date, start time, and end time are required.", "தேதி, தொடக்க நேரம் மற்றும் முடிவு நேரம் தேவை."));
       return;
     }
-    if (!durationValid) {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    if (end <= start) {
       alert(L("End time must be after start time.", "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்."));
       return;
     }
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     setSaving(true);
     try {
       const payload = {
         date: date || null,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        duration_hours: durationMinutes / 60,
-        notes: notes.trim() || null,
+        start_time: startTime,
+        end_time: endTime,
+        duration_hours: durationHours,
+        notes: notes || null,
       };
       const { error } = editingId
         ? await supabase.from("tractor_usage").update(payload).eq("id", editingId)
@@ -976,7 +991,6 @@ function PhotosTab({ L }: { L: (en: string, ta: string) => string }) {
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchPhotos();
@@ -993,8 +1007,11 @@ function PhotosTab({ L }: { L: (en: string, ta: string) => string }) {
     setTitle("");
     setNotes("");
     setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     setModalOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFile(e.target.files?.[0] ?? null);
   };
 
   const save = async () => {
@@ -1004,19 +1021,10 @@ function PhotosTab({ L }: { L: (en: string, ta: string) => string }) {
     }
     setSaving(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("machinery-photos").upload(path, file);
-      if (uploadError) {
-        console.error("Error uploading photo:", uploadError);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
-        setSaving(false);
-        return;
-      }
-      const { data: urlData } = supabase.storage.from("machinery-photos").getPublicUrl(path);
+      const base64 = await convertToBase64(file);
       const { error } = await supabase.from("tractor_photos").insert({
         title: title.trim(),
-        photo_url: urlData.publicUrl,
+        photo_url: base64,
         notes: notes.trim() || null,
       });
       if (error) {
@@ -1097,7 +1105,28 @@ function PhotosTab({ L }: { L: (en: string, ta: string) => string }) {
               </div>
               <div>
                 <label className={labelCls}>{L("Photo", "புகைப்படம்")} *</label>
-                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-xs w-full" />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 hover:bg-green-50 transition-colors duration-200">
+                    <div className="text-3xl mb-2">📷</div>
+                    <p className="text-gray-700 font-medium text-sm">
+                      {L("Click to upload photo", "புகைப்படம் பதிவேற்ற கிளிக் செய்யவும்")}
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {file ? `✅ ${file.name}` : L("JPG, PNG supported (max 2MB recommended)", "JPG, PNG ஆதரிக்கப்படும் (அதிகபட்சம் 2MB பரிந்துரைக்கப்படுகிறது)")}
+                    </p>
+                  </div>
+                </div>
+                {file && file.size > MAX_RECOMMENDED_PHOTO_BYTES && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠️ {L("Photo is large and may slow the app. Please use a compressed image under 2MB.", "புகைப்படம் பெரியது, செயலியை மெதுவாக்கலாம். 2MB க்கும் குறைவான சுருக்கப்பட்ட படத்தை பயன்படுத்தவும்.")}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">

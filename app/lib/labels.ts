@@ -86,6 +86,8 @@ export const labels = {
     totalLitres: "Total",
     expectedIncome: "Expected Income",
     uploadMilkCard: "Upload Milk Card Photo",
+    clickToUploadPhoto: "Click to upload photo",
+    jpgPngSupported: "JPG, PNG supported (max 2MB recommended)",
     readingMilkCard: "Reading milk card...",
     saveAllRows: "Save All Rows",
 
@@ -273,6 +275,8 @@ export const labels = {
     totalLitres: "மொத்தம்",
     expectedIncome: "எதிர்பார்க்கும் வருமானம்",
     uploadMilkCard: "பால் அட்டை பதிவேற்றம்",
+    clickToUploadPhoto: "புகைப்படம் பதிவேற்ற கிளிக் செய்யவும்",
+    jpgPngSupported: "JPG, PNG ஆதரிக்கப்படும் (அதிகபட்சம் 2MB பரிந்துரைக்கப்படுகிறது)",
     readingMilkCard: "பால் அட்டையைப் படிக்கிறது...",
     saveAllRows: "அனைத்தையும் சேமி",
 
