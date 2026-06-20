@@ -45,7 +45,7 @@ export default function Dashboard() {
     const { count: cropCount } = await supabase
       .from("cultivations")
       .select("*", { count: "exact", head: true })
-      .eq("status", "active");
+      .is("end_date", null);
     setActiveCropsCount(cropCount || 0);
   };
 
@@ -107,7 +107,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-green-50">
+    <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 p-3 overflow-hidden flex flex-col">
@@ -116,14 +116,14 @@ export default function Dashboard() {
           {/* Header */}
           <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex justify-between items-center shrink-0">
             <div>
-              <h1 className="text-xl font-bold text-green-900">{t.title}</h1>
-              <p className="text-green-700 text-sm font-medium mt-0.5">{t.tagline}</p>
+              <h1 className="text-xl font-bold text-primary">{t.title}</h1>
+              <p className="text-primary text-sm font-medium mt-0.5">{t.tagline}</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Language Toggle */}
               <button
                 onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-                className="px-3 py-1.5 rounded-lg border border-green-300 text-green-700 text-sm font-medium hover:bg-green-50 transition"
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
               >
                 {lang === "ta" ? "English" : "தமிழ்"}
               </button>
@@ -136,7 +136,7 @@ export default function Dashboard() {
           {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-3 shrink-0">
             {[
-              { label: t.totalFarms, value: farms.length, color: "text-green-700", bg: "bg-green-50", icon: "🌳" },
+              { label: t.totalFarms, value: farms.length, color: "text-primary", bg: "bg-green-50", icon: "🌳" },
               { label: t.totalArea, value: `${totalArea.toFixed(2)} ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
               { label: t.activeCrops, value: activeCropsCount, color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
             ].map((card) => (
@@ -162,7 +162,7 @@ export default function Dashboard() {
                 placeholder={t.farmName}
                 value={farmName}
                 onChange={(e) => setFarmName(e.target.value)}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <input
                 type="number"
@@ -170,12 +170,12 @@ export default function Dashboard() {
                 placeholder={t.areaAcres}
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <select
                 value={hasWell ? "yes" : "no"}
                 onChange={(e) => setHasWell(e.target.value === "yes")}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option className="text-gray-900" value="yes">{t.well}: {t.yes}</option>
                 <option className="text-gray-900" value="no">{t.well}: {t.no}</option>
@@ -183,7 +183,7 @@ export default function Dashboard() {
               <select
                 value={hasMotor ? "yes" : "no"}
                 onChange={(e) => setHasMotor(e.target.value === "yes")}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option className="text-gray-900" value="yes">{t.motor}: {t.yes}</option>
                 <option className="text-gray-900" value="no">{t.motor}: {t.no}</option>
@@ -191,7 +191,7 @@ export default function Dashboard() {
               <button
                 onClick={addFarm}
                 disabled={saving}
-                className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-xl px-3 py-2 text-sm font-semibold transition shadow-sm"
+                className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl px-3 py-2 text-sm font-semibold transition shadow-sm"
               >
                 {saving ? "..." : t.save}
               </button>
@@ -206,20 +206,24 @@ export default function Dashboard() {
             </h2>
 
             {loading ? (
-              <div className="text-center py-6 text-green-700 text-sm font-medium">{t.loading}</div>
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
+              </div>
             ) : farms.length === 0 ? (
               <div className="text-center py-6 text-gray-500 text-sm font-medium">{t.noFarms}</div>
             ) : (
               <div className="space-y-2 overflow-y-auto max-h-48">
                 {farms.map((farm) => (
                   <Link key={farm.id} href={`/farms/${farm.id}`}>
-                    <div className="flex justify-between items-center p-3 rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition cursor-pointer group">
+                    <div className="flex justify-between items-center p-3 rounded-xl border border-gray-100 hover:border-primary/40 hover:bg-green-50 transition cursor-pointer group">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center text-lg group-hover:bg-green-200 transition">
                           🌳
                         </div>
                         <div>
-                          <h3 className="font-semibold text-sm text-green-900">{farm.name}</h3>
+                          <h3 className="font-semibold text-sm text-primary">{farm.name}</h3>
                           <p className="text-xs text-gray-600 font-medium mt-0.5">
                             {t.well}: {farm.has_well ? t.yes : t.no} &nbsp;|&nbsp;
                             {t.motor}: {farm.has_motor ? t.yes : t.no}
@@ -227,8 +231,8 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-green-700 font-bold text-sm">{farm.total_area}</span>
-                        <span className="text-green-700 text-xs font-medium ml-1">{t.acres}</span>
+                        <span className="text-primary font-bold text-sm">{farm.total_area}</span>
+                        <span className="text-primary text-xs font-medium ml-1">{t.acres}</span>
                       </div>
                     </div>
                   </Link>

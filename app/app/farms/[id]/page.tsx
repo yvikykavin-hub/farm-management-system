@@ -26,14 +26,15 @@ type Cultivation = {
   status: string;
   start_date: string | null;
   end_date: string | null;
+  variety_name: string | null;
+  quantity: number | null;
+  quantity_unit: string | null;
 };
 
-type Financials = { spent: number; earned: number };
-
-const STATUS_BADGE: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  completed: "bg-blue-100 text-blue-700",
-  finished: "bg-gray-200 text-gray-600",
+const formatDMY = (iso: string | null) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : iso;
 };
 
 const CROP_TYPES = [
@@ -66,7 +67,7 @@ function TogglePill({
         type="button"
         onClick={() => onChange(true)}
         className={`px-3 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-          value ? "bg-green-600 text-white" : "bg-gray-100 text-gray-500 border border-gray-200"
+          value ? "bg-success text-white" : "bg-gray-100 text-gray-500 border border-gray-200"
         }`}
       >
         {yesLabel}
@@ -75,7 +76,7 @@ function TogglePill({
         type="button"
         onClick={() => onChange(false)}
         className={`px-3 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-          !value ? "bg-red-500 text-white" : "bg-gray-100 text-gray-500 border border-gray-200"
+          !value ? "bg-danger text-white" : "bg-gray-100 text-gray-500 border border-gray-200"
         }`}
       >
         {noLabel}
@@ -108,19 +109,7 @@ export default function FarmDetail() {
   const [cropType, setCropType] = useState("");
   const [cropArea, setCropArea] = useState("");
   const [cropStartDate, setCropStartDate] = useState("");
-  const [cropEndDate, setCropEndDate] = useState("");
   const [addingCultivation, setAddingCultivation] = useState(false);
-
-  // Inline edit cultivation
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editCropType, setEditCropType] = useState("");
-  const [editArea, setEditArea] = useState("");
-  const [editStartDate, setEditStartDate] = useState("");
-  const [editEndDate, setEditEndDate] = useState("");
-  const [editStatus, setEditStatus] = useState("active");
-  const [savingEdit, setSavingEdit] = useState(false);
-
-  const [financials, setFinancials] = useState<Record<string, Financials>>({});
 
   useEffect(() => {
     if (id) {
@@ -155,32 +144,7 @@ export default function FarmDetail() {
       .from("cultivations")
       .select("*")
       .eq("farm_id", id);
-    if (!error && data) {
-      setCultivations(data);
-      fetchFinancials(data.map((c: Cultivation) => c.id));
-    }
-  };
-
-  const fetchFinancials = async (cultivationIds: string[]) => {
-    if (cultivationIds.length === 0) {
-      setFinancials({});
-      return;
-    }
-    const [{ data: expenses }, { data: incomes }] = await Promise.all([
-      supabase.from("expense_records").select("cultivation_id, amount").in("cultivation_id", cultivationIds),
-      supabase.from("income_records").select("cultivation_id, amount").in("cultivation_id", cultivationIds),
-    ]);
-    const map: Record<string, Financials> = {};
-    cultivationIds.forEach((cid) => {
-      map[cid] = { spent: 0, earned: 0 };
-    });
-    (expenses || []).forEach((e: { cultivation_id: string; amount: number }) => {
-      map[e.cultivation_id].spent += Number(e.amount);
-    });
-    (incomes || []).forEach((i: { cultivation_id: string; amount: number }) => {
-      map[i.cultivation_id].earned += Number(i.amount);
-    });
-    setFinancials(map);
+    if (!error && data) setCultivations(data);
   };
 
   const saveFarm = async () => {
@@ -235,9 +199,8 @@ export default function FarmDetail() {
         farm_id: id,
         crop_type: cropType,
         area: newArea,
-        status: "active",
         start_date: cropStartDate,
-        end_date: cropEndDate || null,
+        status: "active",
       });
       if (error) {
         alert("Error adding cultivation: " + error.message);
@@ -245,7 +208,6 @@ export default function FarmDetail() {
         setCropType("");
         setCropArea("");
         setCropStartDate("");
-        setCropEndDate("");
         fetchCultivations();
       }
     } catch (err) {
@@ -254,82 +216,13 @@ export default function FarmDetail() {
     setAddingCultivation(false);
   };
 
-  const startEdit = (item: Cultivation) => {
-    setEditingId(item.id);
-    setEditCropType(item.crop_type);
-    setEditArea(String(item.area));
-    setEditStartDate(item.start_date ?? "");
-    setEditEndDate(item.end_date ?? "");
-    setEditStatus(item.status || "active");
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditCropType("");
-    setEditArea("");
-    setEditStartDate("");
-    setEditEndDate("");
-    setEditStatus("active");
-  };
-
-  const saveEdit = async (item: Cultivation) => {
-    if (!editCropType || !editArea) {
-      alert(lang === "ta" ? "பயிர் மற்றும் பரப்பளவு தேவை" : "Crop and area are required");
-      return;
-    }
-    const newArea = parseFloat(editArea);
-    const otherCultivationsArea = cultivations
-      .filter((c) => c.id !== item.id)
-      .reduce((sum, c) => sum + Number(c.area), 0);
-    const remaining = farmTotalArea - otherCultivationsArea;
-    if (newArea > remaining) {
-      alert(notEnoughAreaMessage(remaining));
-      return;
-    }
-    setSavingEdit(true);
-    try {
-      const { error } = await supabase
-        .from("cultivations")
-        .update({
-          crop_type: editCropType,
-          area: newArea,
-          start_date: editStartDate || null,
-          end_date: editEndDate || null,
-          status: editStatus,
-        })
-        .eq("id", item.id);
-      if (error) {
-        alert("Error updating cultivation: " + error.message);
-      } else {
-        cancelEdit();
-        fetchCultivations();
-      }
-    } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
-    }
-    setSavingEdit(false);
-  };
-
-  const deleteCultivation = async (item: Cultivation) => {
-    const confirmMsg =
-      lang === "ta" ? "இந்த பயிரை நீக்க விரும்புகிறீர்களா?" : "Are you sure you want to delete this crop?";
-    if (!confirm(confirmMsg)) return;
-    try {
-      const { error } = await supabase.from("cultivations").delete().eq("id", item.id);
-      if (error) {
-        alert("Error deleting cultivation: " + error.message);
-      } else {
-        fetchCultivations();
-      }
-    } catch (err) {
-      alert("Unexpected error: " + (err instanceof Error ? err.message : String(err)));
-    }
-  };
+  const activeCultivationsCount = cultivations.filter((c) => !c.end_date).length;
+  const doneCultivationsCount = cultivations.filter((c) => !!c.end_date).length;
 
   const usedPercent = farmTotalArea > 0 ? Math.min((usedArea / farmTotalArea) * 100, 100) : 0;
   const isFull = farmTotalArea > 0 && usedArea >= farmTotalArea;
   const isWarning = usedPercent >= 90 && !isFull;
-  const barColor = isFull ? "bg-red-500" : isWarning ? "bg-yellow-500" : "bg-green-500";
+  const barColor = isFull ? "bg-danger" : isWarning ? "bg-yellow-500" : "bg-green-500";
 
   const t = {
     back: lang === "ta" ? "முகப்புக்கு திரும்பு" : "Back to Dashboard",
@@ -366,42 +259,43 @@ export default function FarmDetail() {
     used: lang === "ta" ? "பயன்படுத்தியது" : "used",
     remaining: lang === "ta" ? "மீதம்" : "remaining",
     startDate: lang === "ta" ? "தொடக்க தேதி" : "Start Date",
-    endDate: lang === "ta" ? "முடிவு தேதி" : "End Date",
-    status: lang === "ta" ? "நிலை" : "Status",
     statusActive: lang === "ta" ? "செயலில்" : "Active",
-    statusCompleted: lang === "ta" ? "முடிந்தது" : "Completed",
-    statusFinished: lang === "ta" ? "நிறைவு" : "Finished",
-    spent: lang === "ta" ? "செலவு" : "Spent",
-    earned: lang === "ta" ? "வருமானம்" : "Earned",
-    net: lang === "ta" ? "நிகர" : "Net",
+    statusDone: lang === "ta" ? "பயிர் முடிந்தது" : "Cultivation Done",
+    completedOn: lang === "ta" ? "நிறைவு செய்யப்பட்டது" : "Completed on",
+    activeCount: lang === "ta" ? "செயலில்" : "Active",
+    doneCount: lang === "ta" ? "முடிந்தவை" : "Done",
   };
 
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-green-50">
+      <div className="flex h-screen overflow-hidden bg-page">
         <Sidebar lang={lang} setLang={setLang} />
-        <main className="flex-1 flex items-center justify-center text-green-700 text-sm font-medium">
-          {t.loading}
+        <main className="flex-1 p-3 flex flex-col gap-3">
+          <div className="h-12 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="flex gap-3 flex-1">
+            <div className="w-[40%] bg-gray-200 rounded-2xl animate-pulse" />
+            <div className="w-[60%] bg-gray-200 rounded-2xl animate-pulse" />
+          </div>
         </main>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-green-50">
+    <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-hidden p-3 flex flex-col gap-3">
 
         {/* Header bar */}
         <div className="bg-white rounded-xl shadow-sm py-2 px-4 flex items-center justify-between shrink-0">
-          <Link href="/" className="text-green-700 hover:text-green-800 text-sm font-semibold">
+          <Link href="/" className="text-primary hover:text-primary text-sm font-semibold">
             ← {t.back}
           </Link>
-          <h1 className="text-base font-bold text-green-800">{farm?.name}</h1>
+          <h1 className="text-base font-bold text-primary">{farm?.name}</h1>
           <button
             onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-            className="px-3 py-1.5 rounded-lg border border-green-300 text-green-700 text-sm font-medium hover:bg-green-50 transition"
+            className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
           >
             {lang === "ta" ? "English" : "தமிழ்"}
           </button>
@@ -494,7 +388,7 @@ export default function FarmDetail() {
             <button
               onClick={saveFarm}
               disabled={saving}
-              className="shrink-0 w-full bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg py-1.5 text-xs font-semibold transition shadow-sm"
+              className="shrink-0 w-full bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-1.5 text-xs font-semibold transition shadow-sm"
             >
               {saving ? "..." : t.saveChanges}
             </button>
@@ -508,7 +402,7 @@ export default function FarmDetail() {
                 <span className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center text-xs">🌾</span>
                 {t.cultivations}
                 <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                  {cultivations.length}
+                  {activeCultivationsCount} {t.activeCount}, {doneCultivationsCount} {t.doneCount}
                 </span>
               </h2>
 
@@ -517,7 +411,7 @@ export default function FarmDetail() {
                   <select
                     value={cropType}
                     onChange={(e) => setCropType(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs min-w-[150px] focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option className="text-gray-900" value="">{t.selectCrop}</option>
                     {CROP_TYPES.map((c) => (
@@ -534,7 +428,7 @@ export default function FarmDetail() {
                     placeholder={t.acresPlaceholder}
                     value={cropArea}
                     onChange={(e) => setCropArea(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-24 truncate placeholder:text-xs placeholder:text-gray-500 placeholder:truncate focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-24 truncate placeholder:text-xs placeholder:text-gray-500 placeholder:truncate focus:outline-none focus:ring-2 focus:ring-primary"
                   />
 
                   <input
@@ -542,26 +436,18 @@ export default function FarmDetail() {
                     title={t.startDate}
                     value={cropStartDate}
                     onChange={(e) => setCropStartDate(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
-                  />
-
-                  <input
-                    type="date"
-                    title={t.endDate}
-                    value={cropEndDate}
-                    onChange={(e) => setCropEndDate(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
                   />
 
                   <button
                     onClick={addCultivation}
                     disabled={addingCultivation || isFull}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-3 py-1.5 text-sm font-semibold transition shadow-sm shrink-0"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-3 py-1.5 text-sm font-semibold transition shadow-sm shrink-0"
                   >
                     {addingCultivation ? "..." : t.addCultivation}
                   </button>
                 </div>
-                <span className="text-xs text-green-700 font-medium">
+                <span className="text-xs text-primary font-medium">
                   {t.available}: {Math.max(remainingArea, 0).toFixed(2)} {t.acres}
                 </span>
               </div>
@@ -590,138 +476,37 @@ export default function FarmDetail() {
               <div className="flex-1 overflow-y-auto mt-2 grid grid-cols-2 lg:grid-cols-3 gap-2 content-start">
                 {cultivations.map((item) => {
                   const crop = cropInfo(item.crop_type);
-                  const isEditing = editingId === item.id;
-
-                  if (isEditing) {
-                    return (
-                      <div
-                        key={item.id}
-                        className="col-span-1 sm:col-span-2 bg-green-50 rounded-xl border border-green-300 p-2 flex flex-col gap-2"
-                      >
-                        <select
-                          value={editCropType}
-                          onChange={(e) => setEditCropType(e.target.value)}
-                          className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
-                        >
-                          {CROP_TYPES.map((c) => (
-                            <option className="text-gray-900" key={c.value} value={c.value}>
-                              {c.icon} {lang === "ta" ? c.labelTa : c.labelEn}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder={t.acresPlaceholder}
-                          value={editArea}
-                          onChange={(e) => setEditArea(e.target.value)}
-                          className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="date"
-                            title={t.startDate}
-                            value={editStartDate}
-                            onChange={(e) => setEditStartDate(e.target.value)}
-                            className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
-                          />
-                          <input
-                            type="date"
-                            title={t.endDate}
-                            value={editEndDate}
-                            onChange={(e) => setEditEndDate(e.target.value)}
-                            className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
-                          />
-                        </div>
-                        <select
-                          value={editStatus}
-                          onChange={(e) => setEditStatus(e.target.value)}
-                          className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-2 focus:ring-green-400"
-                        >
-                          <option className="text-gray-900" value="active">{t.statusActive}</option>
-                          <option className="text-gray-900" value="completed">{t.statusCompleted}</option>
-                          <option className="text-gray-900" value="finished">{t.statusFinished}</option>
-                        </select>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => saveEdit(item)}
-                            disabled={savingEdit}
-                            className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg py-1.5 text-xs font-semibold transition"
-                          >
-                            {t.save}
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg py-1.5 text-xs font-semibold transition"
-                          >
-                            {t.cancel}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const fin = financials[item.id];
-                  const net = fin ? fin.earned - fin.spent : 0;
-                  const netColor = !fin || (fin.spent === 0 && fin.earned === 0)
-                    ? "text-gray-400"
-                    : net >= 0 ? "text-green-700" : "text-red-600";
-                  const statusLabel =
-                    item.status === "completed" ? t.statusCompleted
-                    : item.status === "finished" ? t.statusFinished
-                    : t.statusActive;
-                  const statusCls = STATUS_BADGE[item.status] ?? STATUS_BADGE.active;
+                  const isDone = !!item.end_date;
 
                   return (
                     <Link key={item.id} href={`/crops/${item.id}`}>
-                      <div className="group relative bg-white rounded-xl border border-gray-100 hover:border-green-400 hover:bg-green-50 hover:shadow-md transition cursor-pointer p-2 flex items-center gap-2">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-lg shrink-0">
-                          {crop.icon}
-                        </div>
+                      <div className="group relative bg-white rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition cursor-pointer p-3 flex items-center gap-2">
+                        <span className="text-2xl shrink-0">{crop.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-sm text-green-900 truncate">
-                            {lang === "ta" ? crop.labelTa : crop.labelEn}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {item.area} {t.acres}
-                            {item.start_date && (
-                              <> · {item.start_date}{item.end_date ? ` → ${item.end_date}` : ""}</>
+                          <div className="flex items-center justify-between gap-1">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">
+                              {lang === "ta" ? crop.labelTa : crop.labelEn}
+                            </h3>
+                            <span className="text-xs text-gray-500 shrink-0">{item.area} {t.acres}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {isDone ? (
+                              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                                ✓ {t.statusDone}
+                              </span>
+                            ) : (
+                              <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                                ● {t.statusActive}
+                              </span>
                             )}
-                          </p>
-                          {fin && (
-                            <p className={`text-[10px] mt-0.5 ${netColor}`}>
-                              💸 {t.spent}: ₹{fin.spent.toFixed(0)} · 💰 {t.earned}: ₹{fin.earned.toFixed(0)} · {t.net}: ₹{net.toFixed(0)}
+                          </div>
+                          {isDone && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {t.completedOn}: {formatDMY(item.end_date)}
                             </p>
                           )}
                         </div>
-                        <span className={`${statusCls} text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0`}>
-                          {statusLabel}
-                        </span>
                         <span className="text-gray-400 group-hover:text-green-600 text-sm shrink-0">→</span>
-
-                        <div className="absolute top-1 right-1 hidden group-hover:flex gap-1 bg-white/90 rounded-lg p-0.5">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              startEdit(item);
-                            }}
-                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-sm"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              deleteCultivation(item);
-                            }}
-                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-100 text-sm"
-                          >
-                            🗑️
-                          </button>
-                        </div>
                       </div>
                     </Link>
                   );
@@ -730,7 +515,7 @@ export default function FarmDetail() {
             )}
 
             <div className="shrink-0 mt-2 pt-2 border-t border-gray-100 text-sm font-medium text-gray-700">
-              {t.totalCultivated}: <span className="font-bold text-green-700">{usedArea.toFixed(2)} {t.acres}</span>
+              {t.totalCultivated}: <span className="font-bold text-primary">{usedArea.toFixed(2)} {t.acres}</span>
             </div>
           </div>
 

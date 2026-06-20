@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
 
@@ -14,6 +14,9 @@ type Cultivation = {
   status: string;
   start_date: string | null;
   end_date: string | null;
+  variety_name: string | null;
+  quantity: number | null;
+  quantity_unit: string | null;
 };
 
 type CoconutDetails = {
@@ -168,6 +171,51 @@ const CROP_TYPES = [
 const cropInfo = (value: string) =>
   CROP_TYPES.find((c) => c.value === value) ?? { value, icon: "🌱", labelTa: value, labelEn: value };
 
+type QuantityUnitOption = { value: string; en: string; ta: string };
+type QuantityFieldConfig = {
+  units: QuantityUnitOption[];
+  labelFor: (unit: string) => { en: string; ta: string };
+};
+
+const QUANTITY_CONFIG: Record<string, QuantityFieldConfig> = {
+  coconut: {
+    units: [{ value: "trees", en: "Trees", ta: "மரங்கள்" }],
+    labelFor: () => ({ en: "Number of Trees", ta: "மரங்களின் எண்ணிக்கை" }),
+  },
+  sugarcane: {
+    units: [
+      { value: "plants", en: "Plants", ta: "தாவரங்கள்" },
+      { value: "stems", en: "Stems", ta: "தண்டுகள்" },
+    ],
+    labelFor: (u) =>
+      u === "stems" ? { en: "Number of Stems", ta: "தண்டுகளின் எண்ணிக்கை" } : { en: "Number of Plants", ta: "தாவரங்களின் எண்ணிக்கை" },
+  },
+  turmeric: {
+    units: [{ value: "beds", en: "Beds", ta: "படுக்கைகள்" }],
+    labelFor: () => ({ en: "Number of Beds", ta: "படுக்கைகளின் எண்ணிக்கை" }),
+  },
+  ellu: {
+    units: [{ value: "kg", en: "kg", ta: "கி.கி" }],
+    labelFor: () => ({ en: "Seed Quantity (kg)", ta: "விதை அளவு (kg)" }),
+  },
+  kuchi_kilangu: {
+    units: [{ value: "cuttings", en: "Cuttings", ta: "கட்டிங்ஸ்" }],
+    labelFor: () => ({ en: "Number of Cuttings", ta: "கட்டிங்ஸ் எண்ணிக்கை" }),
+  },
+  onion: {
+    units: [
+      { value: "bulbs", en: "Bulbs", ta: "தண்டுகள்" },
+      { value: "seed_kg", en: "Seed (kg)", ta: "விதை (kg)" },
+    ],
+    labelFor: (u) =>
+      u === "seed_kg" ? { en: "Seed Quantity (kg)", ta: "விதை அளவு (kg)" } : { en: "Number of Bulbs", ta: "தண்டுகளின் எண்ணிக்கை" },
+  },
+  fodder_corn: {
+    units: [{ value: "kg", en: "kg", ta: "கி.கி" }],
+    labelFor: () => ({ en: "Seed Quantity (kg)", ta: "விதை அளவு (kg)" }),
+  },
+};
+
 const EXPENSE_CATEGORIES = [
   { value: "seeds", en: "Seeds", ta: "விதைகள்" },
   { value: "fertilizer", en: "Fertilizer", ta: "உரம்" },
@@ -200,11 +248,6 @@ const KUCHI_BUYER_TYPES = [
   { value: "direct_buyer", en: "Direct Buyer", ta: "நேரடி வாங்குபவர்" },
 ];
 
-const STATUS_BADGE: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  completed: "bg-blue-100 text-blue-700",
-  finished: "bg-gray-200 text-gray-600",
-};
 
 const formatDMY = (iso: string | null | undefined) => {
   if (!iso) return "";
@@ -216,7 +259,7 @@ const inr = (n: number) =>
   `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })}`;
 
 const inputCls =
-  "w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-900 placeholder:text-xs placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400";
+  "w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-900 placeholder:text-xs placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
 const labelCls = "block mb-0.5 text-xs font-medium text-gray-600";
 
 const num = (v: string | undefined) => parseFloat(v ?? "") || 0;
@@ -487,6 +530,7 @@ const ELLU_SUBSECTIONS: ActivitySubsection[] = [
 
 export default function CropDetail() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [lang, setLang] = useState<"ta" | "en">("en");
@@ -496,6 +540,16 @@ export default function CropDetail() {
   const [loading, setLoading] = useState(true);
   const [farmName, setFarmName] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "finance" | "activities">("overview");
+
+  const [endDateInput, setEndDateInput] = useState("");
+  const [savingEndDate, setSavingEndDate] = useState(false);
+  const [deletingCultivation, setDeletingCultivation] = useState(false);
+
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [varietyInput, setVarietyInput] = useState("");
+  const [quantityInput, setQuantityInput] = useState("");
+  const [quantityUnitInput, setQuantityUnitInput] = useState("");
+  const [savingDetails, setSavingDetails] = useState(false);
 
   const cropType = cultivation?.crop_type ?? "";
   const isCoconut = cropType === "coconut";
@@ -600,6 +654,7 @@ export default function CropDetail() {
 
   // Income
   const [incomeRecords, setIncomeRecords] = useState<IncomeRecord[]>([]);
+  const [expandedIncomeIds, setExpandedIncomeIds] = useState<Set<string>>(new Set());
   const [harvestDate, setHarvestDate] = useState("");
   const [smallCount, setSmallCount] = useState("");
   const [smallPrice, setSmallPrice] = useState("");
@@ -710,10 +765,74 @@ export default function CropDetail() {
     const { data, error } = await supabase.from("cultivations").select("*").eq("id", id).single();
     if (!error && data) {
       setCultivation(data);
+      setEndDateInput(data.end_date ?? "");
+      setVarietyInput(data.variety_name ?? "");
+      setQuantityInput(data.quantity != null ? String(data.quantity) : "");
+      setQuantityUnitInput(data.quantity_unit ?? QUANTITY_CONFIG[data.crop_type]?.units[0]?.value ?? "");
       const { data: farmData } = await supabase.from("farms").select("name").eq("id", data.farm_id).single();
       if (farmData) setFarmName(farmData.name);
     }
     setLoading(false);
+  };
+
+  const saveEndDate = async () => {
+    if (!cultivation) return;
+    setSavingEndDate(true);
+    try {
+      const { error } = await supabase
+        .from("cultivations")
+        .update({
+          end_date: endDateInput || null,
+          status: endDateInput ? "completed" : "active",
+        })
+        .eq("id", id);
+      if (error) reportError("Error saving end date", error.message);
+      else fetchCultivation();
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingEndDate(false);
+  };
+
+  const saveDetails = async () => {
+    if (!cultivation) return;
+    setSavingDetails(true);
+    try {
+      const { error } = await supabase
+        .from("cultivations")
+        .update({
+          variety_name: varietyInput.trim() || null,
+          quantity: quantityInput ? parseFloat(quantityInput) : null,
+          quantity_unit: quantityInput ? quantityUnitInput || null : null,
+        })
+        .eq("id", id);
+      if (error) reportError("Error saving details", error.message);
+      else {
+        setEditingDetails(false);
+        fetchCultivation();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingDetails(false);
+  };
+
+  const deleteCultivation = async () => {
+    if (!cultivation) return;
+    if (!confirm(L("Delete this cultivation? This cannot be undone.", "இந்த பயிரை நீக்கவா? இதை மீட்க முடியாது."))) return;
+    setDeletingCultivation(true);
+    try {
+      const { error } = await supabase.from("cultivations").delete().eq("id", id);
+      if (error) {
+        reportError("Error deleting cultivation", error.message);
+        setDeletingCultivation(false);
+      } else {
+        router.push(`/farms/${cultivation.farm_id}`);
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+      setDeletingCultivation(false);
+    }
   };
 
   const fetchCoconutDetails = async () => {
@@ -1515,6 +1634,31 @@ export default function CropDetail() {
     }
   };
 
+  const toggleIncomeExpand = (recordId: string) => {
+    setExpandedIncomeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(recordId)) next.delete(recordId);
+      else next.add(recordId);
+      return next;
+    });
+  };
+
+  const incomeDetailRows = (r: IncomeRecord): { label: string; value: string }[] => {
+    const rows: { label: string; value: string }[] = [];
+    if (r.quantity != null) rows.push({ label: L("Quantity", "அளவு"), value: `${r.quantity}${r.unit ? ` ${r.unit}` : ""}` });
+    if (r.price_per_unit != null) rows.push({ label: L("Price/unit", "யூனிட் விலை"), value: inr(Number(r.price_per_unit)) });
+    if (r.quantity_tons != null) rows.push({ label: L("Tonnage", "டன் எடை"), value: `${r.quantity_tons} ${L("tonnes", "டன்")}` });
+    if (r.rate_per_ton != null) rows.push({ label: L("Price/Tonne", "டன் விலை"), value: inr(Number(r.rate_per_ton)) });
+    if (r.small_coconuts != null) rows.push({ label: L("Small Coconuts", "சிறிய தேங்காய்"), value: `${r.small_coconuts} nos @ ₹${r.small_price ?? 0}` });
+    if (r.large_coconuts != null) rows.push({ label: L("Large Coconuts", "பெரிய தேங்காய்"), value: `${r.large_coconuts} nos @ ₹${r.large_price ?? 0}` });
+    if (r.dealer_deduction != null) rows.push({ label: L("Dealer Deduction", "டீலர் தள்ளுபடி"), value: `${r.dealer_deduction} nos` });
+    if (r.market_name) rows.push({ label: L("Market", "சந்தை"), value: r.market_name });
+    if (r.buyer_name) rows.push({ label: L("Buyer", "வாங்குபவர்"), value: r.buyer_name });
+    if (r.buyer_contact) rows.push({ label: L("Buyer Contact", "தொடர்பு"), value: r.buyer_contact });
+    if (r.notes) rows.push({ label: L("Notes", "குறிப்பு"), value: r.notes });
+    return rows;
+  };
+
   const saveActivity = async (sub: ActivitySubsection) => {
     if (!cultivation) return;
     const values = formValues[sub.key] || {};
@@ -1679,18 +1823,10 @@ export default function CropDetail() {
   const totalExpenses = expenseRecords.reduce((sum, r) => sum + Number(r.amount), 0);
   const netProfit = totalIncome - totalExpenses;
 
-  const lastActivityTimestamps = [
-    ...incomeRecords.map((r) => r.created_at),
-    ...expenseRecords.map((r) => r.created_at),
-  ].filter((v): v is string => !!v);
-  const lastActivityDays = lastActivityTimestamps.length
-    ? Math.floor((Date.now() - Math.max(...lastActivityTimestamps.map((t) => new Date(t).getTime()))) / 86400000)
-    : null;
-
-  const cultivationStatusLabel = (() => {
-    const s = cultivation?.status ?? "active";
-    return s === "completed" ? L("Completed", "முடிந்தது") : s === "finished" ? L("Finished", "நிறைவு") : L("Active", "செயலில்");
-  })();
+  const isCultivationDone = !!cultivation?.end_date;
+  const cultivationStatusLabel = isCultivationDone
+    ? L("Cultivation Done", "பயிர் முடிந்தது")
+    : L("Active", "செயலில்");
   const cultivationDays = cultivation?.start_date
     ? Math.floor((Date.now() - new Date(cultivation.start_date).getTime()) / 86400000)
     : null;
@@ -1778,7 +1914,7 @@ export default function CropDetail() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setFormOpen((s) => ({ ...s, [sub.key]: !isOpen }))}
-              className="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-bold hover:bg-green-200 transition"
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-primary text-sm font-bold hover:bg-green-200 transition"
             >
               {isOpen ? "−" : "+"}
             </button>
@@ -1801,7 +1937,7 @@ export default function CropDetail() {
               <button
                 onClick={() => saveActivity(sub)}
                 disabled={savingActivity[sub.key]}
-                className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-3 py-1 text-xs font-semibold transition"
+                className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-3 py-1 text-xs font-semibold transition"
               >
                 {savingActivity[sub.key] ? "..." : L("Save", "சேமி")}
               </button>
@@ -1819,7 +1955,7 @@ export default function CropDetail() {
                 <span className="truncate">{r.expense_date} · {r.description}</span>
                 <span className="flex items-center gap-1.5 shrink-0">
                   {inr(Number(r.amount))}
-                  <button onClick={() => deleteExpenseRecord(r.id)} className="hover:text-red-600">🗑️</button>
+                  <button onClick={() => deleteExpenseRecord(r.id)} className="hover:text-danger">🗑️</button>
                 </span>
               </div>
             ))}
@@ -1829,19 +1965,131 @@ export default function CropDetail() {
     );
   };
 
+  const renderVarietyQuantityFields = (includeQuantity = true) => {
+    const qConfig = QUANTITY_CONFIG[cropType];
+    const qLabel = qConfig?.labelFor(quantityUnitInput) ?? { en: "Quantity", ta: "அளவு" };
+
+    if (!editingDetails) {
+      return (
+        <div className="flex flex-wrap items-center gap-3 text-xs mt-2 pt-2 border-t border-gray-100">
+          <span>
+            <span className="text-gray-500">{L("Variety (வகை)", "வகை (Variety)")}:</span>{" "}
+            <span className="font-semibold text-gray-800">
+              {cultivation?.variety_name || L("Not set", "அமைக்கப்படவில்லை")}
+            </span>
+          </span>
+          {includeQuantity && (
+            <span>
+              <span className="text-gray-500">
+                {lang === "ta" ? qLabel.ta : qLabel.en} ({lang === "ta" ? qLabel.en : qLabel.ta}):
+              </span>{" "}
+              <span className="font-semibold text-gray-800">
+                {cultivation?.quantity != null
+                  ? `${cultivation.quantity} ${cultivation.quantity_unit ?? ""}`
+                  : L("Not set", "அமைக்கப்படவில்லை")}
+              </span>
+            </span>
+          )}
+          <button
+            onClick={() => setEditingDetails(true)}
+            className="text-primary hover:text-primary/80 font-semibold ml-auto"
+          >
+            ✏️ {L("Edit", "திருத்து")}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap items-end gap-2 mt-2 pt-2 border-t border-gray-100">
+        <div>
+          <label className="text-[10px] text-gray-500 block">
+            {L("Variety Name (வகை பெயர்)", "வகை பெயர் (Variety Name)")}
+          </label>
+          <input
+            type="text"
+            value={varietyInput}
+            onChange={(e) => setVarietyInput(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1 text-xs bg-white text-gray-900 w-36"
+          />
+        </div>
+
+        {includeQuantity && (
+          <div>
+            <label className="text-[10px] text-gray-500 block">
+              {lang === "ta" ? qLabel.ta : qLabel.en} ({lang === "ta" ? qLabel.en : qLabel.ta})
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={quantityInput}
+              onChange={(e) => setQuantityInput(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1 text-xs bg-white text-gray-900 w-24"
+            />
+          </div>
+        )}
+
+        {includeQuantity && qConfig && qConfig.units.length > 1 ? (
+          <div className="flex items-center gap-1">
+            {qConfig.units.map((u) => (
+              <button
+                key={u.value}
+                type="button"
+                onClick={() => setQuantityUnitInput(u.value)}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
+                  quantityUnitInput === u.value
+                    ? "bg-primary text-white"
+                    : "bg-gray-100 text-gray-500 border border-gray-200"
+                }`}
+              >
+                {lang === "ta" ? u.ta : u.en}
+              </button>
+            ))}
+          </div>
+        ) : includeQuantity && qConfig ? (
+          <span className="text-xs text-gray-500 self-center">
+            {lang === "ta" ? qConfig.units[0].ta : qConfig.units[0].en}
+          </span>
+        ) : null}
+
+        <button
+          onClick={saveDetails}
+          disabled={savingDetails}
+          className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded px-3 py-1.5 text-xs font-semibold transition"
+        >
+          {savingDetails ? "..." : L("Save", "சேமி")}
+        </button>
+        <button
+          onClick={() => {
+            setEditingDetails(false);
+            setVarietyInput(cultivation?.variety_name ?? "");
+            setQuantityInput(cultivation?.quantity != null ? String(cultivation.quantity) : "");
+            setQuantityUnitInput(cultivation?.quantity_unit ?? qConfig?.units[0]?.value ?? "");
+          }}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded px-3 py-1.5 text-xs font-semibold transition"
+        >
+          {L("Cancel", "ரத்து")}
+        </button>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-green-50">
+      <div className="flex h-screen overflow-hidden bg-page">
         <Sidebar lang={lang} setLang={setLang} />
-        <main className="flex-1 flex items-center justify-center text-green-700 text-sm font-medium">
-          {L("Loading...", "ஏற்றுகிறது...")}
+        <main className="flex-1 p-3 flex flex-col gap-3">
+          <div className="h-12 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="h-16 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="flex-1 bg-gray-200 rounded-2xl animate-pulse" />
         </main>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-green-50">
+    <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-3">
@@ -1852,16 +2100,16 @@ export default function CropDetail() {
             <div className="flex items-center justify-between">
               <Link
                 href={cultivation ? `/farms/${cultivation.farm_id}` : "/farms"}
-                className="text-green-700 hover:text-green-800 text-sm font-semibold"
+                className="text-primary hover:text-primary text-sm font-semibold"
               >
                 ← {L("Back to Farm", "நிலத்திற்கு திரும்பு")}
               </Link>
-              <h1 className="text-lg font-bold text-green-800">
+              <h1 className="text-lg font-bold text-primary">
                 {crop.icon} {lang === "ta" ? crop.labelTa : crop.labelEn}
               </h1>
               <button
                 onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-                className="px-3 py-1.5 rounded-lg border border-green-300 text-green-700 text-sm font-medium hover:bg-green-50 transition"
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
               >
                 {lang === "ta" ? "English" : "தமிழ்"}
               </button>
@@ -1874,7 +2122,7 @@ export default function CropDetail() {
               <span className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                 📐 {cultivation?.area} {L("Acres", "ஏக்கர்")}
               </span>
-              <span className={`${STATUS_BADGE[cultivation?.status ?? "active"] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+              <span className={`${isCultivationDone ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
                 {cultivationStatusLabel}
               </span>
               {cultivation?.start_date && (
@@ -1891,28 +2139,6 @@ export default function CropDetail() {
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
-            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
-              <p className="text-xs font-medium text-gray-700">💸 {L("Total Spent", "மொத்த செலவு")}</p>
-              <p className="text-lg font-bold text-red-600">{inr(totalExpenses)}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
-              <p className="text-xs font-medium text-gray-700">💰 {L("Total Earned", "மொத்த வருமானம்")}</p>
-              <p className="text-lg font-bold text-green-700">{inr(totalIncome)}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
-              <p className="text-xs font-medium text-gray-700">📈 {L("Net P/L", "நிகர")}</p>
-              <p className={`text-lg font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-600"}`}>{inr(netProfit)}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
-              <p className="text-xs font-medium text-gray-700">🕐 {L("Last Activity", "கடைசி செயல்பாடு")}</p>
-              <p className="text-lg font-bold text-gray-700">
-                {lastActivityDays === null ? "—" : `${lastActivityDays} ${L("days ago", "நாட்கள் முன்பு")}`}
-              </p>
-            </div>
-          </div>
-
           {/* Tabs */}
           <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 w-fit shrink-0">
             {([
@@ -1924,7 +2150,7 @@ export default function CropDetail() {
                 key={key}
                 onClick={() => setActiveTab(key)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
-                  activeTab === key ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                  activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 {label}
@@ -1934,6 +2160,66 @@ export default function CropDetail() {
 
           {/* OVERVIEW TAB */}
           {activeTab === "overview" && (
+            <div className="flex flex-col gap-3">
+
+              {/* Cultivation Status */}
+              <div className="bg-white rounded-xl shadow-sm border border-green-100 p-2">
+                <div className="flex flex-wrap items-end gap-2">
+                  <span className="text-xs font-semibold text-gray-700 shrink-0">
+                    📅 {L("Cultivation Status", "பயிர் நிலை")}
+                  </span>
+
+                  <div className="flex items-center gap-1">
+                    <label className="text-[10px] text-gray-500">{L("Start", "தொடக்கம்")}</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={formatDMY(cultivation?.start_date)}
+                      className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 w-24"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <label className="text-[10px] text-gray-500">{L("End", "முடிவு")}</label>
+                    <input
+                      type="date"
+                      title={L("Leave empty until cultivation is complete", "முடியும் வரை வெறுமையாக விடவும்")}
+                      value={endDateInput}
+                      onChange={(e) => setEndDateInput(e.target.value)}
+                      className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white text-gray-900 w-32"
+                    />
+                  </div>
+
+                  {endDateInput ? (
+                    <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded-full">
+                      ✓ {L("Done", "முடிந்தது")}
+                    </span>
+                  ) : (
+                    <span className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full">
+                      ● {L("Active", "செயலில்")}
+                    </span>
+                  )}
+
+                  <button
+                    onClick={saveEndDate}
+                    disabled={savingEndDate}
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded px-2.5 py-1 text-[10px] font-semibold transition"
+                  >
+                    {savingEndDate ? "..." : L("Save", "சேமி")}
+                  </button>
+                  <button
+                    onClick={deleteCultivation}
+                    disabled={deletingCultivation}
+                    className="bg-white hover:bg-danger/10 disabled:opacity-50 text-danger border border-danger/40 rounded px-2.5 py-1 text-[10px] font-semibold transition"
+                  >
+                    {deletingCultivation ? "..." : `🗑️ ${L("Delete", "நீக்கு")}`}
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {L("Adding an end date will mark this crop as Completed", "முடிவு தேதி சேர்த்தால் இந்த பயிர் முடிந்ததாக குறிக்கப்படும்")}
+                </p>
+              </div>
+
             <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
               {isCoconut ? (
                 <>
@@ -1944,7 +2230,7 @@ export default function CropDetail() {
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     <div className="bg-green-50 rounded-xl p-3 border border-white shadow-sm">
                       <p className="text-xs font-medium text-gray-700">🌴 {L("Total Trees", "மொத்த மரங்கள்")}</p>
-                      <p className="text-2xl font-bold text-green-700">{totalTreesNum || 0}</p>
+                      <p className="text-2xl font-bold text-primary">{totalTreesNum || 0}</p>
                     </div>
                     <div className="bg-amber-50 rounded-xl p-3 border border-white shadow-sm">
                       <p className="text-xs font-medium text-gray-700">🥥 {L("Small Trees", "சிறிய மரங்கள்")}</p>
@@ -1983,10 +2269,12 @@ export default function CropDetail() {
                   <button
                     onClick={saveCoconutTrees}
                     disabled={savingTrees || treesMismatch}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     {savingTrees ? "..." : L("Save", "சேமி")}
                   </button>
+
+                  {renderVarietyQuantityFields(false)}
                 </>
               ) : isTurmeric ? (
                 <>
@@ -2020,7 +2308,7 @@ export default function CropDetail() {
                   <button
                     onClick={saveTurmericDetails}
                     disabled={savingTurmericDetails}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     {savingTurmericDetails ? "..." : L("Save", "சேமி")}
                   </button>
@@ -2057,7 +2345,7 @@ export default function CropDetail() {
                   <button
                     onClick={saveElluDetails}
                     disabled={savingElluDetails}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     {savingElluDetails ? "..." : L("Save", "சேமி")}
                   </button>
@@ -2086,10 +2374,42 @@ export default function CropDetail() {
                   <button
                     onClick={saveKuchiDetails}
                     disabled={savingKuchiDetails}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     {savingKuchiDetails ? "..." : L("Save", "சேமி")}
                   </button>
+
+                  {renderVarietyQuantityFields(false)}
+                </>
+              ) : isSugarcane ? (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🎋 {L("Sugarcane Cultivation Details", "கரும்பு பயிர் விவரங்கள்")}
+                  </h2>
+                  <div className="text-sm text-gray-600 mb-1">
+                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+                  </div>
+                  {renderVarietyQuantityFields()}
+                </>
+              ) : isOnion ? (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🧅 {L("Onion Cultivation Details", "வெங்காய பயிர் விவரங்கள்")}
+                  </h2>
+                  <div className="text-sm text-gray-600 mb-1">
+                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+                  </div>
+                  {renderVarietyQuantityFields()}
+                </>
+              ) : isFodderCorn ? (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-800 mb-2">
+                    🌽 {L("Fodder Corn Cultivation Details", "மக்காச்சோள பயிர் விவரங்கள்")}
+                  </h2>
+                  <div className="text-sm text-gray-600 mb-1">
+                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+                  </div>
+                  {renderVarietyQuantityFields()}
                 </>
               ) : (
                 <div className="text-sm text-gray-600">
@@ -2097,6 +2417,8 @@ export default function CropDetail() {
                   {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
                 </div>
               )}
+            </div>
+
             </div>
           )}
 
@@ -2153,14 +2475,14 @@ export default function CropDetail() {
                         <p>Large: {largeCountNum} nos × ₹{largePriceNum} = ₹{largeRevenue.toFixed(2)}</p>
                         <p>{L("Dealer deduction", "டீலர் தள்ளுபடி")}: -{deductionCount} nos (≈ ₹{deductionValue.toFixed(2)})</p>
                         <div className="border-t border-gray-300 my-1" />
-                        <p className="font-bold text-green-700">{L("Net Income", "நிகர வருமானம்")}: ₹{netRevenue.toFixed(2)}</p>
+                        <p className="font-bold text-primary">{L("Net Income", "நிகர வருமானம்")}: ₹{netRevenue.toFixed(2)}</p>
                       </div>
                     )}
 
                     <button
                       onClick={saveCoconutIncome}
                       disabled={savingIncome}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingIncome ? "..." : L("Save Income", "வருமானம் சேமி")}
                     </button>
@@ -2179,7 +2501,7 @@ export default function CropDetail() {
                         </div>
                         <div className="bg-green-50 rounded-xl p-2 border border-white shadow-sm">
                           <p className="text-xs font-medium text-gray-700">📊 {L("Grand Total Income", "மொத்த வருமானம்")}</p>
-                          <p className="text-sm font-bold text-green-700">{inr(turmericSalesGrandTotal)}</p>
+                          <p className="text-sm font-bold text-primary">{inr(turmericSalesGrandTotal)}</p>
                         </div>
                       </div>
                     )}
@@ -2257,14 +2579,14 @@ export default function CropDetail() {
                       </div>
                     </div>
 
-                    <p className="text-sm font-bold text-green-700 mb-2">
+                    <p className="text-sm font-bold text-primary mb-2">
                       {L("Grand Total", "மொத்தம்")}: {inr(turmericGrandSaleTotal)}
                     </p>
 
                     <button
                       onClick={saveTurmericIncome}
                       disabled={savingTurmericSale}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingTurmericSale ? "..." : L("Save Sale", "விற்பனை சேமி")}
                     </button>
@@ -2301,7 +2623,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveSugarcaneIncome}
                       disabled={savingSugarcaneIncome}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingSugarcaneIncome ? "..." : L("Save Income", "வருமானம் சேமி")}
                     </button>
@@ -2338,7 +2660,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveElluIncome}
                       disabled={savingElluIncome}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingElluIncome ? "..." : L("Save Income", "வருமானம் சேமி")}
                     </button>
@@ -2393,7 +2715,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveKuchiIncome}
                       disabled={savingKuchiSale}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingKuchiSale ? "..." : L("Save Income", "வருமானம் சேமி")}
                     </button>
@@ -2421,7 +2743,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveIncome}
                       disabled={savingIncome}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingIncome ? "..." : L("Save Income", "வருமானம் சேமி")}
                     </button>
@@ -2453,11 +2775,11 @@ export default function CropDetail() {
                               <td className="py-1 pr-2">
                                 {g.finger ? `${g.finger.quantity}${g.finger.unit} @ ₹${g.finger.price_per_unit} = ${inr(Number(g.finger.amount))}` : "—"}
                               </td>
-                              <td className="py-1 pr-2 font-semibold text-green-700">
+                              <td className="py-1 pr-2 font-semibold text-primary">
                                 {inr(Number(g.bulb?.amount ?? 0) + Number(g.finger?.amount ?? 0))}
                               </td>
                               <td className="py-1">
-                                <button onClick={() => deleteTurmericSaleGroup(g)} className="hover:text-red-600">🗑️</button>
+                                <button onClick={() => deleteTurmericSaleGroup(g)} className="hover:text-danger">🗑️</button>
                               </td>
                             </tr>
                           ))}
@@ -2467,16 +2789,46 @@ export default function CropDetail() {
                   )
                 ) : (
                   incomeRecords.length > 0 && (
-                    <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
-                      {incomeRecords.map((r) => (
-                        <div key={r.id} className="flex justify-between items-center text-xs text-gray-700 border-b border-gray-100 py-1">
-                          <span>{r.income_date} {r.buyer_name ? `· ${r.buyer_name}` : ""}</span>
-                          <span className="flex items-center gap-1.5">
-                            <span className="font-semibold text-green-700">{inr(Number(r.amount))}</span>
-                            <button onClick={() => deleteIncomeRecord(r.id)} className="hover:text-red-600">🗑️</button>
-                          </span>
-                        </div>
-                      ))}
+                    <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                      {incomeRecords.map((r) => {
+                        const isExpanded = expandedIncomeIds.has(r.id);
+                        const details = incomeDetailRows(r);
+                        return (
+                          <div key={r.id} className="border-b border-gray-100 py-1">
+                            <div
+                              className="flex justify-between items-center text-xs text-gray-700 cursor-pointer"
+                              onClick={() => toggleIncomeExpand(r.id)}
+                            >
+                              <span className="flex items-center gap-1">
+                                <span className="text-gray-400 shrink-0">{isExpanded ? "▲" : "▼"}</span>
+                                {r.income_date} {r.buyer_name ? `· ${r.buyer_name}` : ""}
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <span className="font-semibold text-primary">{inr(Number(r.amount))}</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteIncomeRecord(r.id);
+                                  }}
+                                  className="hover:text-danger"
+                                >
+                                  🗑️
+                                </button>
+                              </span>
+                            </div>
+                            {isExpanded && details.length > 0 && (
+                              <div className="bg-gray-50 rounded-lg p-2 mt-1 grid grid-cols-2 gap-1 text-xs text-gray-600">
+                                {details.map((d, i) => (
+                                  <div key={i} className="flex justify-between gap-2">
+                                    <span className="text-gray-500">{d.label}:</span>
+                                    <span className="font-medium text-gray-800">{d.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )
                 )}
@@ -2530,7 +2882,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveCoconutLabour}
                       disabled={savingLabour}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingLabour ? "..." : L("Save Labour Expense", "கூலி செலவு சேமி")}
                     </button>
@@ -2588,7 +2940,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveExpense}
                       disabled={savingExpense}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingExpense ? "..." : L("Save Expense", "செலவு சேமி")}
                     </button>
@@ -2637,7 +2989,7 @@ export default function CropDetail() {
                   <button
                     onClick={saveHarvest}
                     disabled={savingHarvest}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     {savingHarvest ? "..." : L("Save Harvest", "அறுவடை சேமி")}
                   </button>
@@ -2693,7 +3045,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveStorage}
                       disabled={savingStorage}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingStorage ? "..." : L("Save Storage", "சேமிப்பு சேமி")}
                     </button>
@@ -2731,7 +3083,7 @@ export default function CropDetail() {
                     <button
                       onClick={saveOnionSale}
                       disabled={savingOnionSale}
-                      className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingOnionSale ? "..." : L("Save Sale", "விற்பனை சேமி")}
                     </button>
@@ -2740,7 +3092,7 @@ export default function CropDetail() {
                   <div className="bg-gray-50 rounded-lg p-2 text-xs text-gray-700 space-y-0.5">
                     <p>{L("Total Storage Cost", "மொத்த சேமிப்பு செலவு")}: {inr(totalStorageCost)}</p>
                     <p>{L("Total Sales Income", "மொத்த விற்பனை வருமானம்")}: {inr(totalOnionSalesIncome)}</p>
-                    <p className={`font-semibold ${netAfterStorage >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    <p className={`font-semibold ${netAfterStorage >= 0 ? "text-success" : "text-danger"}`}>
                       {L("Net after storage", "சேமிப்புக்குப் பின் நிகரம்")}: {inr(netAfterStorage)}
                     </p>
                   </div>
@@ -2748,30 +3100,30 @@ export default function CropDetail() {
               )}
 
               {/* Summary */}
-              <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+              <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-2">
                 {isTurmeric && turmericSales.length > 0 && (
                   <>
-                    <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <div className="flex justify-between text-xs text-gray-600 mb-0.5">
                       <span>🟡 {L("Bulb Turmeric Sales", "கிழங்கு மஞ்சள் விற்பனை")}</span>
                       <span>{inr(turmericBulbTotal)} ({turmericBulbQty.toFixed(2)} kg)</span>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <div className="flex justify-between text-xs text-gray-600 mb-0.5">
                       <span>🟡 {L("Finger Turmeric Sales", "விரல் மஞ்சள் விற்பனை")}</span>
                       <span>{inr(turmericFingerTotal)} ({turmericFingerQty.toFixed(2)} kg)</span>
                     </div>
                     <div className="border-t border-gray-100 my-1" />
                   </>
                 )}
-                <div className="flex justify-between text-sm text-gray-700 font-medium mb-1">
+                <div className="flex justify-between text-xs text-gray-700 font-medium mb-0.5">
                   <span>💰 {L("Total Income", "மொத்த வருமானம்")}</span>
                   <span>{inr(totalIncome)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-700 font-medium mb-1">
+                <div className="flex justify-between text-xs text-gray-700 font-medium mb-0.5">
                   <span>💸 {L("Total Expenses", "மொத்த செலவு")}</span>
                   <span>{inr(totalExpenses)}</span>
                 </div>
                 <div className="border-t border-gray-200 my-1" />
-                <div className={`flex justify-between text-sm font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                <div className={`flex justify-between text-sm font-bold ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
                   <span>{netProfit >= 0 ? `📈 ${L("Net Profit", "நிகர லாபம்")}` : `📉 ${L("Net Loss", "நிகர நஷ்டம்")}`}</span>
                   <span>{inr(Math.abs(netProfit))}</span>
                 </div>
@@ -2856,7 +3208,7 @@ export default function CropDetail() {
                   <button
                     onClick={saveCutting}
                     disabled={savingCutting}
-                    className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     {savingCutting ? "..." : L("Save Cutting", "வெட்டு சேமி")}
                   </button>
@@ -2866,10 +3218,10 @@ export default function CropDetail() {
                       {fodderCuttings.map(({ harvest, income }, idx) => (
                         <div key={harvest.id} className="flex items-center gap-2">
                           <div className="bg-green-50 rounded-xl p-2 border border-white shadow-sm min-w-[140px]">
-                            <p className="text-xs font-bold text-green-800">{L("Cut", "வெட்டு")} #{harvest.cutting_number}</p>
+                            <p className="text-xs font-bold text-primary">{L("Cut", "வெட்டு")} #{harvest.cutting_number}</p>
                             <p className="text-xs text-gray-600 mt-0.5">{harvest.harvest_date}</p>
                             <p className="text-xs text-gray-600">{harvest.yield_quantity}{harvest.yield_unit}{income ? ` @ ₹${income.price_per_unit}` : ""}</p>
-                            {income && <p className="text-xs font-semibold text-green-700">{inr(Number(income.amount))}</p>}
+                            {income && <p className="text-xs font-semibold text-primary">{inr(Number(income.amount))}</p>}
                             {income?.buyer_name && <p className="text-xs text-gray-500">{income.buyer_name}</p>}
                           </div>
                           {idx < fodderCuttings.length - 1 && <span className="text-gray-400">→</span>}
@@ -2926,7 +3278,7 @@ export default function CropDetail() {
                 <button
                   onClick={saveFertilizer}
                   disabled={savingFert}
-                  className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                 >
                   {savingFert ? "..." : L("Add", "சேர்")}
                 </button>
@@ -2980,7 +3332,7 @@ export default function CropDetail() {
                 <button
                   onClick={saveWeedRemoval}
                   disabled={savingWeed}
-                  className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                 >
                   {savingWeed ? "..." : L("Add", "சேர்")}
                 </button>
@@ -3025,7 +3377,7 @@ export default function CropDetail() {
                 <button
                   onClick={saveIrrigation}
                   disabled={savingIrrigation}
-                  className="bg-green-700 hover:bg-green-800 disabled:bg-green-400 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                 >
                   {savingIrrigation ? "..." : L("Add", "சேர்")}
                 </button>

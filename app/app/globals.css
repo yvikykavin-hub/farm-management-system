@@ -14,6 +14,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Thaai Nilam AGRO design tokens */
+  --color-primary: #2d6a4f;
+  --color-accent: #f4a261;
+  --color-page: #f8f9fa;
+  --color-danger: #e63946;
+  --color-success: #52b788;
 }
 
 @media (prefers-color-scheme: dark) {
