@@ -33,7 +33,6 @@ type MilkPayment = {
   period_to: string;
   milkman_name: string;
   total_litres: number;
-  rate_per_litre: number;
   expected_amount: number;
   received_amount: number;
   status: string;
@@ -420,7 +419,7 @@ export default function CowDetailPage() {
     setPmTo(p.period_to);
     setPmMilkman(p.milkman_name);
     setPmLitres(String(p.total_litres));
-    setPmRate(String(p.rate_per_litre));
+    setPmRate(Number(p.total_litres) ? String(Number(p.expected_amount) / Number(p.total_litres)) : "");
     setPmReceived(String(p.received_amount));
     setPmStatus(p.status);
     setPmRemarks(p.remarks ?? "");
@@ -442,7 +441,6 @@ export default function CowDetailPage() {
         period_to: pmTo,
         milkman_name: pmMilkman.trim(),
         total_litres: parseFloat(pmLitres) || 0,
-        rate_per_litre: parseFloat(pmRate) || 0,
         expected_amount: pmExpected,
         received_amount: parseFloat(pmReceived) || 0,
         status: pmStatus,
@@ -946,7 +944,7 @@ export default function CowDetailPage() {
                               <td className="py-1 px-1">{formatDMY(p.period_from)} → {formatDMY(p.period_to)}</td>
                               <td className="py-1 px-1">{p.milkman_name}</td>
                               <td className="py-1 px-1">{Number(p.total_litres).toFixed(1)} L</td>
-                              <td className="py-1 px-1">{inr(Number(p.rate_per_litre))}</td>
+                              <td className="py-1 px-1">{Number(p.total_litres) ? inr(Number(p.expected_amount) / Number(p.total_litres)) : "—"}</td>
                               <td className="py-1 px-1">{inr(Number(p.expected_amount))}</td>
                               <td className="py-1 px-1 font-medium text-success">{inr(Number(p.received_amount))}</td>
                               <td className={`py-1 px-1 font-medium ${diff < 0 ? "text-danger" : "text-success"}`}>{inr(diff)}</td>
