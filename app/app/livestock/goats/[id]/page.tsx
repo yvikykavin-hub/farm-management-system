@@ -16,7 +16,7 @@ type Goat = {
   date_of_birth: string | null;
   purchase_date: string | null;
   purchase_price: number | null;
-  weight: number | null;
+  weight_kg: number | null;
   current_status: string;
   sold_date: string | null;
   sold_price: number | null;
@@ -119,7 +119,7 @@ export default function GoatDetailPage() {
       date_of_birth: goat.date_of_birth ?? "",
       purchase_date: goat.purchase_date ?? "",
       purchase_price: goat.purchase_price != null ? String(goat.purchase_price) : "",
-      weight: goat.weight != null ? String(goat.weight) : "",
+      weight_kg: goat.weight_kg != null ? String(goat.weight_kg) : "",
       current_status: goat.current_status,
       sold_date: goat.sold_date ?? "",
       sold_price: goat.sold_price != null ? String(goat.sold_price) : "",
@@ -145,7 +145,7 @@ export default function GoatDetailPage() {
           date_of_birth: ovForm.date_of_birth || null,
           purchase_date: ovForm.purchase_date || null,
           purchase_price: ovForm.purchase_price ? parseFloat(ovForm.purchase_price) : null,
-          weight: ovForm.weight ? parseFloat(ovForm.weight) : null,
+          weight_kg: ovForm.weight_kg ? parseFloat(ovForm.weight_kg) : null,
           current_status: ovForm.current_status,
           sold_date: ovForm.current_status === "sold" ? ovForm.sold_date || null : null,
           sold_price: ovForm.current_status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
@@ -204,7 +204,7 @@ export default function GoatDetailPage() {
         sale_date: saleDate || null,
         weight_kg: saleWeight ? parseFloat(saleWeight) : null,
         rate_per_kg: saleRate ? parseFloat(saleRate) : null,
-        total_amount: total,
+        total_amount: total || null,
         buyer_name: saleBuyer.trim() || null,
         remarks: saleRemarks.trim() || null,
       });
@@ -262,11 +262,11 @@ export default function GoatDetailPage() {
       const { error } = await supabase.from("goat_expenses").insert({
         goat_id: id,
         farm_location: "Home",
-        expense_type: t("en", expType),
+        expense_type: t("en", expType) || null,
         expense_date: expDate || null,
         quantity: expQty ? parseFloat(expQty) : null,
         unit: expUnit.trim() || null,
-        amount: parseFloat(expAmount) || 0,
+        amount: parseFloat(expAmount) || null,
         description: expDescription.trim() || null,
         notes: null,
       });
@@ -365,7 +365,7 @@ export default function GoatDetailPage() {
                   <div><span className="text-gray-500">{t(lang, "breed")}:</span> <span className="font-medium text-gray-800">{goat?.breed || "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "gender")}:</span> <span className="font-medium text-gray-800">{goat?.gender || "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "dateOfBirth")}:</span> <span className="font-medium text-gray-800">{formatDMY(goat?.date_of_birth)}</span></div>
-                  <div><span className="text-gray-500">{t(lang, "weight")}:</span> <span className="font-medium text-gray-800">{goat?.weight != null ? `${goat.weight} kg` : "—"}</span></div>
+                  <div><span className="text-gray-500">{t(lang, "weight")}:</span> <span className="font-medium text-gray-800">{goat?.weight_kg != null ? `${goat.weight_kg} kg` : "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchaseDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(goat?.purchase_date)}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchasePrice")}:</span> <span className="font-medium text-gray-800">{goat?.purchase_price != null ? inr(Number(goat.purchase_price)) : "—"}</span></div>
                   {goat?.current_status === "sold" && (
@@ -412,7 +412,7 @@ export default function GoatDetailPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "weight")}</label>
-                    <input type="number" value={ovForm.weight} onChange={(e) => setOvForm({ ...ovForm, weight: e.target.value })} className={inputCls} />
+                    <input type="number" value={ovForm.weight_kg} onChange={(e) => setOvForm({ ...ovForm, weight_kg: e.target.value })} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "status")}</label>

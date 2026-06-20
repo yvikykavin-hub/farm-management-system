@@ -15,7 +15,7 @@ type Goat = {
   date_of_birth: string | null;
   purchase_date: string | null;
   purchase_price: number | null;
-  weight: number | null;
+  weight_kg: number | null;
   current_status: string;
   sold_date: string | null;
   sold_price: number | null;
@@ -45,7 +45,7 @@ const emptyForm = {
   date_of_birth: "",
   purchase_date: "",
   purchase_price: "",
-  weight: "",
+  weight_kg: "",
   current_status: "active",
   notes: "",
 };
@@ -121,7 +121,7 @@ export default function GoatsListPage() {
         date_of_birth: form.date_of_birth || null,
         purchase_date: form.purchase_date || null,
         purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
-        weight: form.weight ? parseFloat(form.weight) : null,
+        weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
         current_status: form.current_status,
         notes: form.notes.trim() || null,
       });
@@ -221,7 +221,7 @@ export default function GoatsListPage() {
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{goat.breed || "—"} · {goat.gender || "—"}</p>
                     <p className="text-xs text-gray-600 mt-1 font-medium">
-                      {t(lang, "weight")}: {goat.weight != null ? `${goat.weight} kg` : "—"}
+                      {t(lang, "weight")}: {goat.weight_kg != null ? `${goat.weight_kg} kg` : "—"}
                     </p>
                   </div>
                 </Link>
@@ -283,7 +283,7 @@ export default function GoatsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "weight")}</label>
-                <input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} className={inputCls} />
+                <input type="number" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "status")}</label>

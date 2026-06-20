@@ -16,7 +16,7 @@ type Hen = {
   date_of_birth: string | null;
   purchase_date: string | null;
   purchase_price: number | null;
-  weight: number | null;
+  weight_kg: number | null;
   current_status: string;
   sold_date: string | null;
   sold_price: number | null;
@@ -122,7 +122,7 @@ export default function HenDetailPage() {
       date_of_birth: hen.date_of_birth ?? "",
       purchase_date: hen.purchase_date ?? "",
       purchase_price: hen.purchase_price != null ? String(hen.purchase_price) : "",
-      weight: hen.weight != null ? String(hen.weight) : "",
+      weight_kg: hen.weight_kg != null ? String(hen.weight_kg) : "",
       current_status: hen.current_status,
       sold_date: hen.sold_date ?? "",
       sold_price: hen.sold_price != null ? String(hen.sold_price) : "",
@@ -148,7 +148,7 @@ export default function HenDetailPage() {
           date_of_birth: ovForm.date_of_birth || null,
           purchase_date: ovForm.purchase_date || null,
           purchase_price: ovForm.purchase_price ? parseFloat(ovForm.purchase_price) : null,
-          weight: ovForm.weight ? parseFloat(ovForm.weight) : null,
+          weight_kg: ovForm.weight_kg ? parseFloat(ovForm.weight_kg) : null,
           current_status: ovForm.current_status,
           sold_date: ovForm.current_status === "sold" ? ovForm.sold_date || null : null,
           sold_price: ovForm.current_status === "sold" && ovForm.sold_price ? parseFloat(ovForm.sold_price) : null,
@@ -219,7 +219,7 @@ export default function HenDetailPage() {
         rate_per_kg: saleType === "weight" && saleRateKg ? parseFloat(saleRateKg) : null,
         number_sold: saleType === "bird" && saleBirdCount ? parseFloat(saleBirdCount) : null,
         rate_per_bird: saleType === "bird" && saleRateBird ? parseFloat(saleRateBird) : null,
-        total_amount: total,
+        total_amount: total || null,
         buyer_name: saleBuyer.trim() || null,
         remarks: saleRemarks.trim() || null,
       });
@@ -277,11 +277,11 @@ export default function HenDetailPage() {
       const { error } = await supabase.from("hen_expenses").insert({
         hen_id: id,
         farm_location: "Home",
-        expense_type: t("en", expType),
+        expense_type: t("en", expType) || null,
         expense_date: expDate || null,
         quantity: expQty ? parseFloat(expQty) : null,
         unit: expUnit.trim() || null,
-        amount: parseFloat(expAmount) || 0,
+        amount: parseFloat(expAmount) || null,
         description: expDescription.trim() || null,
         notes: null,
       });
@@ -380,7 +380,7 @@ export default function HenDetailPage() {
                   <div><span className="text-gray-500">{t(lang, "breed")}:</span> <span className="font-medium text-gray-800">{hen?.breed || "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "gender")}:</span> <span className="font-medium text-gray-800">{hen?.gender || "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "dateOfBirth")}:</span> <span className="font-medium text-gray-800">{formatDMY(hen?.date_of_birth)}</span></div>
-                  <div><span className="text-gray-500">{t(lang, "weight")}:</span> <span className="font-medium text-gray-800">{hen?.weight != null ? `${hen.weight} kg` : "—"}</span></div>
+                  <div><span className="text-gray-500">{t(lang, "weight")}:</span> <span className="font-medium text-gray-800">{hen?.weight_kg != null ? `${hen.weight_kg} kg` : "—"}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchaseDate")}:</span> <span className="font-medium text-gray-800">{formatDMY(hen?.purchase_date)}</span></div>
                   <div><span className="text-gray-500">{t(lang, "purchasePrice")}:</span> <span className="font-medium text-gray-800">{hen?.purchase_price != null ? inr(Number(hen.purchase_price)) : "—"}</span></div>
                   {hen?.current_status === "sold" && (
@@ -427,7 +427,7 @@ export default function HenDetailPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "weight")}</label>
-                    <input type="number" value={ovForm.weight} onChange={(e) => setOvForm({ ...ovForm, weight: e.target.value })} className={inputCls} />
+                    <input type="number" value={ovForm.weight_kg} onChange={(e) => setOvForm({ ...ovForm, weight_kg: e.target.value })} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "status")}</label>

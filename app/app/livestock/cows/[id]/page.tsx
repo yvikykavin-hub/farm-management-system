@@ -42,12 +42,13 @@ type CowExpense = {
   id: string;
   cow_id: string;
   expense_date: string;
-  type: string;
+  expense_type: string;
   quantity: number | null;
   unit: string | null;
   amount: number;
   vendor_name: string | null;
   description: string | null;
+  notes: string | null;
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -515,12 +516,13 @@ export default function CowDetailPage() {
         cow_id: id,
         farm_location: "Home",
         expense_date: expDate || null,
-        type: EXPENSE_TYPE_VALUES[expType],
+        expense_type: EXPENSE_TYPE_VALUES[expType] || null,
         quantity: isFeedType && expQty ? parseFloat(expQty) : null,
         unit: isFeedType ? expUnit.trim() || null : null,
-        amount: parseFloat(expAmount) || 0,
+        amount: parseFloat(expAmount) || null,
         vendor_name: expVendor.trim() || null,
         description: expDescription.trim() || null,
+        notes: null,
       };
       const { error } = await supabase.from("cow_expenses").insert(payload);
       if (error) {
@@ -551,7 +553,7 @@ export default function CowDetailPage() {
   const totalExpenseAll = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const expenseTotalsByType = EXPENSE_TYPE_KEYS.map((key) => ({
     key,
-    total: monthExpenses.filter((e) => e.type === EXPENSE_TYPE_VALUES[key]).reduce((s, e) => s + Number(e.amount), 0),
+    total: monthExpenses.filter((e) => e.expense_type === EXPENSE_TYPE_VALUES[key]).reduce((s, e) => s + Number(e.amount), 0),
   })).filter((e) => e.total > 0);
 
   if (loading) {
@@ -1012,11 +1014,11 @@ export default function CowDetailPage() {
                         <tr><td colSpan={8} className="text-center py-6 text-gray-500">🐄 {t(lang, "noExpensesYet")}</td></tr>
                       ) : (
                         cowExpenses.map((e) => {
-                          const typeKey = EXPENSE_TYPE_KEYS.find((k) => EXPENSE_TYPE_VALUES[k] === e.type);
+                          const typeKey = EXPENSE_TYPE_KEYS.find((k) => EXPENSE_TYPE_VALUES[k] === e.expense_type);
                           return (
                             <tr key={e.id} className="border-b border-gray-50">
                               <td className="py-1 px-1">{formatDMY(e.expense_date)}</td>
-                              <td className="py-1 px-1">{typeKey ? t(lang, typeKey) : e.type}</td>
+                              <td className="py-1 px-1">{typeKey ? t(lang, typeKey) : e.expense_type}</td>
                               <td className="py-1 px-1">{e.quantity ?? "—"}</td>
                               <td className="py-1 px-1">{e.unit ?? "—"}</td>
                               <td className="py-1 px-1 text-danger font-medium">{inr(Number(e.amount))}</td>
