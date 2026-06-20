@@ -297,7 +297,7 @@ export const labels = {
     pending: "நிலுவையில்",
     noPaymentsYet: "பணப் பதிவுகள் இல்லை",
 
-    riceFeed: "கரும்பு தவிடு",
+    riceFeed: "கருக்கை தவிடு",
     normalFeed: "சாதாரண தவிடு",
     otherExpense: "இதர செலவு",
     expenseType: "வகை",
