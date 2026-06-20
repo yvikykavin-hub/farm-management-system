@@ -20,8 +20,14 @@ export default function LivestockLandingPage() {
 
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
-          <div>
+          <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-primary">{t(lang, "livestock")}</h1>
+            <button
+              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+              className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+            >
+              {lang === "ta" ? "English" : "தமிழ்"}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

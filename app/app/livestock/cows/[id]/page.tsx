@@ -583,9 +583,17 @@ export default function CowDetailPage() {
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h1 className="text-xl font-bold text-primary">🐄 {cow?.name}</h1>
-            <span className={`${STATUS_BADGE[cow?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
-              {cow?.current_status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`${STATUS_BADGE[cow?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
+                {cow?.current_status}
+              </span>
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

@@ -319,9 +319,17 @@ export default function GoatDetailPage() {
 
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h1 className="text-xl font-bold text-primary">🐐 {goat?.name}</h1>
-            <span className={`${STATUS_BADGE[goat?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
-              {goat?.current_status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`${STATUS_BADGE[goat?.current_status ?? "active"]} text-xs font-semibold px-2 py-1 rounded-full`}>
+                {goat?.current_status}
+              </span>
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-3">
@@ -485,12 +493,12 @@ export default function GoatDetailPage() {
                       ) : (
                         sales.map((s) => (
                           <tr key={s.id} className="border-b border-gray-50">
-                            <td className="py-1 px-1">{formatDMY(s.sale_date)}</td>
-                            <td className="py-1 px-1">{s.weight_kg ?? "—"}</td>
-                            <td className="py-1 px-1">{s.rate_per_kg != null ? inr(Number(s.rate_per_kg)) : "—"}</td>
-                            <td className="py-1 px-1 font-medium text-success">{inr(Number(s.total_amount))}</td>
-                            <td className="py-1 px-1">{s.buyer_name || "—"}</td>
-                            <td className="py-1 px-1">{s.remarks || "—"}</td>
+                            <td className="py-1 px-1 text-gray-900">{formatDMY(s.sale_date)}</td>
+                            <td className="py-1 px-1 text-gray-900">{s.weight_kg ?? "—"}</td>
+                            <td className="py-1 px-1 text-gray-900">{s.rate_per_kg != null ? inr(Number(s.rate_per_kg)) : "—"}</td>
+                            <td className="py-1 px-1 font-medium text-green-600">{inr(Number(s.total_amount))}</td>
+                            <td className="py-1 px-1 text-gray-600">{s.buyer_name || "—"}</td>
+                            <td className="py-1 px-1 text-gray-600">{s.remarks || "—"}</td>
                             <td className="py-1 px-1">
                               <button onClick={() => deleteSale(s.id)} className="hover:text-danger">🗑️</button>
                             </td>
@@ -538,12 +546,12 @@ export default function GoatDetailPage() {
                       ) : (
                         goatExpenses.map((e) => (
                           <tr key={e.id} className="border-b border-gray-50">
-                            <td className="py-1 px-1">{formatDMY(e.expense_date)}</td>
-                            <td className="py-1 px-1">{e.expense_type}</td>
-                            <td className="py-1 px-1">{e.quantity ?? "—"}</td>
-                            <td className="py-1 px-1">{e.unit || "—"}</td>
-                            <td className="py-1 px-1 text-danger font-medium">{inr(Number(e.amount))}</td>
-                            <td className="py-1 px-1">{e.description || "—"}</td>
+                            <td className="py-1 px-1 text-gray-900">{formatDMY(e.expense_date)}</td>
+                            <td className="py-1 px-1 text-gray-900">{e.expense_type}</td>
+                            <td className="py-1 px-1 text-gray-900">{e.quantity ?? "—"}</td>
+                            <td className="py-1 px-1 text-gray-900">{e.unit || "—"}</td>
+                            <td className="py-1 px-1 text-red-600 font-medium">{inr(Number(e.amount))}</td>
+                            <td className="py-1 px-1 text-gray-600">{e.description || "—"}</td>
                             <td className="py-1 px-1">
                               <button onClick={() => deleteExpense(e.id)} className="hover:text-danger">🗑️</button>
                             </td>

@@ -154,12 +154,20 @@ export default function HensListPage() {
               <h1 className="text-2xl font-bold text-primary">🐔 {t(lang, "hens")}</h1>
               <p className="text-sm text-gray-500">{t(lang, "livestock")}</p>
             </div>
-            <button
-              onClick={openAddModal}
-              className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition"
-            >
-              + {t(lang, "addHen")}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+              <button
+                onClick={openAddModal}
+                className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition"
+              >
+                + {t(lang, "addHen")}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
