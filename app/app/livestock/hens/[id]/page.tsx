@@ -28,9 +28,9 @@ type HenSale = {
   hen_id: string;
   sale_date: string;
   sale_type: string;
-  weight: number | null;
+  weight_kg: number | null;
   rate_per_kg: number | null;
-  bird_count: number | null;
+  number_sold: number | null;
   rate_per_bird: number | null;
   total_amount: number;
   buyer_name: string | null;
@@ -46,6 +46,7 @@ type HenExpense = {
   unit: string | null;
   amount: number;
   description: string | null;
+  notes: string | null;
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -93,7 +94,7 @@ export default function HenDetailPage() {
     setLoading(false);
   };
   const fetchSales = async () => {
-    const { data } = await supabase.from("hen_sales").select("*").eq("hen_id", id).order("sale_date", { ascending: false });
+    const { data } = await supabase.from("hen_income").select("*").eq("hen_id", id).order("sale_date", { ascending: false });
     if (data) setSales(data);
   };
   const fetchExpenses = async () => {
@@ -206,13 +207,14 @@ export default function HenDetailPage() {
     setSavingSale(true);
     try {
       const total = totalManuallyEdited ? parseFloat(saleTotal) || 0 : computedTotal;
-      const { error } = await supabase.from("hen_sales").insert({
+      const { error } = await supabase.from("hen_income").insert({
         hen_id: id,
+        farm_location: "Home",
         sale_date: saleDate,
         sale_type: saleType,
-        weight: saleType === "weight" && saleWeight ? parseFloat(saleWeight) : null,
+        weight_kg: saleType === "weight" && saleWeight ? parseFloat(saleWeight) : null,
         rate_per_kg: saleType === "weight" && saleRateKg ? parseFloat(saleRateKg) : null,
-        bird_count: saleType === "bird" && saleBirdCount ? parseFloat(saleBirdCount) : null,
+        number_sold: saleType === "bird" && saleBirdCount ? parseFloat(saleBirdCount) : null,
         rate_per_bird: saleType === "bird" && saleRateBird ? parseFloat(saleRateBird) : null,
         total_amount: total,
         buyer_name: saleBuyer.trim() || null,
@@ -231,7 +233,7 @@ export default function HenDetailPage() {
 
   const deleteSale = async (sid: string) => {
     if (!confirm(t(lang, "deleteConfirmSale"))) return;
-    const { error } = await supabase.from("hen_sales").delete().eq("id", sid);
+    const { error } = await supabase.from("hen_income").delete().eq("id", sid);
     if (error) alert("Error: " + error.message);
     else fetchSales();
   };
@@ -265,12 +267,14 @@ export default function HenDetailPage() {
     try {
       const { error } = await supabase.from("hen_expenses").insert({
         hen_id: id,
+        farm_location: "Home",
         expense_type: t("en", expType),
         expense_date: expDate,
         quantity: expQty ? parseFloat(expQty) : null,
         unit: expUnit.trim() || null,
         amount: parseFloat(expAmount) || 0,
         description: expDescription.trim() || null,
+        notes: null,
       });
       if (error) alert("Error saving expense: " + error.message);
       else {
@@ -485,7 +489,7 @@ export default function HenDetailPage() {
                             <td className="py-1 px-1">{formatDMY(s.sale_date)}</td>
                             <td className="py-1 px-1">{s.sale_type === "weight" ? t(lang, "byWeight") : t(lang, "perBird")}</td>
                             <td className="py-1 px-1">
-                              {s.sale_type === "weight" ? (s.weight != null ? `${s.weight} kg` : "—") : (s.bird_count ?? "—")}
+                              {s.sale_type === "weight" ? (s.weight_kg != null ? `${s.weight_kg} kg` : "—") : (s.number_sold ?? "—")}
                             </td>
                             <td className="py-1 px-1">
                               {s.sale_type === "weight"

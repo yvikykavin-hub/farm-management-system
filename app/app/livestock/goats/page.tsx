@@ -74,7 +74,7 @@ export default function GoatsListPage() {
       const ids = goatData.map((g: Goat) => g.id);
       if (ids.length > 0) {
         const [{ data: saleData }, { data: expData }] = await Promise.all([
-          supabase.from("goat_sales").select("goat_id, total_amount").in("goat_id", ids),
+          supabase.from("goat_income").select("goat_id, total_amount").in("goat_id", ids),
           supabase.from("goat_expenses").select("goat_id, amount").in("goat_id", ids),
         ]);
         if (saleData) setSales(saleData);

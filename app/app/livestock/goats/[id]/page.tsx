@@ -27,7 +27,7 @@ type GoatSale = {
   id: string;
   goat_id: string;
   sale_date: string;
-  weight: number | null;
+  weight_kg: number | null;
   rate_per_kg: number | null;
   total_amount: number;
   buyer_name: string | null;
@@ -43,6 +43,7 @@ type GoatExpense = {
   unit: string | null;
   amount: number;
   description: string | null;
+  notes: string | null;
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -90,7 +91,7 @@ export default function GoatDetailPage() {
     setLoading(false);
   };
   const fetchSales = async () => {
-    const { data } = await supabase.from("goat_sales").select("*").eq("goat_id", id).order("sale_date", { ascending: false });
+    const { data } = await supabase.from("goat_income").select("*").eq("goat_id", id).order("sale_date", { ascending: false });
     if (data) setSales(data);
   };
   const fetchExpenses = async () => {
@@ -194,10 +195,11 @@ export default function GoatDetailPage() {
     setSavingSale(true);
     try {
       const total = totalManuallyEdited ? parseFloat(saleTotal) || 0 : computedTotal;
-      const { error } = await supabase.from("goat_sales").insert({
+      const { error } = await supabase.from("goat_income").insert({
         goat_id: id,
+        farm_location: "Home",
         sale_date: saleDate,
-        weight: saleWeight ? parseFloat(saleWeight) : null,
+        weight_kg: saleWeight ? parseFloat(saleWeight) : null,
         rate_per_kg: saleRate ? parseFloat(saleRate) : null,
         total_amount: total,
         buyer_name: saleBuyer.trim() || null,
@@ -216,7 +218,7 @@ export default function GoatDetailPage() {
 
   const deleteSale = async (sid: string) => {
     if (!confirm(t(lang, "deleteConfirmSale"))) return;
-    const { error } = await supabase.from("goat_sales").delete().eq("id", sid);
+    const { error } = await supabase.from("goat_income").delete().eq("id", sid);
     if (error) alert("Error: " + error.message);
     else fetchSales();
   };
@@ -250,12 +252,14 @@ export default function GoatDetailPage() {
     try {
       const { error } = await supabase.from("goat_expenses").insert({
         goat_id: id,
+        farm_location: "Home",
         expense_type: t("en", expType),
         expense_date: expDate,
         quantity: expQty ? parseFloat(expQty) : null,
         unit: expUnit.trim() || null,
         amount: parseFloat(expAmount) || 0,
         description: expDescription.trim() || null,
+        notes: null,
       });
       if (error) alert("Error saving expense: " + error.message);
       else {
@@ -467,7 +471,7 @@ export default function GoatDetailPage() {
                         sales.map((s) => (
                           <tr key={s.id} className="border-b border-gray-50">
                             <td className="py-1 px-1">{formatDMY(s.sale_date)}</td>
-                            <td className="py-1 px-1">{s.weight ?? "—"}</td>
+                            <td className="py-1 px-1">{s.weight_kg ?? "—"}</td>
                             <td className="py-1 px-1">{s.rate_per_kg != null ? inr(Number(s.rate_per_kg)) : "—"}</td>
                             <td className="py-1 px-1 font-medium text-success">{inr(Number(s.total_amount))}</td>
                             <td className="py-1 px-1">{s.buyer_name || "—"}</td>

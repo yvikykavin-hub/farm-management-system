@@ -225,6 +225,7 @@ export default function CowDetailPage() {
     try {
       const { error } = await supabase.from("milk_rates").insert({
         cow_id: id,
+        farm_location: "Home",
         rate_per_litre: parseFloat(newRate),
         effective_from: newRateDate,
         notes: newRateNotes.trim() || null,
@@ -261,6 +262,7 @@ export default function CowDetailPage() {
     try {
       const { error } = await supabase.from("milk_collections").insert({
         cow_id: id,
+        farm_location: "Home",
         collection_date: manualDate,
         morning_litres: parseFloat(manualMorning) || 0,
         evening_litres: parseFloat(manualEvening) || 0,
@@ -317,6 +319,7 @@ export default function CowDetailPage() {
     try {
       const payload = ocrRows.map((row) => ({
         cow_id: id,
+        farm_location: "Home",
         collection_date: row.date.includes("/") ? parseDMYToISO(row.date) : row.date,
         morning_litres: row.morning,
         evening_litres: row.evening,
@@ -418,6 +421,7 @@ export default function CowDetailPage() {
     try {
       const payload = {
         cow_id: id,
+        farm_location: "Home",
         payment_date: pmDate,
         period_from: pmFrom,
         period_to: pmTo,
@@ -490,6 +494,7 @@ export default function CowDetailPage() {
     try {
       const payload = {
         cow_id: id,
+        farm_location: "Home",
         expense_date: expDate,
         type: EXPENSE_TYPE_VALUES[expType],
         quantity: isFeedType && expQty ? parseFloat(expQty) : null,

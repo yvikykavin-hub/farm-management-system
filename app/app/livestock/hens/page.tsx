@@ -74,7 +74,7 @@ export default function HensListPage() {
       const ids = henData.map((h: Hen) => h.id);
       if (ids.length > 0) {
         const [{ data: saleData }, { data: expData }] = await Promise.all([
-          supabase.from("hen_sales").select("hen_id, total_amount").in("hen_id", ids),
+          supabase.from("hen_income").select("hen_id, total_amount").in("hen_id", ids),
           supabase.from("hen_expenses").select("hen_id, amount").in("hen_id", ids),
         ]);
         if (saleData) setSales(saleData);
