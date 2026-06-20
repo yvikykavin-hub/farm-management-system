@@ -218,11 +218,10 @@ const QUANTITY_CONFIG: Record<string, QuantityFieldConfig> = {
   },
   onion: {
     units: [
-      { value: "bulbs", en: "Bulbs", ta: "தண்டுகள்" },
-      { value: "seed_kg", en: "Seed (kg)", ta: "விதை (kg)" },
+      { value: "kg", en: "Kg", ta: "கி.கி" },
+      { value: "bags", en: "Bags", ta: "பைகள்" },
     ],
-    labelFor: (u) =>
-      u === "seed_kg" ? { en: "Seed Quantity (kg)", ta: "விதை அளவு (kg)" } : { en: "Number of Bulbs", ta: "தண்டுகளின் எண்ணிக்கை" },
+    labelFor: () => ({ en: "Quantity", ta: "அளவு" }),
   },
   fodder_corn: {
     units: [{ value: "kg", en: "kg", ta: "கி.கி" }],
@@ -290,6 +289,19 @@ const KUCHI_BUYER_TYPES = [
   { value: "direct_buyer", en: "Direct Buyer", ta: "நேரடி வாங்குபவர்" },
 ];
 
+const ONION_INCOME_UNITS = [
+  { value: "kg", en: "Kg", ta: "கிலோ" },
+  { value: "tonne", en: "Tonne", ta: "டன்" },
+  { value: "bags", en: "Bags", ta: "பைகள்" },
+];
+
+const ONION_STORAGE_EXPENSE_TYPES = [
+  { value: "storage_rent", en: "Storage Rent", ta: "சேமிப்பு வாடகை" },
+  { value: "cold_storage", en: "Cold Storage", ta: "குளிர் சேமிப்பு" },
+  { value: "maintenance", en: "Maintenance", ta: "பராமரிப்பு" },
+  { value: "other", en: "Other", ta: "மற்றவை" },
+];
+
 
 const formatDMY = (iso: string | null | undefined) => {
   if (!iso) return "";
@@ -299,6 +311,12 @@ const formatDMY = (iso: string | null | undefined) => {
 
 const inr = (n: number) =>
   `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })}`;
+
+const ratePerUnitLabel = (unit: string): { en: string; ta: string } => {
+  if (unit === "tonne") return { en: "Rate per Tonne (₹)", ta: "டன்னுக்கு விலை (₹)" };
+  if (unit === "bags") return { en: "Rate per Bag (₹)", ta: "பையுக்கு விலை (₹)" };
+  return { en: "Rate per Kg (₹)", ta: "கிலோவுக்கு விலை (₹)" };
+};
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-900 placeholder:text-xs placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
@@ -653,20 +671,28 @@ export default function CropDetail() {
   const [cuttingNotes, setCuttingNotes] = useState("");
   const [savingCutting, setSavingCutting] = useState(false);
 
-  // Onion storage & sales
-  const [storageStartDate, setStorageStartDate] = useState("");
-  const [storageLocation, setStorageLocation] = useState("");
-  const [storageQty, setStorageQty] = useState("");
-  const [storageUnit, setStorageUnit] = useState("kg");
-  const [storageCostPerMonth, setStorageCostPerMonth] = useState("");
-  const [savingStorage, setSavingStorage] = useState(false);
-
+  // Onion income
+  const [onionIncomeModalOpen, setOnionIncomeModalOpen] = useState(false);
+  const [onionEditingIncomeId, setOnionEditingIncomeId] = useState<string | null>(null);
   const [onionSaleDate, setOnionSaleDate] = useState("");
   const [onionQtySold, setOnionQtySold] = useState("");
-  const [onionPricePerKg, setOnionPricePerKg] = useState("");
+  const [onionUnit, setOnionUnit] = useState("kg");
+  const [onionRate, setOnionRate] = useState("");
+  const [onionTotal, setOnionTotal] = useState("");
+  const [onionTotalManual, setOnionTotalManual] = useState(false);
   const [onionBuyerName, setOnionBuyerName] = useState("");
+  const [onionContact, setOnionContact] = useState("");
   const [onionSaleNotes, setOnionSaleNotes] = useState("");
   const [savingOnionSale, setSavingOnionSale] = useState(false);
+
+  // Onion storage & maintenance expense
+  const [onionStorageModalOpen, setOnionStorageModalOpen] = useState(false);
+  const [onionStorageEditingId, setOnionStorageEditingId] = useState<string | null>(null);
+  const [onionStorageDate, setOnionStorageDate] = useState("");
+  const [onionStorageType, setOnionStorageType] = useState("storage_rent");
+  const [onionStorageAmount, setOnionStorageAmount] = useState("");
+  const [onionStorageNotes, setOnionStorageNotes] = useState("");
+  const [savingOnionStorageExpense, setSavingOnionStorageExpense] = useState(false);
 
   // Kuchi kilangu details
   const [kuchiDetailsId, setKuchiDetailsId] = useState<string | null>(null);
@@ -1438,76 +1464,152 @@ export default function CropDetail() {
     setSavingCutting(false);
   };
 
-  // ---- Onion storage & sales ----
-  const saveStorage = async () => {
-    if (!cultivation) return;
-    if (!storageStartDate || !storageLocation.trim() || !storageCostPerMonth) {
-      alert(L("Storage date, location, and cost are required", "சேமிப்பு தேதி, இடம் மற்றும் செலவு தேவை"));
-      return;
-    }
-    setSavingStorage(true);
-    try {
-      const { error } = await supabase.from("expense_records").insert({
-        cultivation_id: id,
-        farm_id: cultivation.farm_id,
-        expense_date: storageStartDate,
-        category: "miscellaneous",
-        stage: "storage",
-        amount: parseFloat(storageCostPerMonth) || 0,
-        description: `Storage at ${storageLocation.trim()} - ${storageQty || 0} ${storageUnit}`,
-      });
-      if (error) reportError("Error saving storage record", error.message);
-      else {
-        setStorageStartDate("");
-        setStorageLocation("");
-        setStorageQty("");
-        setStorageCostPerMonth("");
-        fetchExpenseRecords();
-      }
-    } catch (err) {
-      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
-    }
-    setSavingStorage(false);
+  // ---- Onion income ----
+  const onionIncomeRecords = incomeRecords.filter((r) => r.stage === "onion_sale");
+  const totalOnionSalesIncome = onionIncomeRecords.reduce((sum, r) => sum + Number(r.amount), 0);
+  const onionQtySoldNum = parseFloat(onionQtySold) || 0;
+  const onionRateNum = parseFloat(onionRate) || 0;
+  const onionComputedTotal = onionQtySoldNum * onionRateNum;
+  const onionQtyByUnit = onionIncomeRecords.reduce<Record<string, number>>((acc, r) => {
+    const u = r.unit ?? "kg";
+    acc[u] = (acc[u] ?? 0) + Number(r.quantity ?? 0);
+    return acc;
+  }, {});
+
+  const openAddOnionIncome = () => {
+    setOnionEditingIncomeId(null);
+    setOnionSaleDate("");
+    setOnionQtySold("");
+    setOnionUnit("kg");
+    setOnionRate("");
+    setOnionTotal("");
+    setOnionTotalManual(false);
+    setOnionBuyerName("");
+    setOnionContact("");
+    setOnionSaleNotes("");
+    setOnionIncomeModalOpen(true);
   };
 
-  const onionQtySoldNum = parseFloat(onionQtySold) || 0;
-  const onionPricePerKgNum = parseFloat(onionPricePerKg) || 0;
-  const onionSaleTotal = onionQtySoldNum * onionPricePerKgNum;
+  const openEditOnionIncome = (r: IncomeRecord) => {
+    setOnionEditingIncomeId(r.id);
+    setOnionSaleDate(r.income_date);
+    setOnionQtySold(String(r.quantity ?? ""));
+    setOnionUnit(r.unit ?? "kg");
+    setOnionRate(String(r.price_per_unit ?? ""));
+    setOnionTotal(String(r.amount));
+    setOnionTotalManual(true);
+    setOnionBuyerName(r.buyer_name ?? "");
+    setOnionContact(r.buyer_contact ?? "");
+    setOnionSaleNotes(r.notes ?? "");
+    setOnionIncomeModalOpen(true);
+  };
 
   const saveOnionSale = async () => {
     if (!cultivation) return;
-    if (!onionSaleDate || onionQtySoldNum <= 0) {
-      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+    if (!onionSaleDate || onionQtySoldNum <= 0 || onionRateNum <= 0) {
+      alert(L("Sale date, quantity, and rate are required", "விற்பனை தேதி, அளவு மற்றும் விலை தேவை"));
+      return;
+    }
+    if (onionContact.trim() && !/^\d+$/.test(onionContact.trim())) {
+      alert(L("Contact number must contain numbers only", "தொடர்பு எண்ணில் எண்கள் மட்டும் இருக்க வேண்டும்"));
       return;
     }
     setSavingOnionSale(true);
     try {
-      const { error } = await supabase.from("income_records").insert({
+      const total = onionTotalManual ? parseFloat(onionTotal) || 0 : onionComputedTotal;
+      const payload = {
         cultivation_id: id,
         farm_id: cultivation.farm_id,
-        income_date: onionSaleDate,
+        income_date: onionSaleDate || null,
         category: "crop_sale",
         stage: "onion_sale",
         quantity: onionQtySoldNum,
-        unit: "kg",
-        price_per_unit: onionPricePerKgNum,
-        amount: onionSaleTotal,
+        unit: onionUnit,
+        price_per_unit: onionRateNum,
+        amount: total,
         buyer_name: onionBuyerName.trim() || null,
+        buyer_contact: onionContact.trim() || null,
         notes: onionSaleNotes.trim() || null,
-      });
+      };
+      const { error } = onionEditingIncomeId
+        ? await supabase.from("income_records").update(payload).eq("id", onionEditingIncomeId)
+        : await supabase.from("income_records").insert(payload);
       if (error) reportError("Error saving income", error.message);
       else {
-        setOnionSaleDate("");
-        setOnionQtySold("");
-        setOnionPricePerKg("");
-        setOnionBuyerName("");
-        setOnionSaleNotes("");
+        setOnionIncomeModalOpen(false);
         fetchIncomeRecords();
       }
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
     setSavingOnionSale(false);
+  };
+
+  const deleteOnionIncome = async (recordId: string) => {
+    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
+    const { error } = await supabase.from("income_records").delete().eq("id", recordId);
+    if (error) reportError("Error deleting income", error.message);
+    else fetchIncomeRecords();
+  };
+
+  // ---- Onion storage & maintenance expense ----
+  const onionStorageRecords = expenseRecords.filter((r) => r.stage === "storage");
+  const totalStorageCost = onionStorageRecords.reduce((sum, r) => sum + Number(r.amount), 0);
+
+  const openAddOnionStorageExpense = () => {
+    setOnionStorageEditingId(null);
+    setOnionStorageDate("");
+    setOnionStorageType("storage_rent");
+    setOnionStorageAmount("");
+    setOnionStorageNotes("");
+    setOnionStorageModalOpen(true);
+  };
+
+  const openEditOnionStorageExpense = (r: ExpenseRecord) => {
+    setOnionStorageEditingId(r.id);
+    setOnionStorageDate(r.expense_date);
+    setOnionStorageType(r.category ?? "storage_rent");
+    setOnionStorageAmount(String(r.amount));
+    setOnionStorageNotes(r.notes ?? "");
+    setOnionStorageModalOpen(true);
+  };
+
+  const saveOnionStorageExpense = async () => {
+    if (!cultivation) return;
+    if (!onionStorageDate || !onionStorageAmount || parseFloat(onionStorageAmount) <= 0) {
+      alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      return;
+    }
+    setSavingOnionStorageExpense(true);
+    try {
+      const payload = {
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        expense_date: onionStorageDate || null,
+        category: onionStorageType,
+        stage: "storage",
+        amount: parseFloat(onionStorageAmount) || 0,
+        notes: onionStorageNotes.trim() || null,
+      };
+      const { error } = onionStorageEditingId
+        ? await supabase.from("expense_records").update(payload).eq("id", onionStorageEditingId)
+        : await supabase.from("expense_records").insert(payload);
+      if (error) reportError("Error saving storage expense", error.message);
+      else {
+        setOnionStorageModalOpen(false);
+        fetchExpenseRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingOnionStorageExpense(false);
+  };
+
+  const deleteOnionStorageExpense = async (recordId: string) => {
+    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
+    const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
+    if (error) reportError("Error deleting storage expense", error.message);
+    else fetchExpenseRecords();
   };
 
   // ---- Kuchi kilangu income ----
@@ -2037,10 +2139,6 @@ export default function CropDetail() {
       income: incomeRecords.find((r) => r.stage === "fodder_cutting" && r.income_date === h.harvest_date),
     }));
 
-  const totalStorageCost = expenseRecords.filter((r) => r.stage === "storage").reduce((sum, r) => sum + Number(r.amount), 0);
-  const totalOnionSalesIncome = incomeRecords.filter((r) => r.stage === "onion_sale").reduce((sum, r) => sum + Number(r.amount), 0);
-  const netAfterStorage = totalOnionSalesIncome - totalStorageCost;
-
   const renderField = (sub: ActivitySubsection, f: ActivityField, values: Record<string, string>) => (
     <div key={f.name}>
       <label className={labelCls}>{lang === "ta" ? f.labelTa : f.labelEn}</label>
@@ -2567,10 +2665,37 @@ export default function CropDetail() {
                   <h2 className="text-sm font-semibold text-gray-800 mb-2">
                     🧅 {L("Onion Cultivation Details", "வெங்காய பயிர் விவரங்கள்")}
                   </h2>
-                  <div className="text-sm text-gray-600 mb-1">
-                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Variety Name", "வகை பெயர்")}</label>
+                      <input type="text" value={varietyInput} onChange={(e) => setVarietyInput(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Quantity", "அளவு")}</label>
+                      <input type="number" step="0.01" value={quantityInput} onChange={(e) => setQuantityInput(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Unit", "அலகு")}</label>
+                      <select value={quantityUnitInput} onChange={(e) => setQuantityUnitInput(e.target.value)} className={inputCls}>
+                        {QUANTITY_CONFIG.onion.units.map((u) => (
+                          <option className="text-gray-900" key={u.value} value={u.value}>{lang === "ta" ? u.ta : u.en}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Area (Acres)", "பரப்பு (ஏக்கர்)")}</label>
+                      <input type="text" disabled value={`${cultivation?.area ?? ""} ${L("Acres", "ஏக்கர்")}`} className={`${inputCls} bg-gray-100 text-gray-500`} />
+                    </div>
                   </div>
-                  {renderVarietyQuantityFields()}
+
+                  <button
+                    onClick={saveDetails}
+                    disabled={savingDetails}
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingDetails ? "..." : L("Save", "சேமி")}
+                  </button>
                 </>
               ) : isFodderCorn ? (
                 <>
@@ -3052,13 +3177,13 @@ export default function CropDetail() {
                       <div>
                         <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
                         <select value={kuchiUnit} onChange={(e) => setKuchiUnit(e.target.value)} className={inputCls}>
-                          {["kg", "tonne"].map((u) => (
+                          {["kg", "tonne", "bags"].map((u) => (
                             <option className="text-gray-900" key={u} value={u}>{u}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className={labelCls}>{L("Rate per kg (₹)", "கி.கி விலை (₹)")}</label>
+                        <label className={labelCls}>{L(ratePerUnitLabel(kuchiUnit).en, ratePerUnitLabel(kuchiUnit).ta)}</label>
                         <input type="number" value={kuchiRatePerKg} onChange={(e) => setKuchiRatePerKg(e.target.value)} className={inputCls} />
                       </div>
                       <div>
@@ -3091,6 +3216,29 @@ export default function CropDetail() {
                       className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
                     >
                       {savingKuchiSale ? "..." : L("Save Income", "வருமானம் சேமி")}
+                    </button>
+                  </>
+                ) : isOnion ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div className="bg-green-50 rounded-lg p-2">
+                        <p className="text-[10px] text-gray-600">{L("Total Income", "மொத்த வருமானம்")}</p>
+                        <p className="text-sm font-bold text-success">{inr(totalOnionSalesIncome)}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <p className="text-[10px] text-gray-600">{L("Total Quantity Sold", "மொத்த விற்ற அளவு")}</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {Object.keys(onionQtyByUnit).length === 0
+                            ? "—"
+                            : Object.entries(onionQtyByUnit).map(([u, q]) => `${q} ${u}`).join(" · ")}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={openAddOnionIncome}
+                      className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                    >
+                      + {L("Add Income", "வருமானம் சேர்க்க")}
                     </button>
                   </>
                 ) : (
@@ -3160,6 +3308,49 @@ export default function CropDetail() {
                       </table>
                     </div>
                   )
+                ) : isOnion ? (
+                  <div className="mt-3 overflow-x-auto max-h-56 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b sticky top-0 bg-white">
+                          <th className="py-1 px-1">{L("Date", "தேதி")}</th>
+                          <th className="py-1 px-1">{L("Qty", "அளவு")}</th>
+                          <th className="py-1 px-1">{L("Unit", "அலகு")}</th>
+                          <th className="py-1 px-1">{L("Rate", "விலை")}</th>
+                          <th className="py-1 px-1">{L("Total", "மொத்தம்")}</th>
+                          <th className="py-1 px-1">{L("Buyer", "வாங்குபவர்")}</th>
+                          <th className="py-1 px-1">{L("Contact", "தொடர்பு")}</th>
+                          <th className="py-1 px-1">{L("Notes", "குறிப்பு")}</th>
+                          <th className="py-1 px-1"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {onionIncomeRecords.length === 0 ? (
+                          <tr><td colSpan={9} className="text-center py-4 text-gray-500">🧅 {L("No income records yet", "வருமான பதிவுகள் இல்லை")}</td></tr>
+                        ) : (
+                          onionIncomeRecords.map((r) => {
+                            const unitOpt = ONION_INCOME_UNITS.find((u) => u.value === r.unit);
+                            return (
+                              <tr key={r.id} className="border-b border-gray-50">
+                                <td className="py-1 px-1 text-gray-900">{formatDMY(r.income_date)}</td>
+                                <td className="py-1 px-1 text-gray-900">{r.quantity}</td>
+                                <td className="py-1 px-1 text-gray-900">{unitOpt ? L(unitOpt.en, unitOpt.ta) : r.unit}</td>
+                                <td className="py-1 px-1 text-gray-900">{inr(Number(r.price_per_unit))}</td>
+                                <td className="py-1 px-1 font-medium text-success">{inr(Number(r.amount))}</td>
+                                <td className="py-1 px-1 text-gray-600">{r.buyer_name || "—"}</td>
+                                <td className="py-1 px-1 text-gray-600">{r.buyer_contact || "—"}</td>
+                                <td className="py-1 px-1 text-gray-600">{r.notes || "—"}</td>
+                                <td className="py-1 px-1 whitespace-nowrap">
+                                  <button onClick={() => openEditOnionIncome(r)} className="mr-2 hover:text-primary">✏️</button>
+                                  <button onClick={() => deleteOnionIncome(r.id)} className="hover:text-danger">🗑️</button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
                   incomeRecords.length > 0 && (
                     <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
@@ -3380,95 +3571,55 @@ export default function CropDetail() {
                 </div>
               )}
 
-              {/* Storage & Sales (Onion) */}
+              {/* Storage & Maintenance Cost (Onion) */}
               {isOnion && (
                 <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
-                  <h2 className="text-sm font-semibold text-gray-800 mb-2">🧅 {L("Storage & Sales", "சேமிப்பு & விற்பனை")}</h2>
-
-                  <div className="bg-amber-50 rounded-xl p-2 mb-3">
-                    <p className="text-xs font-semibold text-gray-700 mb-1.5">{L("Storage Record", "சேமிப்பு பதிவு")}</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-1">
-                      <div>
-                        <label className={labelCls}>{L("Storage Start Date", "சேமிப்பு தொடக்க தேதி")}</label>
-                        <input type="date" value={storageStartDate} onChange={(e) => setStorageStartDate(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Storage Location", "சேமிப்பு இடம்")}</label>
-                        <input type="text" value={storageLocation} onChange={(e) => setStorageLocation(e.target.value)} className={inputCls} />
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className={labelCls}>{L("Quantity Stored", "சேமித்த அளவு")}</label>
-                          <input type="number" value={storageQty} onChange={(e) => setStorageQty(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>{L("Unit", "அளவீடு")}</label>
-                          <select value={storageUnit} onChange={(e) => setStorageUnit(e.target.value)} className={inputCls}>
-                            {["kg", "bags"].map((u) => (
-                              <option className="text-gray-900" key={u} value={u}>{u}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Storage Cost/Month (₹)", "மாத சேமிப்பு செலவு (₹)")}</label>
-                        <input type="number" value={storageCostPerMonth} onChange={(e) => setStorageCostPerMonth(e.target.value)} className={inputCls} />
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-sm font-semibold text-gray-800">🧅 {L("Storage & Maintenance Cost", "சேமிப்பு & பராமரிப்பு செலவு")}</h2>
                     <button
-                      onClick={saveStorage}
-                      disabled={savingStorage}
-                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                      onClick={openAddOnionStorageExpense}
+                      className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition"
                     >
-                      {savingStorage ? "..." : L("Save Storage", "சேமிப்பு சேமி")}
+                      + {L("Add Expense", "செலவு சேர்க்க")}
                     </button>
                   </div>
-
-                  <div className="bg-green-50 rounded-xl p-2 mb-3">
-                    <p className="text-xs font-semibold text-gray-700 mb-1.5">{L("Sales Record", "விற்பனை பதிவு")}</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-1">
-                      <div>
-                        <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")}</label>
-                        <input type="date" value={onionSaleDate} onChange={(e) => setOnionSaleDate(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Quantity Sold (kg)", "விற்ற அளவு (கி.கி)")}</label>
-                        <input type="number" value={onionQtySold} onChange={(e) => setOnionQtySold(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Price per kg (₹)", "விலை/கி.கி (₹)")}</label>
-                        <input type="number" value={onionPricePerKg} onChange={(e) => setOnionPricePerKg(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
-                        <input type="text" value={onionBuyerName} onChange={(e) => setOnionBuyerName(e.target.value)} className={inputCls} />
-                      </div>
-                      <div>
-                        <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
-                        <input type="text" value={onionSaleNotes} onChange={(e) => setOnionSaleNotes(e.target.value)} className={inputCls} />
-                      </div>
-                    </div>
-                    {onionQtySoldNum > 0 && (
-                      <p className="text-xs font-mono text-gray-700 mb-1">
-                        {onionQtySoldNum}kg × ₹{onionPricePerKgNum} = {L("Total Amount", "மொத்த தொகை")}: {inr(onionSaleTotal)}
-                      </p>
-                    )}
-                    <button
-                      onClick={saveOnionSale}
-                      disabled={savingOnionSale}
-                      className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
-                    >
-                      {savingOnionSale ? "..." : L("Save Sale", "விற்பனை சேமி")}
-                    </button>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                          <th className="py-1 px-1">{L("Date", "தேதி")}</th>
+                          <th className="py-1 px-1">{L("Type", "வகை")}</th>
+                          <th className="py-1 px-1">{L("Amount", "தொகை")}</th>
+                          <th className="py-1 px-1">{L("Notes", "குறிப்பு")}</th>
+                          <th className="py-1 px-1"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {onionStorageRecords.length === 0 ? (
+                          <tr><td colSpan={5} className="text-center py-4 text-gray-500">🧅 {L("No storage records yet", "சேமிப்பு பதிவுகள் இல்லை")}</td></tr>
+                        ) : (
+                          onionStorageRecords.map((r) => {
+                            const typeOpt = ONION_STORAGE_EXPENSE_TYPES.find((t) => t.value === r.category);
+                            return (
+                              <tr key={r.id} className="border-b border-gray-50">
+                                <td className="py-1 px-1 text-gray-900">{formatDMY(r.expense_date)}</td>
+                                <td className="py-1 px-1 text-gray-900">{typeOpt ? L(typeOpt.en, typeOpt.ta) : r.category}</td>
+                                <td className="py-1 px-1 text-danger font-medium">{inr(Number(r.amount))}</td>
+                                <td className="py-1 px-1 text-gray-600">{r.notes || "—"}</td>
+                                <td className="py-1 px-1 whitespace-nowrap">
+                                  <button onClick={() => openEditOnionStorageExpense(r)} className="mr-2 hover:text-primary">✏️</button>
+                                  <button onClick={() => deleteOnionStorageExpense(r.id)} className="hover:text-danger">🗑️</button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-
-                  <div className="bg-gray-50 rounded-lg p-2 text-xs text-gray-700 space-y-0.5">
-                    <p>{L("Total Storage Cost", "மொத்த சேமிப்பு செலவு")}: {inr(totalStorageCost)}</p>
-                    <p>{L("Total Sales Income", "மொத்த விற்பனை வருமானம்")}: {inr(totalOnionSalesIncome)}</p>
-                    <p className={`font-semibold ${netAfterStorage >= 0 ? "text-success" : "text-danger"}`}>
-                      {L("Net after storage", "சேமிப்புக்குப் பின் நிகரம்")}: {inr(netAfterStorage)}
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-700 font-semibold mt-2 pt-2 border-t border-gray-100">
+                    {L("Total Storage Expense", "மொத்த சேமிப்பு செலவு")}: <span className="text-danger">{inr(totalStorageCost)}</span>
+                  </p>
                 </div>
               )}
 
@@ -3959,6 +4110,118 @@ export default function CropDetail() {
                   {savingNellIncome ? "..." : L("Save", "சேமி")}
                 </button>
                 <button onClick={() => setNellIncomeModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                  {L("Cancel", "ரத்து")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {onionIncomeModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-primary">
+                {onionEditingIncomeId ? L("Edit Income", "வருமானத்தைத் திருத்து") : L("Add Income", "வருமானம் சேர்க்க")}
+              </h2>
+              <button onClick={() => setOnionIncomeModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>{L("Sale Date", "விற்பனை தேதி")} *</label>
+                <input type="date" value={onionSaleDate} onChange={(e) => setOnionSaleDate(e.target.value)} className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>{L("Quantity Sold", "விற்ற அளவு")} *</label>
+                  <input type="number" value={onionQtySold} onChange={(e) => setOnionQtySold(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>{L("Unit", "அலகு")} *</label>
+                  <select value={onionUnit} onChange={(e) => setOnionUnit(e.target.value)} className={inputCls}>
+                    {ONION_INCOME_UNITS.map((u) => (
+                      <option key={u.value} value={u.value}>{L(u.en, u.ta)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>{L(ratePerUnitLabel(onionUnit).en, ratePerUnitLabel(onionUnit).ta)} *</label>
+                <input type="number" value={onionRate} onChange={(e) => setOnionRate(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Total Amount (₹)", "மொத்த தொகை (₹)")}</label>
+                <input
+                  type="number"
+                  value={onionTotalManual ? onionTotal : onionComputedTotal.toFixed(2)}
+                  onChange={(e) => {
+                    setOnionTotalManual(true);
+                    setOnionTotal(e.target.value);
+                  }}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
+                <input type="text" value={onionBuyerName} onChange={(e) => setOnionBuyerName(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Buyer Contact Number", "வாங்குபவர் தொடர்பு எண்")}</label>
+                <input type="text" value={onionContact} onChange={(e) => setOnionContact(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                <textarea value={onionSaleNotes} onChange={(e) => setOnionSaleNotes(e.target.value)} className={inputCls} rows={2} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveOnionSale} disabled={savingOnionSale} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                  {savingOnionSale ? "..." : L("Save", "சேமி")}
+                </button>
+                <button onClick={() => setOnionIncomeModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                  {L("Cancel", "ரத்து")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {onionStorageModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-primary">
+                {onionStorageEditingId ? L("Edit Expense", "செலவைத் திருத்து") : L("Add Expense", "செலவு சேர்க்க")}
+              </h2>
+              <button onClick={() => setOnionStorageModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>{L("Date", "தேதி")} *</label>
+                <input type="date" value={onionStorageDate} onChange={(e) => setOnionStorageDate(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Expense Type", "செலவு வகை")}</label>
+                <select value={onionStorageType} onChange={(e) => setOnionStorageType(e.target.value)} className={inputCls}>
+                  {ONION_STORAGE_EXPENSE_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{L(t.en, t.ta)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")} *</label>
+                <input type="number" value={onionStorageAmount} onChange={(e) => setOnionStorageAmount(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                <textarea value={onionStorageNotes} onChange={(e) => setOnionStorageNotes(e.target.value)} className={inputCls} rows={2} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveOnionStorageExpense} disabled={savingOnionStorageExpense} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                  {savingOnionStorageExpense ? "..." : L("Save", "சேமி")}
+                </button>
+                <button onClick={() => setOnionStorageModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
