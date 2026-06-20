@@ -9,7 +9,7 @@ const navItems = [
   { href: "/", icon: "🏠", label: "Dashboard", labelTa: "முகப்பு" },
   { href: "/farms", icon: "🌳", label: "Farms", labelTa: "நிலங்கள்" },
   { href: "/crops", icon: "🌾", label: "Crops", labelTa: "பயிர்கள்" },
-  { href: "/machinery", icon: "🚜", label: "Machinery", labelTa: "இயந்திரம்" },
+  { href: "/machinery", icon: "🚜", label: "Machinery", labelTa: "இயந்திரங்கள்" },
   { href: "/income", icon: "💰", label: "Income", labelTa: "வருமானம்" },
   { href: "/expenses", icon: "💸", label: "Expenses", labelTa: "செலவு" },
   { href: "/reports", icon: "📊", label: "Reports", labelTa: "அறிக்கை" },
@@ -109,7 +109,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
           </Link>
 
           {navItems.slice(3).map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href === "/machinery" ? pathname.startsWith("/machinery") : pathname === item.href;
             return (
               <Link
                 key={item.href}
