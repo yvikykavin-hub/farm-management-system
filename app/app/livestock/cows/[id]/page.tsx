@@ -268,7 +268,7 @@ export default function CowDetailPage() {
       const { error } = await supabase.from("milk_collections").insert({
         cow_id: id,
         farm_location: "Home",
-        collection_date: manualDate,
+        collection_date: manualDate || null,
         morning_litres: parseFloat(manualMorning) || 0,
         evening_litres: parseFloat(manualEvening) || 0,
       });
@@ -328,7 +328,7 @@ export default function CowDetailPage() {
       const payload = ocrRows.map((row) => ({
         cow_id: id,
         farm_location: "Home",
-        collection_date: row.date.includes("/") ? parseDMYToISO(row.date) : row.date,
+        collection_date: (row.date.includes("/") ? parseDMYToISO(row.date) : row.date) || null,
         morning_litres: row.morning,
         evening_litres: row.evening,
       }));
@@ -436,14 +436,14 @@ export default function CowDetailPage() {
       const payload = {
         cow_id: id,
         farm_location: "Home",
-        payment_date: pmDate,
-        period_from: pmFrom,
-        period_to: pmTo,
-        milkman_name: pmMilkman.trim(),
-        total_litres: parseFloat(pmLitres) || 0,
-        expected_amount: pmExpected,
-        received_amount: parseFloat(pmReceived) || 0,
-        payment_status: pmStatus,
+        payment_date: pmDate || null,
+        period_from: pmFrom || null,
+        period_to: pmTo || null,
+        milkman_name: pmMilkman.trim() || null,
+        total_litres: parseFloat(pmLitres) || null,
+        expected_amount: pmExpected || null,
+        received_amount: parseFloat(pmReceived) || null,
+        payment_status: pmStatus || "pending",
         remarks: pmRemarks.trim() || null,
       };
       const { error } = editingPaymentId
@@ -514,7 +514,7 @@ export default function CowDetailPage() {
       const payload = {
         cow_id: id,
         farm_location: "Home",
-        expense_date: expDate,
+        expense_date: expDate || null,
         type: EXPENSE_TYPE_VALUES[expType],
         quantity: isFeedType && expQty ? parseFloat(expQty) : null,
         unit: isFeedType ? expUnit.trim() || null : null,

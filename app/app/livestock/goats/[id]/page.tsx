@@ -201,7 +201,7 @@ export default function GoatDetailPage() {
       const { error } = await supabase.from("goat_income").insert({
         goat_id: id,
         farm_location: "Home",
-        sale_date: saleDate,
+        sale_date: saleDate || null,
         weight_kg: saleWeight ? parseFloat(saleWeight) : null,
         rate_per_kg: saleRate ? parseFloat(saleRate) : null,
         total_amount: total,
@@ -263,7 +263,7 @@ export default function GoatDetailPage() {
         goat_id: id,
         farm_location: "Home",
         expense_type: t("en", expType),
-        expense_date: expDate,
+        expense_date: expDate || null,
         quantity: expQty ? parseFloat(expQty) : null,
         unit: expUnit.trim() || null,
         amount: parseFloat(expAmount) || 0,

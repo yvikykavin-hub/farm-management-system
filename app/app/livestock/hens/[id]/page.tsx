@@ -213,7 +213,7 @@ export default function HenDetailPage() {
       const { error } = await supabase.from("hen_income").insert({
         hen_id: id,
         farm_location: "Home",
-        sale_date: saleDate,
+        sale_date: saleDate || null,
         sale_type: saleType,
         weight_kg: saleType === "weight" && saleWeight ? parseFloat(saleWeight) : null,
         rate_per_kg: saleType === "weight" && saleRateKg ? parseFloat(saleRateKg) : null,
@@ -278,7 +278,7 @@ export default function HenDetailPage() {
         hen_id: id,
         farm_location: "Home",
         expense_type: t("en", expType),
-        expense_date: expDate,
+        expense_date: expDate || null,
         quantity: expQty ? parseFloat(expQty) : null,
         unit: expUnit.trim() || null,
         amount: parseFloat(expAmount) || 0,
