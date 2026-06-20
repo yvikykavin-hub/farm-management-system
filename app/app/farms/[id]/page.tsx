@@ -45,6 +45,7 @@ const CROP_TYPES = [
   { value: "kuchi_kilangu", icon: "🥔", labelTa: "குச்சிக்கிழங்கு", labelEn: "Kuchi Kilangu" },
   { value: "onion", icon: "🧅", labelTa: "வெங்காயம்", labelEn: "Onion" },
   { value: "fodder_corn", icon: "🌽", labelTa: "மக்காச்சோளம்", labelEn: "Fodder Corn" },
+  { value: "nell", icon: "🌾", labelTa: "நெல்", labelEn: "Nell (Rice)" },
 ];
 
 const cropInfo = (value: string) =>
