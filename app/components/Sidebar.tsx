@@ -9,13 +9,15 @@ const navItems = [
   { href: "/", icon: "🏠", label: "Dashboard", labelTa: "முகப்பு" },
   { href: "/farms", icon: "🌳", label: "Farms", labelTa: "நிலங்கள்" },
   { href: "/crops", icon: "🌾", label: "Crops", labelTa: "பயிர்கள்" },
-  { href: "/livestock", icon: "🐄", label: "Livestock", labelTa: "கால்நடை" },
   { href: "/machinery", icon: "🚜", label: "Machinery", labelTa: "இயந்திரம்" },
   { href: "/income", icon: "💰", label: "Income", labelTa: "வருமானம்" },
   { href: "/expenses", icon: "💸", label: "Expenses", labelTa: "செலவு" },
   { href: "/reports", icon: "📊", label: "Reports", labelTa: "அறிக்கை" },
   { href: "/settings", icon: "⚙️", label: "Settings", labelTa: "அமைப்புகள்" },
 ];
+
+const livestockLink = { href: "/livestock", icon: "🐄", label: "Livestock", labelTa: "கால்நடை" };
+const generalExpensesLink = { href: "/livestock/general-expenses", icon: "🏦", label: "General Expenses", labelTa: "பொது செலவுகள்" };
 
 type SidebarProps = {
   lang?: "ta" | "en";
@@ -73,7 +75,54 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
 
         {/* Nav */}
         <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.slice(0, 3).map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-accent text-white font-semibold shadow"
+                    : "text-white opacity-100 hover:bg-white/15"
+                }`}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span>{lang === "ta" ? item.labelTa : item.label}</span>
+              </Link>
+            );
+          })}
+
+          <Link
+            href={livestockLink.href}
+            title={livestockLink.label}
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              pathname.startsWith("/livestock") && !pathname.startsWith(generalExpensesLink.href)
+                ? "bg-accent text-white font-semibold shadow"
+                : "text-white opacity-100 hover:bg-white/15"
+            }`}
+          >
+            <span className="text-base">{livestockLink.icon}</span>
+            <span>{lang === "ta" ? livestockLink.labelTa : livestockLink.label}</span>
+          </Link>
+          <Link
+            href={generalExpensesLink.href}
+            title={generalExpensesLink.label}
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-2.5 pl-7 pr-2.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              pathname.startsWith(generalExpensesLink.href)
+                ? "bg-accent text-white font-semibold shadow"
+                : "text-white opacity-100 hover:bg-white/15"
+            }`}
+          >
+            <span className="text-base">{generalExpensesLink.icon}</span>
+            <span>{lang === "ta" ? generalExpensesLink.labelTa : generalExpensesLink.label}</span>
+          </Link>
+
+          {navItems.slice(3).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -108,7 +157,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
             className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium text-red-200 hover:bg-danger/80 w-full transition-all"
           >
             <span>🚪</span>
-            <span>{lang === "ta" ? "வெளியேறு" : "Logout"}</span>
+            <span>Logout / வெளியேறு</span>
           </button>
         </div>
       </div>
