@@ -54,8 +54,6 @@ export default function Dashboard() {
   };
 
   const addFarm = async () => {
-    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-
     if (!farmName.trim() || !area) {
       toast.error(lang === "ta" ? "நிலம் பெயர் மற்றும் பரப்பளவு தேவை" : "Farm name and area are required");
       return;
@@ -67,7 +65,6 @@ export default function Dashboard() {
       has_well: hasWell,
       has_motor: hasMotor,
     };
-    console.log("Saving farm:", payload);
 
     setSaving(true);
     try {

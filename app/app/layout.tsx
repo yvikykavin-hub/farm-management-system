@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import InactivityTimer from "../components/InactivityTimer";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -18,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="ta">
       <body className={`${geist.className} min-h-screen bg-green-50`}>
+        <InactivityTimer />
         {children}
         <Toaster
           position="top-right"
