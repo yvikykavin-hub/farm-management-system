@@ -17,10 +17,34 @@
 
   /* Thaai Nilam AGRO design tokens */
   --color-primary: #2d6a4f;
+  --color-primary-light: #52b788;
+  --color-primary-dark: #1b4332;
+  --color-primary-hover: #245a42;
+
   --color-accent: #f4a261;
-  --color-page: #f8f9fa;
-  --color-danger: #e63946;
-  --color-success: #52b788;
+  --color-accent-light: #fdecd5;
+
+  --color-success: #22c55e;
+  --color-success-bg: #f0fdf4;
+  --color-danger: #ef4444;
+  --color-danger-bg: #fef2f2;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fffbeb;
+  --color-info: #3b82f6;
+  --color-info-bg: #eff6ff;
+
+  --color-page: #f7f8fa;
+  --color-card: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  --color-sidebar: #1b4332;
+  --color-sidebar-hover: #245a42;
+  --color-sidebar-active: #2d6a4f;
+  --color-sidebar-text: #d1fae5;
+  --color-sidebar-active-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
