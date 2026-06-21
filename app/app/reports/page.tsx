@@ -317,31 +317,101 @@ export default function ReportsPage() {
   const highestExpenseCrop = report ? [...report.cropTotals].sort((a, b) => b.expense - a.expense)[0] : null;
   const overallMargin = report && report.totalIncome > 0 ? (report.totalNet / report.totalIncome) * 100 : 0;
 
+  // Built with plain jsPDF text/shape drawing (no html2canvas) — Tailwind v4's
+  // oklch() colors aren't parseable by html2canvas, so we avoid rasterizing the
+  // DOM entirely and draw the PDF directly instead.
   const downloadPDF = async () => {
     if (!report) return;
-    const element = document.getElementById("report-content");
-    if (!element) return;
-    const html2canvas = (await import("html2canvas")).default;
     const { jsPDF } = await import("jspdf");
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    let y = 20;
 
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.setFontSize(18);
+    pdf.setTextColor(45, 106, 79);
+    pdf.text("Thaai Nilam AGRO Farms", pageWidth / 2, y, { align: "center" });
+    y += 8;
 
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    if (pdfHeight > pageHeight) {
-      let heightLeft = pdfHeight - pageHeight;
-      let position = -pageHeight;
-      while (heightLeft > 0) {
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text("Our Land, Our Legacy", pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Crop Profit & Loss Report", pageWidth / 2, y, { align: "center" });
+    y += 8;
+
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Generated: ${new Date(report.generatedAt).toLocaleDateString("en-IN")}`, pageWidth / 2, y, { align: "center" });
+    y += 6;
+    pdf.text(`Report ID: ${report.id}`, pageWidth / 2, y, { align: "center" });
+    y += 6;
+    pdf.text(`Period: ${report.periodLabel}  |  Farm: ${report.farmLabel}  |  Crops: ${report.cropLabel}`, pageWidth / 2, y, { align: "center" });
+    y += 15;
+
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`Total Income: Rs. ${Math.round(report.totalIncome).toLocaleString("en-IN")}`, 14, y);
+    y += 7;
+    pdf.text(`Total Expense: Rs. ${Math.round(report.totalExpense).toLocaleString("en-IN")}`, 14, y);
+    y += 7;
+    pdf.text(`Net Profit/Loss: Rs. ${Math.round(report.totalNet).toLocaleString("en-IN")}`, 14, y);
+    y += 15;
+
+    const drawTableHeader = () => {
+      pdf.setFillColor(45, 106, 79);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.rect(14, y, pageWidth - 28, 8, "F");
+      pdf.text("Crop", 16, y + 5.5);
+      pdf.text("Farm", 55, y + 5.5);
+      pdf.text("Income (Rs.)", 90, y + 5.5);
+      pdf.text("Expense (Rs.)", 125, y + 5.5);
+      pdf.text("Net P/L (Rs.)", 160, y + 5.5);
+      y += 10;
+    };
+    drawTableHeader();
+
+    report.rows.forEach((row, index) => {
+      if (y > 270) {
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-        position -= pageHeight;
+        y = 20;
+        drawTableHeader();
       }
+      const shade = index % 2 === 0 ? 248 : 255;
+      pdf.setFillColor(shade, shade + 1, shade + 2);
+      pdf.rect(14, y, pageWidth - 28, 7, "F");
+      pdf.setFontSize(8);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(cropLabel(row.cropType, "en"), 16, y + 5);
+      pdf.text(row.farmName, 55, y + 5);
+      pdf.text(Math.round(row.income).toLocaleString("en-IN"), 90, y + 5);
+      pdf.text(Math.round(row.expense).toLocaleString("en-IN"), 125, y + 5);
+
+      if (row.net >= 0) pdf.setTextColor(22, 163, 74);
+      else pdf.setTextColor(220, 38, 38);
+      pdf.text(Math.round(row.net).toLocaleString("en-IN"), 160, y + 5);
+      pdf.setTextColor(0, 0, 0);
+      y += 7;
+    });
+
+    if (y > 270) {
+      pdf.addPage();
+      y = 20;
     }
+    y += 3;
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("TOTAL", 16, y + 5);
+    pdf.text(Math.round(report.totalIncome).toLocaleString("en-IN"), 90, y + 5);
+    pdf.text(Math.round(report.totalExpense).toLocaleString("en-IN"), 125, y + 5);
+    pdf.setTextColor(report.totalNet >= 0 ? 22 : 220, report.totalNet >= 0 ? 163 : 38, report.totalNet >= 0 ? 74 : 38);
+    pdf.text(Math.round(report.totalNet).toLocaleString("en-IN"), 160, y + 5);
+    pdf.setFont("helvetica", "normal");
+
     pdf.save(`ThaaiNilam-${report.id}.pdf`);
   };
 
@@ -383,7 +453,6 @@ export default function ReportsPage() {
           {/* Report type card */}
           <div className="bg-white rounded-2xl shadow-sm border-2 border-primary p-4">
             <p className="text-sm font-semibold text-gray-900">📈 {L("Crop Profit & Loss Report", "பயிர் இலாப நஷ்ட அறிக்கை")}</p>
-            <p className="text-xs text-gray-600">{L("பயிர் இலாப நஷ்ட அறிக்கை", "Crop Profit & Loss Report")}</p>
             <span className="inline-block mt-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
               ✅ {L("Selected", "தேர்ந்தெடுக்கப்பட்டது")}
             </span>
@@ -470,7 +539,6 @@ export default function ReportsPage() {
                       <p className="text-lg font-bold text-primary">🌾 Thaai Nilam AGRO Farms</p>
                       <p className="text-xs text-gray-500">நிலமே தாய், விளைவே வாழ்வு</p>
                       <p className="text-base font-semibold text-gray-900 mt-3">{L("Crop Profit & Loss Report", "பயிர் இலாப நஷ்ட அறிக்கை")}</p>
-                      <p className="text-xs text-gray-500">{L("பயிர் இலாப நஷ்ட அறிக்கை", "Crop Profit & Loss Report")}</p>
                       <div className="text-xs text-gray-600 mt-3 flex flex-col gap-0.5">
                         <p>{L("Generated", "தயாரிக்கப்பட்டது")}: {formatDMY(report.generatedAt)} &nbsp; {L("ID", "எண்")}: {report.id}</p>
                         <p>{L("Period", "காலம்")}: {report.periodLabel}</p>

@@ -9,8 +9,8 @@ const navItems = [
   { href: "/", icon: "🏠", label: "Dashboard", labelTa: "முகப்பு" },
   { href: "/land-details", icon: "🗺️", label: "Land Details", labelTa: "நில விவரம்" },
   { href: "/crops", icon: "🌾", label: "Crops", labelTa: "பயிர்கள்" },
-  { href: "/finance", icon: "💰", label: "Finance", labelTa: "நிதி நிலை" },
   { href: "/machinery", icon: "🚜", label: "Machinery", labelTa: "இயந்திரங்கள்" },
+  { href: "/finance", icon: "💰", label: "Finance", labelTa: "நிதி நிலை" },
   { href: "/reports", icon: "📊", label: "Reports", labelTa: "அறிக்கைகள்" },
   { href: "/settings", icon: "⚙️", label: "Settings", labelTa: "அமைப்புகள்" },
 ];
