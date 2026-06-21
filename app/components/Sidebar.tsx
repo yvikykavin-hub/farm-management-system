@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabase";
 
 const navItems = [
   { href: "/", icon: "🏠", label: "Dashboard", labelTa: "முகப்பு" },
-  { href: "/farms", icon: "🌳", label: "Farms", labelTa: "நிலங்கள்" },
+  { href: "/land-details", icon: "🗺️", label: "Land Details", labelTa: "நில விவரம்" },
   { href: "/crops", icon: "🌾", label: "Crops", labelTa: "பயிர்கள்" },
   { href: "/machinery", icon: "🚜", label: "Machinery", labelTa: "இயந்திரங்கள்" },
   { href: "/income", icon: "💰", label: "Income", labelTa: "வருமானம்" },
@@ -75,7 +75,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
         {/* Nav */}
         <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
           {navItems.slice(0, 3).map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href === "/land-details" ? pathname.startsWith("/land-details") : pathname === item.href;
             return (
               <Link
                 key={item.href}
