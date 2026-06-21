@@ -29,7 +29,10 @@ type FarmDrawing = {
   title: string;
   drawing_data: string;
   notes: string | null;
+  file_type: string | null;
 };
+
+const MAX_RECOMMENDED_PDF_BYTES = 5 * 1024 * 1024;
 
 const WATER_SOURCES = [
   { value: "borewell", en: "Borewell", ta: "துளை கிணறு" },
@@ -299,17 +302,19 @@ export default function LandDetailPage() {
 
   const saveDrawing = async () => {
     if (!drawingTitle.trim() || !drawingFile) {
-      alert(L("Title and photo are required.", "தலைப்பு மற்றும் புகைப்படம் தேவை."));
+      alert(L("Title and photo or PDF are required.", "தலைப்பு மற்றும் படம்/PDF தேவை."));
       return;
     }
     setSavingDrawing(true);
     try {
       const base64 = await convertToBase64(drawingFile);
+      const fileType = drawingFile.type === "application/pdf" ? "pdf" : "image";
       const { error } = await supabase.from("farm_drawings").insert({
         farm_id: id,
         title: drawingTitle.trim(),
         drawing_data: base64,
         notes: drawingNotes.trim() || null,
+        file_type: fileType,
       });
       if (error) {
         console.error("Error saving drawing:", error);
@@ -582,24 +587,50 @@ export default function LandDetailPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {drawings.map((d) => (
-                    <div key={d.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={d.drawing_data}
-                        alt={d.title}
-                        className="w-full h-32 object-cover cursor-pointer"
-                        onClick={() => setViewerUrl(d.drawing_data)}
-                      />
-                      <div className="p-2">
-                        <p className="text-xs font-bold text-gray-900">{d.title}</p>
-                        {d.notes && <p className="text-[11px] text-gray-500 mt-0.5">{d.notes}</p>}
-                        <button onClick={() => deleteDrawing(d.id)} className="text-[11px] text-danger hover:underline mt-1">
-                          {L("Delete", "நீக்கு")}
-                        </button>
+                  {drawings.map((d) => {
+                    const isPdf = d.file_type === "pdf";
+                    return (
+                      <div key={d.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        {isPdf ? (
+                          <iframe src={d.drawing_data} className="w-full h-32 border-b border-gray-100" title={d.title} />
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={d.drawing_data}
+                            alt={d.title}
+                            className="w-full h-32 object-cover cursor-pointer"
+                            onClick={() => setViewerUrl(d.drawing_data)}
+                          />
+                        )}
+                        <div className="p-2">
+                          <p className="text-xs font-bold text-gray-900">{d.title}</p>
+                          {d.notes && <p className="text-[11px] text-gray-500 mt-0.5">{d.notes}</p>}
+                          <div className="flex items-center gap-2 mt-1">
+                            {isPdf ? (
+                              <button
+                                onClick={() => {
+                                  const newTab = window.open();
+                                  newTab?.document.write(
+                                    `<iframe src="${d.drawing_data}" width="100%" height="100%" style="border:0"></iframe>`
+                                  );
+                                }}
+                                className="text-[11px] text-primary hover:underline"
+                              >
+                                📄 {L("View Full PDF", "முழு PDF காண")}
+                              </button>
+                            ) : (
+                              <button onClick={() => setViewerUrl(d.drawing_data)} className="text-[11px] text-primary hover:underline">
+                                {L("View Full", "முழுவதும் காண")}
+                              </button>
+                            )}
+                            <button onClick={() => deleteDrawing(d.id)} className="text-[11px] text-danger hover:underline">
+                              {L("Delete", "நீக்கு")}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -634,27 +665,35 @@ export default function LandDetailPage() {
                 />
               </div>
               <div>
-                <label className={labelCls}>{L("Photo", "படம்")} *</label>
+                <label className={labelCls}>{L("Photo or PDF", "படம் அல்லது PDF")} *</label>
                 <div className="relative">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.pdf"
                     onChange={(e) => setDrawingFile(e.target.files?.[0] ?? null)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                   />
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 hover:bg-green-50 transition-colors duration-200">
-                    <div className="text-3xl mb-2">📐</div>
+                    <div className="text-3xl mb-2">📄</div>
                     <p className="text-gray-700 font-medium text-sm">
-                      {L("Click to upload photo", "புகைப்படம் பதிவேற்ற கிளிக் செய்யவும்")}
+                      {L("Click to upload photo or PDF", "படம் அல்லது PDF பதிவேற்ற கிளிக் செய்யவும்")}
                     </p>
                     <p className="text-gray-500 text-xs mt-1">
-                      {drawingFile ? `✅ ${drawingFile.name}` : L("JPG, PNG supported (max 2MB recommended)", "JPG, PNG ஆதரிக்கப்படும் (அதிகபட்சம் 2MB பரிந்துரைக்கப்படுகிறது)")}
+                      {drawingFile ? `✅ ${drawingFile.name}` : L("JPG, PNG, PDF supported", "JPG, PNG, PDF ஆதரிக்கப்படும்")}
                     </p>
                   </div>
                 </div>
-                {drawingFile && drawingFile.size > MAX_RECOMMENDED_PHOTO_BYTES && (
+                {drawingFile && drawingFile.type !== "application/pdf" && drawingFile.size > MAX_RECOMMENDED_PHOTO_BYTES && (
                   <p className="text-[11px] text-amber-600 mt-1">
                     ⚠️ {L("Photo is large and may slow the app. Please use a compressed image under 2MB.", "புகைப்படம் பெரியது, செயலியை மெதுவாக்கலாம். 2MB க்கும் குறைவான சுருக்கப்பட்ட படத்தை பயன்படுத்தவும்.")}
+                  </p>
+                )}
+                {drawingFile && drawingFile.size > MAX_RECOMMENDED_PDF_BYTES && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠️ {L(
+                      `File is large (${(drawingFile.size / (1024 * 1024)).toFixed(1)}MB). Large files may slow the app. Consider compressing before uploading.`,
+                      `கோப்பு பெரியது (${(drawingFile.size / (1024 * 1024)).toFixed(1)}MB). பெரிய கோப்புகள் செயலியை மெதுவாக்கலாம். பதிவேற்றும் முன் சுருக்கவும்.`
+                    )}
                   </p>
                 )}
               </div>
