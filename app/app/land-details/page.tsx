@@ -10,15 +10,26 @@ type Farm = {
   name: string | null;
   owner_name: string | null;
   area: number | null;
+  total_area: number | null;
   survey_numbers: string | null;
   patta_number: string | null;
   well: boolean | null;
+  has_well: boolean | null;
   well_depth: string | null;
   motor: boolean | null;
+  has_motor: boolean | null;
   motor_details: string | null;
   soil_type: string | null;
   water_source: string | null;
 };
+
+// Farms created via the Dashboard's "Add Farm" form / the legacy /farms/[id] page
+// write to total_area/has_well/has_motor, while Land Details reads/writes
+// area/well/motor. Fall back to the legacy columns so older farm rows still
+// display correctly here without needing a data migration.
+const effectiveArea = (f: Farm) => f.area ?? f.total_area;
+const effectiveWell = (f: Farm) => f.well ?? f.has_well ?? false;
+const effectiveMotor = (f: Farm) => f.motor ?? f.has_motor ?? false;
 
 const SOIL_LABELS: Record<string, { en: string; ta: string }> = {
   red: { en: "Red Soil", ta: "செம்மண்" },
@@ -109,12 +120,15 @@ export default function LandDetailsPage() {
               {farms.map((f) => {
                 const soil = f.soil_type ? SOIL_LABELS[f.soil_type] : null;
                 const water = f.water_source ? WATER_SOURCE_LABELS[f.water_source] : null;
+                const area = effectiveArea(f);
+                const well = effectiveWell(f);
+                const motor = effectiveMotor(f);
                 return (
                   <Link key={f.id} href={`/land-details/${f.id}`}>
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-green-300 transition-all cursor-pointer flex flex-col gap-1.5 h-full">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-bold text-gray-900">🌾 {f.name || "—"}</p>
-                        <span className="text-xs font-semibold text-gray-700">{f.area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
+                        <span className="text-xs font-semibold text-gray-700">{area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
                       </div>
                       <p className="text-xs text-gray-600">
                         {L("Survey", "சர்வே")}: {f.survey_numbers || "—"} • {L("Patta", "பட்டா")}: {f.patta_number || "—"}
@@ -129,12 +143,12 @@ export default function LandDetailsPage() {
                         <p className="text-xs text-gray-600">{L("Water Source", "நீர் ஆதாரம்")}: {L(water.en, water.ta)}</p>
                       )}
                       <p className="text-xs text-gray-700">
-                        {f.well
+                        {well
                           ? `🟢 ${L("Well", "கிணறு")}: ${L("Yes", "உண்டு")}${f.well_depth ? ` (${f.well_depth})` : ""}`
                           : `⭕ ${L("Well", "கிணறு")}: ${L("No", "இல்லை")}`}
                       </p>
                       <p className="text-xs text-gray-700">
-                        {f.motor
+                        {motor
                           ? `🟢 ${L("Motor", "மோட்டார்")}: ${L("Yes", "உண்டு")}${f.motor_details ? ` • ${f.motor_details}` : ""}`
                           : `⭕ ${L("Motor", "மோட்டார்")}: ${L("No", "இல்லை")}`}
                       </p>

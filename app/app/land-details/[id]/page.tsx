@@ -11,11 +11,14 @@ type Farm = {
   name: string | null;
   owner_name: string | null;
   area: number | null;
+  total_area: number | null;
   survey_numbers: string | null;
   patta_number: string | null;
   well: boolean | null;
+  has_well: boolean | null;
   well_depth: string | null;
   motor: boolean | null;
+  has_motor: boolean | null;
   motor_details: string | null;
   water_source: string | null;
   irrigation_type: string | null;
@@ -177,12 +180,13 @@ export default function LandDetailPage() {
       setFarm(f);
       setName(f.name ?? "");
       setOwnerName(f.owner_name ?? "");
-      setArea(f.area != null ? String(f.area) : "");
+      const effectiveArea = f.area ?? f.total_area;
+      setArea(effectiveArea != null ? String(effectiveArea) : "");
       setSurveyNumbers(f.survey_numbers ?? "");
       setPattaNumber(f.patta_number ?? "");
-      setWell(!!f.well);
+      setWell(f.well ?? f.has_well ?? false);
       setWellDepth(f.well_depth ?? "");
-      setMotor(!!f.motor);
+      setMotor(f.motor ?? f.has_motor ?? false);
       setMotorDetails(f.motor_details ?? "");
       setWaterSource(f.water_source ?? "borewell");
       setIrrigationType(f.irrigation_type ?? "drip");
@@ -208,6 +212,7 @@ export default function LandDetailPage() {
           name: name.trim() || null,
           owner_name: ownerName.trim() || null,
           area: parseFloat(area) || 0,
+          total_area: parseFloat(area) || 0,
           survey_numbers: surveyNumbers.trim() || null,
           patta_number: pattaNumber.trim() || null,
         })
@@ -233,8 +238,10 @@ export default function LandDetailPage() {
         .from("farms")
         .update({
           well,
+          has_well: well,
           well_depth: well ? wellDepth.trim() || null : null,
           motor,
+          has_motor: motor,
           motor_details: motor ? motorDetails.trim() || null : null,
           water_source: waterSource || null,
           irrigation_type: irrigationType || null,

@@ -317,22 +317,22 @@ export default function FinancePage() {
                   {L("Crop-wise Financial Overview", "பயிர் வாரியான நிதி கண்ணோட்டம்")}
                 </h2>
 
-                <div className="flex gap-3 flex-wrap mb-4">
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className="w-3 h-3 rounded-full bg-blue-500" />
-                    {L("Income", "வருமானம்")}
+                <div className="flex gap-4 flex-wrap mb-4 justify-center">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 font-medium">{L("Income", "வருமானம்")}</span>
                   </span>
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className="w-3 h-3 rounded-full bg-amber-400" />
-                    {L("Expense", "செலவு")}
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 font-medium">{L("Expense", "செலவு")}</span>
                   </span>
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className="w-3 h-3 rounded-full bg-green-500" />
-                    {L("Profit", "இலாபம்")}
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 font-medium">{L("Profit", "இலாபம்")}</span>
                   </span>
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className="w-3 h-3 rounded-full bg-red-500" />
-                    {L("Loss", "நஷ்டம்")}
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 font-medium">{L("Loss", "நஷ்டம்")}</span>
                   </span>
                 </div>
 
@@ -345,9 +345,9 @@ export default function FinancePage() {
                         <YAxis tickFormatter={inrAxis} tick={{ fontSize: 12 }} />
                         <Tooltip content={<CustomTooltip L={L} />} />
                         <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
-                        <Bar dataKey="income" name="income" fill="#3B82F6" radius={[4, 4, 0, 0]} animationDuration={600} />
-                        <Bar dataKey="expense" name="expense" fill="#F59E0B" radius={[4, 4, 0, 0]} animationDuration={600} />
-                        <Bar dataKey="net" name="net" radius={[4, 4, 0, 0]} animationDuration={600}>
+                        <Bar dataKey="income" name="income" fill="#3B82F6" radius={[4, 4, 0, 0]} animationDuration={600} legendType="none" />
+                        <Bar dataKey="expense" name="expense" fill="#F59E0B" radius={[4, 4, 0, 0]} animationDuration={600} legendType="none" />
+                        <Bar dataKey="net" name="net" radius={[4, 4, 0, 0]} animationDuration={600} legendType="none">
                           {chartData.map((entry, i) => (
                             <Cell key={i} fill={entry.net >= 0 ? "#22C55E" : "#EF4444"} />
                           ))}
