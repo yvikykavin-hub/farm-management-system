@@ -40,7 +40,12 @@ type TractorPhoto = {
   notes: string | null;
 };
 
-const OIL_CHANGE_INTERVAL = 300;
+type TractorSettings = {
+  id: string;
+  oil_change_interval_hours: number;
+};
+
+const DEFAULT_OIL_CHANGE_INTERVAL = 300;
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const formatDMY = (iso: string | null | undefined) => {
@@ -81,9 +86,16 @@ export default function TractorPage() {
   const [engineOil, setEngineOil] = useState<TractorEngineOil[]>([]);
   const [loadingShared, setLoadingShared] = useState(true);
 
+  // Engine oil service interval (editable, persisted in tractor_settings)
+  const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [oilChangeInterval, setOilChangeInterval] = useState(DEFAULT_OIL_CHANGE_INTERVAL);
+  const [intervalInput, setIntervalInput] = useState(String(DEFAULT_OIL_CHANGE_INTERVAL));
+  const [savingInterval, setSavingInterval] = useState(false);
+
   useEffect(() => {
     fetchUsage();
     fetchEngineOil();
+    fetchSettings();
   }, []);
 
   const fetchUsage = async () => {
@@ -97,13 +109,60 @@ export default function TractorPage() {
     if (data) setEngineOil(data);
   };
 
+  const fetchSettings = async () => {
+    const { data } = await supabase.from("tractor_settings").select("*").limit(1).maybeSingle();
+    if (data) {
+      const s = data as TractorSettings;
+      setSettingsId(s.id);
+      setOilChangeInterval(Number(s.oil_change_interval_hours));
+      setIntervalInput(String(s.oil_change_interval_hours));
+    } else {
+      const { data: created, error } = await supabase
+        .from("tractor_settings")
+        .insert({ oil_change_interval_hours: DEFAULT_OIL_CHANGE_INTERVAL })
+        .select()
+        .single();
+      if (!error && created) {
+        setSettingsId(created.id);
+        setOilChangeInterval(Number(created.oil_change_interval_hours));
+        setIntervalInput(String(created.oil_change_interval_hours));
+      }
+    }
+  };
+
+  const saveInterval = async () => {
+    const value = parseFloat(intervalInput);
+    if (!value || value <= 0) {
+      alert(L("Please enter a valid number of hours.", "சரியான மணி நேரத்தை உள்ளிடவும்."));
+      return;
+    }
+    setSavingInterval(true);
+    try {
+      const { error } = settingsId
+        ? await supabase.from("tractor_settings").update({ oil_change_interval_hours: value }).eq("id", settingsId)
+        : await supabase.from("tractor_settings").insert({ oil_change_interval_hours: value });
+      if (error) {
+        console.error("Error saving interval:", error);
+        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      } else {
+        setOilChangeInterval(value);
+        fetchSettings();
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+    }
+    setSavingInterval(false);
+  };
+
   const totalHours = usage.reduce((s, u) => s + Number(u.duration_hours), 0);
   const hoursAtLastOilChange = engineOil[0] ? Number(engineOil[0].hours_at_service) : 0;
   const hoursSinceOilChange = totalHours - hoursAtLastOilChange;
-  const hoursRemaining = OIL_CHANGE_INTERVAL - hoursSinceOilChange;
+  const hoursRemaining = oilChangeInterval - hoursSinceOilChange;
 
+  const oilStatus: "safe" | "warning" | "danger" = hoursRemaining < 20 ? "danger" : hoursRemaining <= 50 ? "warning" : "safe";
   const oilBannerColor =
-    hoursRemaining < 20 ? "bg-red-50 border-danger text-danger" : hoursRemaining <= 50 ? "bg-amber-50 border-amber-400 text-amber-700" : "bg-green-50 border-success text-success";
+    oilStatus === "danger" ? "bg-red-50 border-red-200 text-red-700" : oilStatus === "warning" ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-green-50 border-green-200 text-green-700";
 
   return (
     <div className="flex h-screen overflow-hidden bg-page">
@@ -152,9 +211,14 @@ export default function TractorPage() {
               totalHours={totalHours}
               hoursSinceOilChange={hoursSinceOilChange}
               hoursRemaining={hoursRemaining}
+              oilStatus={oilStatus}
               oilBannerColor={oilBannerColor}
               lastEngineOilDate={engineOil[0]?.service_date ?? null}
               loadingShared={loadingShared}
+              intervalInput={intervalInput}
+              setIntervalInput={setIntervalInput}
+              savingInterval={savingInterval}
+              saveInterval={saveInterval}
             />
           )}
 
@@ -189,17 +253,27 @@ function OverviewTab({
   totalHours,
   hoursSinceOilChange,
   hoursRemaining,
+  oilStatus,
   oilBannerColor,
   lastEngineOilDate,
   loadingShared,
+  intervalInput,
+  setIntervalInput,
+  savingInterval,
+  saveInterval,
 }: {
   L: (en: string, ta: string) => string;
   totalHours: number;
   hoursSinceOilChange: number;
   hoursRemaining: number;
+  oilStatus: "safe" | "warning" | "danger";
   oilBannerColor: string;
   lastEngineOilDate: string | null;
   loadingShared: boolean;
+  intervalInput: string;
+  setIntervalInput: (v: string) => void;
+  savingInterval: boolean;
+  saveInterval: () => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [lastBatteryDate, setLastBatteryDate] = useState<string | null>(null);
@@ -275,21 +349,62 @@ function OverviewTab({
         <p className="text-4xl font-bold text-primary">{totalHours.toFixed(1)} {L("hrs", "மணி")}</p>
       </div>
 
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <h2 className="text-sm font-semibold text-gray-800 mb-2">⚙️ {L("Engine Oil Service Interval", "எஞ்சின் ஆயில் சேவை இடைவெளி")}</h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-700">{L("Change oil every", "ஆயிலை மாற்றவும்")}</span>
+          <input
+            type="number"
+            value={intervalInput}
+            onChange={(e) => setIntervalInput(e.target.value)}
+            className="w-24 border border-gray-300 rounded-lg px-2 py-1 text-sm text-center bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <span className="text-sm text-gray-700">{L("hours", "மணி நேரம்")}</span>
+          <button
+            onClick={saveInterval}
+            disabled={savingInterval}
+            className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+          >
+            {savingInterval ? "..." : L("Save", "சேமி")}
+          </button>
+        </div>
+      </div>
+
       <div className={`rounded-2xl border-2 p-4 ${oilBannerColor}`}>
         <div className="flex justify-between items-center flex-wrap gap-2">
           <div>
             <p className="text-xs font-medium">{L("Hours Since Last Oil Change", "கடைசி ஆயில் மாற்றத்திலிருந்து")}: <span className="font-bold">{Math.max(hoursSinceOilChange, 0).toFixed(1)}</span></p>
-            <p className="text-xs font-medium">{L("Hours Remaining Until Next Oil Change", "அடுத்த ஆயில் மாற்றத்திற்கு மீதமுள்ள நேரம்")}: <span className="font-bold">{Math.max(hoursRemaining, 0).toFixed(1)}</span></p>
+            <p className="text-xs font-medium">
+              {L("Hours Remaining Until Next Oil Change", "அடுத்த ஆயில் மாற்றத்திற்கு மீதமுள்ள நேரம்")}:{" "}
+              <span className={`font-bold ${oilStatus === "danger" ? "text-red-600 font-bold" : oilStatus === "warning" ? "text-amber-500" : "text-green-600"}`}>
+                {Math.max(hoursRemaining, 0).toFixed(1)}
+              </span>
+            </p>
           </div>
         </div>
-        {hoursRemaining < 20 && (
-          <p className="text-sm font-bold mt-2">
-            ⚠️ {L(`Only ${Math.max(hoursRemaining, 0).toFixed(1)} hours remaining for engine oil change!`, `எஞ்சின் ஆயில் மாற்ற ${Math.max(hoursRemaining, 0).toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!`)}
-          </p>
+        {oilStatus === "danger" && (
+          <div className="mt-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-2">
+            <p className="text-sm font-bold">
+              ⚠️ {L(
+                `Only ${Math.max(hoursRemaining, 0).toFixed(1)} hours remaining! Engine oil change needed soon.`,
+                `${Math.max(hoursRemaining, 0).toFixed(1)} மணி நேரம் மட்டுமே உள்ளது! எஞ்சின் ஆயில் மாற்றம் தேவை.`
+              )}
+            </p>
+          </div>
         )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div
+          className={`rounded-xl shadow-sm p-3 ${
+            oilStatus === "danger" ? "bg-red-50 animate-pulse" : oilStatus === "warning" ? "bg-amber-50" : "bg-green-50"
+          }`}
+        >
+          <p className="text-xs text-gray-500">{L("Hours Until Next Oil Change", "அடுத்த ஆயில் மாற்றத்திற்கு மீதமுள்ள நேரம்")}</p>
+          <p className={`text-sm font-bold ${oilStatus === "danger" ? "text-red-600" : oilStatus === "warning" ? "text-amber-500" : "text-green-600"}`}>
+            {Math.max(hoursRemaining, 0).toFixed(1)} {L("hrs", "மணி")}
+          </p>
+        </div>
         <div className="bg-white rounded-xl shadow-sm p-3">
           <p className="text-xs text-gray-500">{L("Last Engine Oil Change", "கடைசி எஞ்சின் ஆயில் மாற்றம்")}</p>
           <p className="text-sm font-bold text-gray-900">{formatDMY(lastEngineOilDate)}</p>

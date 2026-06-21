@@ -228,9 +228,8 @@ export default function CowDetailPage() {
     try {
       const { error } = await supabase.from("milk_rates").insert({
         cow_id: id,
-        farm_location: "Home",
         rate_per_litre: parseFloat(newRate),
-        effective_from: newRateDate,
+        effective_from: newRateDate || null,
         notes: newRateNotes.trim() || null,
       });
       if (error) {
@@ -880,13 +879,13 @@ export default function CowDetailPage() {
                                 const total = Number(r.morning_litres) + Number(r.evening_litres);
                                 const rate = rateForDate(r.collection_date);
                                 return (
-                                  <tr key={r.id} className="border-b border-gray-50">
-                                    <td className="py-1 px-1">{formatDMY(r.collection_date)}</td>
-                                    <td className="py-1 px-1">{r.morning_litres}</td>
-                                    <td className="py-1 px-1">{r.evening_litres}</td>
-                                    <td className="py-1 px-1 font-medium">{total.toFixed(1)}</td>
-                                    <td className="py-1 px-1">{inr(rate)}</td>
-                                    <td className="py-1 px-1 font-medium text-success">{inr(total * rate)}</td>
+                                  <tr key={r.id} className="border-b border-gray-50 text-gray-900">
+                                    <td className="py-1 px-1 text-gray-700">{formatDMY(r.collection_date)}</td>
+                                    <td className="py-1 px-1 text-gray-900 font-medium">{r.morning_litres}</td>
+                                    <td className="py-1 px-1 text-gray-900 font-medium">{r.evening_litres}</td>
+                                    <td className="py-1 px-1 text-gray-900 font-medium">{total.toFixed(1)}</td>
+                                    <td className="py-1 px-1 text-gray-700">{inr(rate)}</td>
+                                    <td className="py-1 px-1 font-medium text-green-600">{inr(total * rate)}</td>
                                     <td className="py-1 px-1">
                                       <button onClick={() => deleteCollection(r.id)} className="hover:text-danger">🗑️</button>
                                     </td>
@@ -894,7 +893,7 @@ export default function CowDetailPage() {
                                 );
                               })}
                               <tr className="bg-gray-50">
-                                <td colSpan={7} className="py-1 px-1 text-[11px] font-semibold text-gray-600">
+                                <td colSpan={7} className="py-1 px-1 text-[11px] font-semibold text-gray-700">
                                   {t(lang, "weekTotal")}: {weekTotal.toFixed(1)} L | {inr(weekIncome)}
                                 </td>
                               </tr>
@@ -969,15 +968,15 @@ export default function CowDetailPage() {
                         payments.map((p) => {
                           const diff = Number(p.received_amount) - Number(p.expected_amount);
                           return (
-                            <tr key={p.id} className="border-b border-gray-50">
-                              <td className="py-1 px-1">{formatDMY(p.payment_date)}</td>
-                              <td className="py-1 px-1">{formatDMY(p.period_from)} → {formatDMY(p.period_to)}</td>
-                              <td className="py-1 px-1">{p.milkman_name}</td>
-                              <td className="py-1 px-1">{Number(p.total_litres).toFixed(1)} L</td>
-                              <td className="py-1 px-1">{Number(p.total_litres) ? inr(Number(p.expected_amount) / Number(p.total_litres)) : "—"}</td>
-                              <td className="py-1 px-1">{inr(Number(p.expected_amount))}</td>
-                              <td className="py-1 px-1 font-medium text-success">{inr(Number(p.received_amount))}</td>
-                              <td className={`py-1 px-1 font-medium ${diff < 0 ? "text-danger" : "text-success"}`}>{inr(diff)}</td>
+                            <tr key={p.id} className="border-b border-gray-50 text-gray-900">
+                              <td className="py-1 px-1 text-gray-700">{formatDMY(p.payment_date)}</td>
+                              <td className="py-1 px-1 text-gray-700">{formatDMY(p.period_from)} → {formatDMY(p.period_to)}</td>
+                              <td className="py-1 px-1 text-gray-700">{p.milkman_name}</td>
+                              <td className="py-1 px-1 text-gray-900">{Number(p.total_litres).toFixed(1)} L</td>
+                              <td className="py-1 px-1 text-gray-700">{Number(p.total_litres) ? inr(Number(p.expected_amount) / Number(p.total_litres)) : "—"}</td>
+                              <td className="py-1 px-1 text-gray-700">{inr(Number(p.expected_amount))}</td>
+                              <td className="py-1 px-1 font-medium text-green-600">{inr(Number(p.received_amount))}</td>
+                              <td className={`py-1 px-1 font-medium ${diff < 0 ? "text-red-600" : "text-green-600"}`}>{inr(diff)}</td>
                               <td className="py-1 px-1">
                                 <span className={`${PAYMENT_STATUS_BADGE[p.payment_status] ?? PAYMENT_STATUS_BADGE.pending} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
                                   {p.payment_status.replace("_", " ")}
@@ -1044,14 +1043,14 @@ export default function CowDetailPage() {
                         cowExpenses.map((e) => {
                           const typeKey = EXPENSE_TYPE_KEYS.find((k) => EXPENSE_TYPE_VALUES[k] === e.expense_type);
                           return (
-                            <tr key={e.id} className="border-b border-gray-50">
-                              <td className="py-1 px-1">{formatDMY(e.expense_date)}</td>
-                              <td className="py-1 px-1">{typeKey ? t(lang, typeKey) : e.expense_type}</td>
-                              <td className="py-1 px-1">{e.quantity ?? "—"}</td>
-                              <td className="py-1 px-1">{e.unit ?? "—"}</td>
-                              <td className="py-1 px-1 text-danger font-medium">{inr(Number(e.amount))}</td>
-                              <td className="py-1 px-1">{e.vendor_name ?? "—"}</td>
-                              <td className="py-1 px-1">{e.description ?? "—"}</td>
+                            <tr key={e.id} className="border-b border-gray-50 text-gray-900">
+                              <td className="py-1 px-1 text-gray-700">{formatDMY(e.expense_date)}</td>
+                              <td className="py-1 px-1 text-gray-700">{typeKey ? t(lang, typeKey) : e.expense_type}</td>
+                              <td className="py-1 px-1 text-gray-900">{e.quantity ?? "—"}</td>
+                              <td className="py-1 px-1 text-gray-700">{e.unit ?? "—"}</td>
+                              <td className="py-1 px-1 text-red-600 font-medium">{inr(Number(e.amount))}</td>
+                              <td className="py-1 px-1 text-gray-700">{e.vendor_name ?? "—"}</td>
+                              <td className="py-1 px-1 text-gray-700">{e.description ?? "—"}</td>
                               <td className="py-1 px-1">
                                 <button onClick={() => deleteExpense(e.id)} className="hover:text-danger">🗑️</button>
                               </td>
