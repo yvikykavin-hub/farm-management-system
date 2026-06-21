@@ -154,6 +154,7 @@ export default function LandDetailPage() {
   // Location tab
   const [googleMapsLink, setGoogleMapsLink] = useState("");
   const [savingLocation, setSavingLocation] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Land Drawing tab
   const [drawings, setDrawings] = useState<FarmDrawing[]>([]);
@@ -510,26 +511,29 @@ export default function LandDetailPage() {
 
           {/* LOCATION TAB */}
           {activeTab === "location" && (
-            <div className="flex flex-col gap-3">
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Google Maps Link", "கூகுள் வரைபட இணைப்பு")}</h2>
-                <div className="flex flex-col sm:flex-row gap-2">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+
+              <div className="mb-6">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  {L("Google Maps Link", "கூகுள் வரைபட இணைப்பு")}
+                </label>
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="https://maps.google.com/..."
                     value={googleMapsLink}
                     onChange={(e) => setGoogleMapsLink(e.target.value)}
-                    className={`${inputCls} flex-1`}
+                    placeholder={L("Paste your Google Maps link here...", "உங்கள் கூகுள் வரைபட இணைப்பை இங்கே ஒட்டவும்...")}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <button
                     onClick={saveGoogleMapsLink}
                     disabled={savingLocation}
-                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm shrink-0"
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0"
                   >
                     {savingLocation ? "..." : L("Save", "சேமி")}
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-500 mt-2">
+                <p className="text-xs text-gray-400 mt-1">
                   {L(
                     "How to get link: Google Maps → Your farm location → Share → Copy link",
                     "இணைப்பு பெற: கூகுள் வரைபடம் → உங்கள் நிலத்தின் இடம் → பகிர் → இணைப்பை நகலெடு"
@@ -537,36 +541,56 @@ export default function LandDetailPage() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                {googleMapsLink ? (
-                  <>
-                    <iframe
-                      src={googleMapsLink}
-                      width="100%"
-                      height={350}
-                      style={{ border: 0 }}
-                      allowFullScreen
-                      loading="lazy"
-                      className="rounded-lg"
-                    />
-                    <a
-                      href={googleMapsLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block mt-3 bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
-                    >
-                      {L("Open in Google Maps 🗺️", "கூகுள் வரைபடத்தில் திற 🗺️")}
-                    </a>
-                  </>
-                ) : (
-                  <div className="text-center text-gray-500 py-10">
-                    <div className="text-4xl mb-2">📍</div>
-                    <p className="text-sm">
-                      {L("Add your Google Maps link to see the map here", "மேலே கூகுள் வரைபட இணைப்பை சேர்த்து வரைபடத்தைக் காணவும்")}
+              {googleMapsLink ? (
+                <div className="border-2 border-green-200 rounded-xl overflow-hidden bg-green-50">
+                  <div className="h-64 bg-gradient-to-br from-green-100 to-emerald-200 flex flex-col items-center justify-center relative overflow-hidden">
+                    <div className="text-6xl mb-3 animate-bounce">📍</div>
+                    <p className="text-green-800 font-semibold text-lg">
+                      {L("Farm Location Saved", "நில இடம் சேமிக்கப்பட்டது")}
                     </p>
+                    <div
+                      className="absolute inset-0 opacity-10"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(#16a34a 1px, transparent 1px), linear-gradient(90deg, #16a34a 1px, transparent 1px)",
+                        backgroundSize: "30px 30px",
+                      }}
+                    />
                   </div>
-                )}
-              </div>
+
+                  <div className="p-4 bg-white border-t border-green-200">
+                    <div className="flex gap-3 flex-wrap">
+                      <a
+                        href={googleMapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        🗺️ {L("Open in Google Maps", "கூகுள் வரைபடத்தில் திற")}
+                      </a>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(googleMapsLink);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        {copied ? `✅ ${L("Copied!", "நகலெடுக்கப்பட்டது!")}` : `📋 ${L("Copy Link", "இணைப்பை நகலெடு")}`}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2 truncate">🔗 {googleMapsLink}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl h-48 flex flex-col items-center justify-center text-center p-6">
+                  <div className="text-4xl mb-3">🗺️</div>
+                  <p className="text-gray-500 font-medium">{L("No location saved yet", "இடம் எதுவும் சேமிக்கப்படவில்லை")}</p>
+                  <p className="text-gray-400 text-xs mt-3">
+                    {L("Paste your Google Maps link above to save your farm location", "உங்கள் நிலத்தின் இடத்தை சேமிக்க மேலே கூகுள் வரைபட இணைப்பை ஒட்டவும்")}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
