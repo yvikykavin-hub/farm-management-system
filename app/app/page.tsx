@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import Sidebar from "../components/Sidebar";
+import PageWrapper from "../components/PageWrapper";
+import AnimatedCard from "../components/AnimatedCard";
+import { SkeletonRow } from "../components/Skeleton";
 import { supabase } from "../lib/supabase";
 
 type Farm = {
@@ -53,7 +57,7 @@ export default function Dashboard() {
     console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
     if (!farmName.trim() || !area) {
-      alert(lang === "ta" ? "நிலம் பெயர் மற்றும் பரப்பளவு தேவை" : "Farm name and area are required");
+      toast.error(lang === "ta" ? "நிலம் பெயர் மற்றும் பரப்பளவு தேவை" : "Farm name and area are required");
       return;
     }
 
@@ -69,8 +73,9 @@ export default function Dashboard() {
     try {
       const { error } = await supabase.from("farms").insert(payload);
       if (error) {
-        alert("Error saving farm: " + error.message);
+        toast.error("Error saving farm: " + error.message);
       } else {
+        toast.success(lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved successfully!");
         setFarmName("");
         setArea("");
         setHasWell(true);
@@ -79,7 +84,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error("Unexpected error saving farm:", err);
-      alert("Unexpected error saving farm: " + (err instanceof Error ? err.message : String(err)));
+      toast.error("Unexpected error saving farm: " + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   };
@@ -111,6 +116,7 @@ export default function Dashboard() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 p-3 overflow-hidden flex flex-col">
+        <PageWrapper>
         <div className="max-w-6xl mx-auto w-full flex flex-col gap-3 h-full">
 
           {/* Header */}
@@ -134,19 +140,22 @@ export default function Dashboard() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-3 shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
             {[
               { label: t.totalFarms, value: farms.length, color: "text-primary", bg: "bg-green-50", icon: "🌳" },
               { label: t.totalArea, value: `${totalArea.toFixed(2)} ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
               { label: t.activeCrops, value: activeCropsCount, color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
-            ].map((card) => (
-              <div key={card.label} className={`${card.bg} rounded-2xl p-3 border border-white shadow-sm`}>
-                <div className="flex justify-between items-start mb-1">
-                  <p className="text-xs font-medium text-gray-700">{card.label}</p>
-                  <span className="text-base">{card.icon}</span>
+            ].map((card, i) => (
+              <AnimatedCard key={card.label} delay={i * 0.1}>
+                <div className={`${card.bg} rounded-2xl p-5 border border-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}>
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-white/40 rounded-full -mr-8 -mt-8" />
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-xs font-medium text-gray-700">{card.label}</p>
+                    <span className="text-base">{card.icon}</span>
+                  </div>
+                  <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
                 </div>
-                <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-              </div>
+              </AnimatedCard>
             ))}
           </div>
 
@@ -162,7 +171,7 @@ export default function Dashboard() {
                 placeholder={t.farmName}
                 value={farmName}
                 onChange={(e) => setFarmName(e.target.value)}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-all duration-200"
               />
               <input
                 type="number"
@@ -170,12 +179,12 @@ export default function Dashboard() {
                 placeholder={t.areaAcres}
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-500 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-all duration-200"
               />
               <select
                 value={hasWell ? "yes" : "no"}
                 onChange={(e) => setHasWell(e.target.value === "yes")}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-all duration-200 cursor-pointer"
               >
                 <option className="text-gray-900" value="yes">{t.well}: {t.yes}</option>
                 <option className="text-gray-900" value="no">{t.well}: {t.no}</option>
@@ -183,7 +192,7 @@ export default function Dashboard() {
               <select
                 value={hasMotor ? "yes" : "no"}
                 onChange={(e) => setHasMotor(e.target.value === "yes")}
-                className="border border-gray-300 bg-white rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-all duration-200 cursor-pointer"
               >
                 <option className="text-gray-900" value="yes">{t.motor}: {t.yes}</option>
                 <option className="text-gray-900" value="no">{t.motor}: {t.no}</option>
@@ -191,7 +200,7 @@ export default function Dashboard() {
               <button
                 onClick={addFarm}
                 disabled={saving}
-                className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl px-3 py-2 text-sm font-semibold transition shadow-sm"
+                className="bg-[#2D6A4F] hover:bg-[#245A42] disabled:bg-primary/40 text-white font-medium text-sm px-4 py-2 rounded-xl transition-all duration-200 shadow-sm hover:shadow active:scale-95"
               >
                 {saving ? "..." : t.save}
               </button>
@@ -206,18 +215,24 @@ export default function Dashboard() {
             </h2>
 
             {loading ? (
-              <div className="space-y-2">
+              <div className="divide-y divide-gray-50">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                  <SkeletonRow key={i} />
                 ))}
               </div>
             ) : farms.length === 0 ? (
-              <div className="text-center py-6 text-gray-500 text-sm font-medium">{t.noFarms}</div>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="text-5xl mb-4 opacity-60">🌳</div>
+                <h3 className="text-base font-semibold text-gray-700 mb-1">
+                  {lang === "ta" ? "நிலங்கள் இல்லை" : "No farms added yet"}
+                </h3>
+                <p className="text-sm text-gray-400 max-w-xs">{t.noFarms}</p>
+              </div>
             ) : (
               <div className="space-y-2 overflow-y-auto max-h-48">
                 {farms.map((farm) => (
                   <Link key={farm.id} href={`/farms/${farm.id}`}>
-                    <div className="flex justify-between items-center p-3 rounded-xl border border-gray-100 hover:border-primary/40 hover:bg-green-50 transition cursor-pointer group">
+                    <div className="flex justify-between items-center p-3 rounded-xl border border-gray-100 hover:border-primary/40 hover:bg-green-50/30 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] group">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center text-lg group-hover:bg-green-200 transition">
                           🌳
@@ -242,6 +257,7 @@ export default function Dashboard() {
           </div>
 
         </div>
+        </PageWrapper>
       </main>
     </div>
   );
