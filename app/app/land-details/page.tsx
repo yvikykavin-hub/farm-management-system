@@ -128,14 +128,16 @@ export default function LandDetailsPage() {
                       {water && (
                         <p className="text-xs text-gray-600">{L("Water Source", "நீர் ஆதாரம்")}: {L(water.en, water.ta)}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.well ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {L("Well", "கிணறு")} {f.well ? "✅" : "❌"}{f.well && f.well_depth ? ` (${f.well_depth})` : ""}
-                        </span>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.motor ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {L("Motor", "மோட்டார்")} {f.motor ? "✅" : "❌"}{f.motor && f.motor_details ? ` (${f.motor_details})` : ""}
-                        </span>
-                      </div>
+                      <p className="text-xs text-gray-700">
+                        {f.well
+                          ? `🟢 ${L("Well", "கிணறு")}: ${L("Yes", "உண்டு")}${f.well_depth ? ` (${f.well_depth})` : ""}`
+                          : `⭕ ${L("Well", "கிணறு")}: ${L("No", "இல்லை")}`}
+                      </p>
+                      <p className="text-xs text-gray-700">
+                        {f.motor
+                          ? `🟢 ${L("Motor", "மோட்டார்")}: ${L("Yes", "உண்டு")}${f.motor_details ? ` • ${f.motor_details}` : ""}`
+                          : `⭕ ${L("Motor", "மோட்டார்")}: ${L("No", "இல்லை")}`}
+                      </p>
                       <div className="flex justify-end mt-1">
                         <span className="text-xs font-semibold text-primary">{L("View Details", "விவரம் காண")} →</span>
                       </div>
