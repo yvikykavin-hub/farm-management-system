@@ -10,7 +10,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ReferenceLine,
   Cell,
 } from "recharts";
@@ -39,10 +38,36 @@ const cropLabel = (cropType: string, lang: "ta" | "en") => {
 };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-const inrAxis = (n: number) => {
-  const abs = Math.abs(n);
-  if (abs >= 100000) return `₹${(n / 100000).toFixed(n % 100000 === 0 ? 0 : 2)}L`;
-  return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const inrAxis = (value: number) =>
+  value >= 0 ? `₹${(value / 100000).toFixed(1)}L` : `-₹${(Math.abs(value) / 100000).toFixed(1)}L`;
+
+type TooltipPayloadItem = { dataKey: string; value: number };
+
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+  L,
+}: {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+  L: (en: string, ta: string) => string;
+}) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const income = payload.find((p) => p.dataKey === "income")?.value ?? 0;
+  const expense = payload.find((p) => p.dataKey === "expense")?.value ?? 0;
+  const net = payload.find((p) => p.dataKey === "net")?.value ?? 0;
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-semibold text-gray-900 mb-2">{label}</p>
+      <p className="text-blue-600">💰 {L("Income", "வருமானம்")}: {inr(income)}</p>
+      <p className="text-amber-600">📤 {L("Expense", "செலவு")}: {inr(expense)}</p>
+      <p className={net >= 0 ? "text-green-600" : "text-red-600"}>
+        {net >= 0 ? `📈 ${L("Profit", "இலாபம்")}` : `📉 ${L("Loss", "நஷ்டம்")}`}: {inr(Math.abs(net))}
+      </p>
+    </div>
+  );
 };
 
 const toggleIn = (arr: string[], val: string) => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -267,6 +292,26 @@ export default function FinancePage() {
                 <h2 className="text-sm font-semibold text-gray-800 mb-3">
                   {L("Crop-wise Financial Overview", "பயிர் வாரியான நிதி கண்ணோட்டம்")}
                 </h2>
+
+                <div className="flex gap-3 flex-wrap mb-4">
+                  <span className="flex items-center gap-1 text-xs">
+                    <span className="w-3 h-3 rounded-full bg-blue-500" />
+                    {L("Income", "வருமானம்")}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs">
+                    <span className="w-3 h-3 rounded-full bg-amber-400" />
+                    {L("Expense", "செலவு")}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs">
+                    <span className="w-3 h-3 rounded-full bg-green-500" />
+                    {L("Profit", "இலாபம்")}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs">
+                    <span className="w-3 h-3 rounded-full bg-red-500" />
+                    {L("Loss", "நஷ்டம்")}
+                  </span>
+                </div>
+
                 <div className="overflow-x-auto">
                   <div style={{ minWidth: Math.max(600, chartData.length * 140), height: 350 }}>
                     <ResponsiveContainer width="100%" height={350}>
@@ -274,23 +319,13 @@ export default function FinancePage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                         <YAxis tickFormatter={inrAxis} tick={{ fontSize: 12 }} />
-                        <Tooltip formatter={(value) => inr(Number(value))} />
-                        <Legend
-                          verticalAlign="top"
-                          formatter={(value) =>
-                            value === "income"
-                              ? L("Income", "வருமானம்")
-                              : value === "expense"
-                              ? L("Expense", "செலவு")
-                              : L("Profit/Loss", "லாப/நஷ்டம்")
-                          }
-                        />
-                        <ReferenceLine y={0} stroke="#9CA3AF" />
-                        <Bar dataKey="income" name="income" fill="#22C55E" radius={[4, 4, 0, 0]} animationDuration={600} />
-                        <Bar dataKey="expense" name="expense" fill="#EF4444" radius={[4, 4, 0, 0]} animationDuration={600} />
+                        <Tooltip content={<CustomTooltip L={L} />} />
+                        <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
+                        <Bar dataKey="income" name="income" fill="#3B82F6" radius={[4, 4, 0, 0]} animationDuration={600} />
+                        <Bar dataKey="expense" name="expense" fill="#F59E0B" radius={[4, 4, 0, 0]} animationDuration={600} />
                         <Bar dataKey="net" name="net" radius={[4, 4, 0, 0]} animationDuration={600}>
                           {chartData.map((entry, i) => (
-                            <Cell key={i} fill={entry.net >= 0 ? "#10B981" : "#F97316"} />
+                            <Cell key={i} fill={entry.net >= 0 ? "#22C55E" : "#EF4444"} />
                           ))}
                         </Bar>
                       </BarChart>
