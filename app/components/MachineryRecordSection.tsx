@@ -1,5 +1,6 @@
 "use client";
 
+import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
@@ -98,7 +99,7 @@ export default function MachineryRecordSection({
   const save = async () => {
     const missing = fields.some((f) => f.required && !formValues[f.key]);
     if (missing) {
-      alert(L("Please fill all required fields.", "தேவையான அனைத்து புலங்களையும் நிரப்பவும்."));
+      toast.error(L("Please fill all required fields.", "தேவையான அனைத்து புலங்களையும் நிரப்பவும்."));
       return;
     }
     setSaving(true);
@@ -120,7 +121,7 @@ export default function MachineryRecordSection({
 
       if (error) {
         console.error(`Error saving ${table}:`, error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setModalOpen(false);
         fetchRecords();
@@ -128,7 +129,7 @@ export default function MachineryRecordSection({
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSaving(false);
   };
@@ -138,7 +139,7 @@ export default function MachineryRecordSection({
     const { error } = await supabase.from(table).delete().eq("id", id);
     if (error) {
       console.error(`Error deleting ${table}:`, error);
-      alert(L("Could not delete. Please try again.", "நீக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not delete. Please try again.", "நீக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     } else {
       fetchRecords();
       onChanged?.();

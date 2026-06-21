@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
+import PageWrapper from "../../../components/PageWrapper";
 import MachineryRecordSection from "../../../components/MachineryRecordSection";
 import { supabase } from "../../../lib/supabase";
 
@@ -51,6 +52,7 @@ export default function RotavatorPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
           <Link href="/machinery" className="text-primary hover:text-primary text-sm font-semibold">
@@ -145,6 +147,7 @@ export default function RotavatorPage() {
           )}
 
         </div>
+        </PageWrapper>
       </main>
     </div>
   );

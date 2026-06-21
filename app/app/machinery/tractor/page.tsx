@@ -1,8 +1,10 @@
 "use client";
 
+import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
+import PageWrapper from "../../../components/PageWrapper";
 import MachineryRecordSection from "../../../components/MachineryRecordSection";
 import { supabase } from "../../../lib/supabase";
 
@@ -130,7 +132,7 @@ export default function TractorPage() {
   const saveInterval = async () => {
     const value = parseFloat(intervalInput);
     if (!value || value <= 0) {
-      alert(L("Please enter a valid number of hours.", "சரியான மணி நேரத்தை உள்ளிடவும்."));
+      toast.error(L("Please enter a valid number of hours.", "சரியான மணி நேரத்தை உள்ளிடவும்."));
       return;
     }
     setSavingInterval(true);
@@ -141,14 +143,14 @@ export default function TractorPage() {
         : await supabase.from("tractor_settings").insert({ oil_change_interval_hours: value });
       if (error) {
         console.error("Error saving interval:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setOilChangeInterval(value);
         fetchSettings();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSavingInterval(false);
   };
@@ -167,6 +169,7 @@ export default function TractorPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
           <Link href="/machinery" className="text-primary hover:text-primary text-sm font-semibold">
@@ -240,6 +243,7 @@ export default function TractorPage() {
           {activeTab === "photos" && <PhotosTab L={L} />}
 
         </div>
+        </PageWrapper>
       </main>
     </div>
   );
@@ -488,7 +492,7 @@ function DieselTab({ L }: { L: (en: string, ta: string) => string }) {
 
   const save = async () => {
     if (!date || !litres || !amount) {
-      alert(L("Date, quantity, and amount are required.", "தேதி, அளவு மற்றும் தொகை தேவை."));
+      toast.error(L("Date, quantity, and amount are required.", "தேதி, அளவு மற்றும் தொகை தேவை."));
       return;
     }
     setSaving(true);
@@ -504,14 +508,14 @@ function DieselTab({ L }: { L: (en: string, ta: string) => string }) {
         : await supabase.from("tractor_diesel").insert(payload);
       if (error) {
         console.error("Error saving diesel:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setModalOpen(false);
         fetchRecords();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSaving(false);
   };
@@ -667,18 +671,18 @@ function UsageTab({
 
   const save = async () => {
     if (!date || !startTime || !endTime) {
-      alert(L("Date, start time, and end time are required.", "தேதி, தொடக்க நேரம் மற்றும் முடிவு நேரம் தேவை."));
+      toast.error(L("Date, start time, and end time are required.", "தேதி, தொடக்க நேரம் மற்றும் முடிவு நேரம் தேவை."));
       return;
     }
     const start = new Date(`2000-01-01T${startTime}`);
     const end = new Date(`2000-01-01T${endTime}`);
     if (end <= start) {
-      alert(L("End time must be after start time.", "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்."));
+      toast.error(L("End time must be after start time.", "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்."));
       return;
     }
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     if (durationHours > 24) {
-      alert(L("Duration cannot exceed 24 hours in one entry.", "ஒரு பதிவில் கால அளவு 24 மணி நேரத்தை தாண்டக்கூடாது."));
+      toast.error(L("Duration cannot exceed 24 hours in one entry.", "ஒரு பதிவில் கால அளவு 24 மணி நேரத்தை தாண்டக்கூடாது."));
       return;
     }
     setSaving(true);
@@ -695,14 +699,14 @@ function UsageTab({
         : await supabase.from("tractor_usage").insert(payload);
       if (error) {
         console.error("Error saving usage:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setModalOpen(false);
         refetch();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSaving(false);
   };
@@ -970,7 +974,7 @@ function EngineOilSection({
 
   const save = async () => {
     if (!serviceDate || !cost) {
-      alert(L("Service date and cost are required.", "சேவை தேதி மற்றும் செலவு தேவை."));
+      toast.error(L("Service date and cost are required.", "சேவை தேதி மற்றும் செலவு தேவை."));
       return;
     }
     setSaving(true);
@@ -988,14 +992,14 @@ function EngineOilSection({
         : await supabase.from("tractor_engine_oil").insert(payload);
       if (error) {
         console.error("Error saving engine oil:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setModalOpen(false);
         refetch();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSaving(false);
   };
@@ -1133,7 +1137,7 @@ function PhotosTab({ L }: { L: (en: string, ta: string) => string }) {
 
   const save = async () => {
     if (!title.trim() || !file) {
-      alert(L("Title and photo are required.", "தலைப்பு மற்றும் புகைப்படம் தேவை."));
+      toast.error(L("Title and photo are required.", "தலைப்பு மற்றும் புகைப்படம் தேவை."));
       return;
     }
     setSaving(true);
@@ -1146,14 +1150,14 @@ function PhotosTab({ L }: { L: (en: string, ta: string) => string }) {
       });
       if (error) {
         console.error("Error saving photo record:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setModalOpen(false);
         fetchPhotos();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSaving(false);
   };

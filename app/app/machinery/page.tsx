@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
+import PageWrapper from "../../components/PageWrapper";
+import AnimatedCard from "../../components/AnimatedCard";
+import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -134,6 +137,7 @@ export default function MachineryLandingPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
 
           <Link href="/" className="text-primary hover:text-primary text-sm font-semibold">
@@ -158,23 +162,26 @@ export default function MachineryLandingPage() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded-2xl animate-pulse" />
+                <SkeletonCard key={i} />
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {cards.map((card) => (
-                <Link key={card.href} href={card.href}>
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md transition p-5 flex flex-col items-center gap-2 cursor-pointer text-center">
-                    <span className="text-4xl">{card.icon}</span>
-                    <span className="text-base font-bold text-gray-800">{card.label}</span>
-                    <div className="mt-1">{card.stats}</div>
-                  </div>
-                </Link>
+              {cards.map((card, i) => (
+                <AnimatedCard key={card.href} delay={i * 0.1}>
+                  <Link href={card.href}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-5 flex flex-col items-center gap-2 cursor-pointer text-center">
+                      <span className="text-4xl">{card.icon}</span>
+                      <span className="text-base font-bold text-gray-800">{card.label}</span>
+                      <div className="mt-1">{card.stats}</div>
+                    </div>
+                  </Link>
+                </AnimatedCard>
               ))}
             </div>
           )}
         </div>
+        </PageWrapper>
       </main>
     </div>
   );
