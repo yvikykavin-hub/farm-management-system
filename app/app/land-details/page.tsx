@@ -7,13 +7,35 @@ import { supabase } from "../../lib/supabase";
 
 type Farm = {
   id: string;
-  name: string;
+  name: string | null;
   owner_name: string | null;
   area: number | null;
   survey_numbers: string | null;
   patta_number: string | null;
   well: boolean | null;
+  well_depth: string | null;
   motor: boolean | null;
+  motor_details: string | null;
+  soil_type: string | null;
+  water_source: string | null;
+};
+
+const SOIL_LABELS: Record<string, { en: string; ta: string }> = {
+  red: { en: "Red Soil", ta: "செம்மண்" },
+  black: { en: "Black Soil", ta: "கரிசல் மண்" },
+  sandy: { en: "Sandy Soil", ta: "மணல் மண்" },
+  clay: { en: "Clay Soil", ta: "களி மண்" },
+  loamy: { en: "Loamy Soil", ta: "வண்டல் மண்" },
+  mixed: { en: "Mixed", ta: "கலவை" },
+};
+
+const WATER_SOURCE_LABELS: Record<string, { en: string; ta: string }> = {
+  borewell: { en: "Borewell", ta: "துளை கிணறு" },
+  open_well: { en: "Open Well", ta: "திறந்த கிணறு" },
+  canal: { en: "Canal", ta: "கால்வாய்" },
+  rain_fed: { en: "Rain Fed", ta: "மழை நீர்" },
+  tank: { en: "Tank", ta: "ஏரி" },
+  other: { en: "Other", ta: "மற்றவை" },
 };
 
 export default function LandDetailsPage() {
@@ -22,19 +44,23 @@ export default function LandDetailsPage() {
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchFarms();
   }, []);
 
-  const fetchFarms = async () => {
-    setLoading(true);
+  const fetchFarms = async (isRefresh = false) => {
+    if (isRefresh) setIsRefreshing(true);
+    else setLoading(true);
     const { data, error } = await supabase
       .from("farms")
-      .select("id, name, owner_name, area, survey_numbers, patta_number, well, motor")
-      .order("name", { ascending: true });
+      .select("*")
+      .order("created_at", { ascending: true });
     if (!error && data) setFarms(data);
+    if (error) console.error("Error fetching farms:", error);
     setLoading(false);
+    setIsRefreshing(false);
   };
 
   return (
@@ -48,7 +74,17 @@ export default function LandDetailsPage() {
             <Link href="/" className="text-primary hover:text-primary text-sm font-semibold">
               ← {L("Back to Dashboard", "முகப்புக்கு திரும்பு")}
             </Link>
-            <h1 className="text-xl font-bold text-primary">🗺️ {L("Land Details", "நில விவரம்")}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-primary">🗺️ {L("Land Details", "நில விவரம்")}</h1>
+              <button
+                onClick={() => fetchFarms(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+              >
+                <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
+                {isRefreshing ? L("Refreshing...", "புதுப்பிக்கிறது...") : L("Refresh", "புதுப்பி")}
+              </button>
+            </div>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
@@ -70,33 +106,43 @@ export default function LandDetailsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {farms.map((f) => (
-                <Link key={f.id} href={`/land-details/${f.id}`}>
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-green-300 transition-all cursor-pointer flex flex-col gap-1.5 h-full">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-gray-900">🌾 {f.name}</p>
-                      <span className="text-xs font-semibold text-gray-700">{f.area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
+              {farms.map((f) => {
+                const soil = f.soil_type ? SOIL_LABELS[f.soil_type] : null;
+                const water = f.water_source ? WATER_SOURCE_LABELS[f.water_source] : null;
+                return (
+                  <Link key={f.id} href={`/land-details/${f.id}`}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-green-300 transition-all cursor-pointer flex flex-col gap-1.5 h-full">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-gray-900">🌾 {f.name || "—"}</p>
+                        <span className="text-xs font-semibold text-gray-700">{f.area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        {L("Survey", "சர்வே")}: {f.survey_numbers || "—"} • {L("Patta", "பட்டா")}: {f.patta_number || "—"}
+                      </p>
+                      {f.owner_name && (
+                        <p className="text-xs text-gray-600">{L("Owner", "உரிமையாளர்")}: {f.owner_name}</p>
+                      )}
+                      {soil && (
+                        <p className="text-xs text-gray-600">{L("Soil", "மண்")}: {L(soil.en, soil.ta)}</p>
+                      )}
+                      {water && (
+                        <p className="text-xs text-gray-600">{L("Water Source", "நீர் ஆதாரம்")}: {L(water.en, water.ta)}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.well ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {L("Well", "கிணறு")} {f.well ? "✅" : "❌"}{f.well && f.well_depth ? ` (${f.well_depth})` : ""}
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.motor ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {L("Motor", "மோட்டார்")} {f.motor ? "✅" : "❌"}{f.motor && f.motor_details ? ` (${f.motor_details})` : ""}
+                        </span>
+                      </div>
+                      <div className="flex justify-end mt-1">
+                        <span className="text-xs font-semibold text-primary">{L("View Details", "விவரம் காண")} →</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {L("Survey", "சர்வே")}: {f.survey_numbers || "—"} • {L("Patta", "பட்டா")}: {f.patta_number || "—"}
-                    </p>
-                    {f.owner_name && (
-                      <p className="text-xs text-gray-500">{L("Owner", "உரிமையாளர்")}: {f.owner_name}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.well ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {L("Well", "கிணறு")} {f.well ? "✅" : "❌"}
-                      </span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.motor ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {L("Motor", "மோட்டார்")} {f.motor ? "✅" : "❌"}
-                      </span>
-                    </div>
-                    <div className="flex justify-end mt-1">
-                      <span className="text-xs font-semibold text-primary">{L("View Details", "விவரம் காண")} →</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
 
