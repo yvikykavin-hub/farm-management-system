@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
+import PageWrapper from "../../components/PageWrapper";
+import AnimatedCard from "../../components/AnimatedCard";
+import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 
 type Cultivation = { id: string; farm_id: string; crop_type: string };
@@ -425,6 +428,7 @@ export default function ReportsPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -459,7 +463,7 @@ export default function ReportsPage() {
           </div>
 
           {loading ? (
-            <div className="h-40 bg-gray-200 rounded-2xl animate-pulse" />
+            <SkeletonCard />
           ) : (
             <>
               {/* Filters */}
@@ -548,18 +552,25 @@ export default function ReportsPage() {
 
                     {/* Summary cards */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <AnimatedCard delay={0}>
                       <div className="bg-green-50 rounded-xl p-3">
                         <p className="text-xs text-gray-600">{L("Total Income", "மொத்த வருமானம்")}</p>
                         <p className="text-lg font-bold text-green-600">{inr(report.totalIncome)}</p>
                       </div>
+                      </AnimatedCard>
+                      <AnimatedCard delay={0.1}>
                       <div className="bg-red-50 rounded-xl p-3">
                         <p className="text-xs text-gray-600">{L("Total Expense", "மொத்த செலவு")}</p>
                         <p className="text-lg font-bold text-red-600">{inr(report.totalExpense)}</p>
                       </div>
+                      </AnimatedCard>
+                      <AnimatedCard delay={0.2}>
                       <div className={`rounded-xl p-3 ${report.totalNet >= 0 ? "bg-green-50" : "bg-red-50"}`}>
                         <p className="text-xs text-gray-600">{L("Net Profit/Loss", "நிகர லாப/நஷ்டம்")}</p>
                         <p className={`text-lg font-bold ${report.totalNet >= 0 ? "text-green-700" : "text-red-600"}`}>{inr(report.totalNet)}</p>
                       </div>
+                      </AnimatedCard>
+                      <AnimatedCard delay={0.3}>
                       <div className="bg-gray-50 rounded-xl p-3">
                         <p className="text-xs text-gray-600">{L("Best Performing Crop", "சிறந்த பயிர்")}</p>
                         {bestCrop ? (
@@ -568,6 +579,7 @@ export default function ReportsPage() {
                           <p className="text-sm text-gray-500">—</p>
                         )}
                       </div>
+                      </AnimatedCard>
                     </div>
 
                     {/* Crop-wise breakdown table */}
@@ -693,6 +705,7 @@ export default function ReportsPage() {
           )}
 
         </div>
+        </PageWrapper>
       </main>
     </div>
   );
