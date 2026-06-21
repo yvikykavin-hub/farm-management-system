@@ -1,5 +1,9 @@
 "use client";
 
+import toast from "react-hot-toast";
+import PageWrapper from "../../../components/PageWrapper";
+import AnimatedCard from "../../../components/AnimatedCard";
+import { SkeletonCard } from "../../../components/Skeleton";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
@@ -105,7 +109,7 @@ export default function HensListPage() {
     };
     setFormErrors(errors);
     if (Object.values(errors).some(Boolean)) {
-      alert(t(lang, "nameGenderRequired"));
+      toast.error(t(lang, "nameGenderRequired"));
       return;
     }
 
@@ -126,14 +130,14 @@ export default function HensListPage() {
       });
       if (error) {
         console.error("Error saving hen: ", error);
-        alert(t(lang, "saveFailedMessage"));
+        toast.error(t(lang, "saveFailedMessage"));
       } else {
         setModalOpen(false);
         fetchAll();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(t(lang, "saveFailedMessage"));
+      toast.error(t(lang, "saveFailedMessage"));
     }
     setSaving(false);
   };
@@ -143,6 +147,7 @@ export default function HensListPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <Link href="/livestock" className="text-primary hover:text-primary text-sm font-semibold">
@@ -200,19 +205,20 @@ export default function HensListPage() {
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-28 bg-gray-200 rounded-2xl animate-pulse" />
+                <SkeletonCard key={i} />
               ))}
             </div>
           ) : hens.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-gray-500">
-              <div className="text-4xl mb-2">🐔</div>
-              {t(lang, "noHensYet")}
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="text-5xl mb-4 opacity-60">🐔</div>
+              <h3 className="text-base font-semibold text-gray-700 mb-1">{t(lang, "noHensYet")}</h3>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {hens.map((hen) => (
-                <Link key={hen.id} href={`/livestock/hens/${hen.id}`}>
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md transition p-3 cursor-pointer">
+              {hens.map((hen, i) => (
+                <AnimatedCard key={hen.id} delay={Math.min(i, 8) * 0.05}>
+                <Link href={`/livestock/hens/${hen.id}`}>
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-3 cursor-pointer">
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="text-sm font-bold text-gray-900">🐔 {hen.name}</h3>
@@ -228,10 +234,12 @@ export default function HensListPage() {
                     </p>
                   </div>
                 </Link>
+                </AnimatedCard>
               ))}
             </div>
           )}
         </div>
+        </PageWrapper>
       </main>
 
       {modalOpen && (

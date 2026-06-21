@@ -1,5 +1,7 @@
 "use client";
 
+import toast from "react-hot-toast";
+import PageWrapper from "../../../components/PageWrapper";
 import { useState, useEffect } from "react";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
@@ -141,14 +143,14 @@ export default function GeneralExpensesPage() {
         : await supabase.from("livestock_general_expenses").insert(payload);
       if (error) {
         console.error("Error saving expense: ", error);
-        alert(t(lang, "saveFailedMessage"));
+        toast.error(t(lang, "saveFailedMessage"));
       } else {
         setModalOpen(false);
         fetchAll();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(t(lang, "saveFailedMessage"));
+      toast.error(t(lang, "saveFailedMessage"));
     }
     setSaving(false);
   };
@@ -158,7 +160,7 @@ export default function GeneralExpensesPage() {
     const { error } = await supabase.from("livestock_general_expenses").delete().eq("id", id);
     if (error) {
       console.error("Error: ", error);
-      alert(t(lang, "saveFailedMessage"));
+      toast.error(t(lang, "saveFailedMessage"));
     }
     else fetchAll();
   };
@@ -168,6 +170,7 @@ export default function GeneralExpensesPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -294,6 +297,7 @@ export default function GeneralExpensesPage() {
             )}
           </div>
         </div>
+        </PageWrapper>
       </main>
 
       {/* Add/Edit Modal */}
