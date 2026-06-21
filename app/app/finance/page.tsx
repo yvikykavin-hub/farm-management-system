@@ -13,7 +13,11 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
+import hotToast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
+import PageWrapper from "../../components/PageWrapper";
+import AnimatedCard from "../../components/AnimatedCard";
+import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 
 type Cultivation = { id: string; farm_id: string; crop_type: string };
@@ -78,7 +82,6 @@ export default function FinancePage() {
 
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [cultivations, setCultivations] = useState<Cultivation[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [incomeRows, setIncomeRows] = useState<Row[]>([]);
@@ -127,8 +130,7 @@ export default function FinancePage() {
     setLoading(false);
     if (isRefresh) {
       setIsRefreshing(false);
-      setToast(L("Data updated!", "தரவு புதுப்பிக்கப்பட்டது!"));
-      setTimeout(() => setToast(null), 2000);
+      hotToast.success(L("Data updated!", "தரவு புதுப்பிக்கப்பட்டது!"));
     }
   };
 
@@ -202,6 +204,7 @@ export default function FinancePage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -226,12 +229,6 @@ export default function FinancePage() {
               </button>
             </div>
           </div>
-
-          {toast && (
-            <div className="fixed bottom-4 right-4 bg-success text-white px-4 py-2 rounded-lg shadow-lg text-sm font-semibold z-50">
-              ✅ {toast}
-            </div>
-          )}
 
           {/* Filters */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2">
@@ -270,44 +267,58 @@ export default function FinancePage() {
           {loading ? (
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse" />)}
+                {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
               <div className="h-80 bg-gray-200 rounded-2xl animate-pulse" />
             </div>
           ) : chartData.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-gray-500">
-              <div className="text-4xl mb-2">📊</div>
-              {L("No data found for selected filters", "தேர்ந்தெடுக்கப்பட்ட வடிகட்டிகளுக்கு தரவு இல்லை")}
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="text-5xl mb-4 opacity-60">📊</div>
+              <h3 className="text-base font-semibold text-gray-700 mb-1">
+                {L("No data found for selected filters", "தேர்ந்தெடுக்கப்பட்ட வடிகட்டிகளுக்கு தரவு இல்லை")}
+              </h3>
             </div>
           ) : (
             <>
               {/* Summary cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 transition-all">
-                <div className="bg-white rounded-2xl shadow-sm p-3">
+                <AnimatedCard delay={0}>
+                <div className="bg-white rounded-2xl shadow-sm p-5 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-green-50 rounded-full -mr-8 -mt-8" />
                   <p className="text-xs text-gray-500">{L("Total Income", "மொத்த வருமானம்")}</p>
                   <p className="text-lg font-bold text-green-600">{inr(totalIncome)}</p>
                 </div>
-                <div className="bg-white rounded-2xl shadow-sm p-3">
+                </AnimatedCard>
+                <AnimatedCard delay={0.1}>
+                <div className="bg-white rounded-2xl shadow-sm p-5 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-red-50 rounded-full -mr-8 -mt-8" />
                   <p className="text-xs text-gray-500">{L("Total Expense", "மொத்த செலவு")}</p>
                   <p className="text-lg font-bold text-red-500">{inr(totalExpense)}</p>
                 </div>
-                <div className="bg-white rounded-2xl shadow-sm p-3">
+                </AnimatedCard>
+                <AnimatedCard delay={0.2}>
+                <div className="bg-white rounded-2xl shadow-sm p-5">
                   <p className="text-xs text-gray-500">{L("Net Profit/Loss", "நிகர லாப/நஷ்டம்")}</p>
                   <p className={`text-lg font-bold ${totalNet >= 0 ? "text-emerald-600" : "text-orange-500"}`}>{inr(totalNet)}</p>
                 </div>
+                </AnimatedCard>
                 {bestCrop && (
-                  <div className="bg-white rounded-2xl shadow-sm p-3">
+                  <AnimatedCard delay={0.3}>
+                  <div className="bg-white rounded-2xl shadow-sm p-5">
                     <p className="text-xs text-gray-500">{L("Best Performing Crop", "சிறந்த செயல்திறன் பயிர்")}</p>
                     <p className="text-sm font-bold text-emerald-600">{bestCrop.label}</p>
                     <p className="text-xs text-gray-500">{inr(bestCrop.net)}</p>
                   </div>
+                  </AnimatedCard>
                 )}
                 {worstCrop && worstCrop !== bestCrop && (
-                  <div className="bg-white rounded-2xl shadow-sm p-3">
+                  <AnimatedCard delay={0.4}>
+                  <div className="bg-white rounded-2xl shadow-sm p-5">
                     <p className="text-xs text-gray-500">{L("Worst Performing Crop", "குறைந்த செயல்திறன் பயிர்")}</p>
                     <p className="text-sm font-bold text-orange-500">{worstCrop.label}</p>
                     <p className="text-xs text-gray-500">{inr(worstCrop.net)}</p>
                   </div>
+                  </AnimatedCard>
                 )}
               </div>
 
@@ -360,6 +371,7 @@ export default function FinancePage() {
             </>
           )}
         </div>
+        </PageWrapper>
       </main>
     </div>
   );
