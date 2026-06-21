@@ -121,6 +121,16 @@ type TurmericDetails = {
   expected_harvest_date: string | null;
 };
 
+type NellDetails = {
+  id: string;
+  cultivation_id: string;
+  variety: string | null;
+  planting_date: string | null;
+  seed_quantity: number | null;
+  seed_unit: string | null;
+  expected_harvest_date: string | null;
+};
+
 type ElluDetails = {
   id: string;
   cultivation_id: string;
@@ -233,22 +243,23 @@ const QUANTITY_CONFIG: Record<string, QuantityFieldConfig> = {
   },
 };
 
-const NELL_EXPENSE_TABLES = [
-  { key: "land_prep", table: "rice_land_prep", costCol: "amount", en: "Land Preparation", ta: "நிலம் தயாரிப்பு" },
-  { key: "seed", table: "rice_seed_expense", costCol: "amount", en: "Seed Expense", ta: "விதை செலவு" },
-  { key: "nursery", table: "rice_nursery_expense", costCol: "labor_cost", en: "Nursery Preparation", ta: "நாற்றங்கால் தயாரிப்பு" },
-  { key: "transplant", table: "rice_transplantation_expense", costCol: "labor_cost", en: "Transplantation Labor", ta: "நடவு கூலி" },
-  { key: "weed", table: "rice_weed_removal", costCol: "labor_cost", en: "Weed Removal", ta: "களை எடுத்தல்" },
-  { key: "harvest", table: "rice_harvesting_expense", costCol: "harvesting_cost", en: "Harvesting Expense", ta: "அறுவடை செலவு" },
-  { key: "misc_labor", table: "rice_misc_labor", costCol: "amount", en: "Miscellaneous Labor", ta: "இதர கூலி செலவு" },
-  { key: "transport", table: "rice_transportation", costCol: "amount", en: "Transportation", ta: "போக்குவரத்து செலவு" },
-  { key: "straw", table: "rice_straw_handling", costCol: "amount", en: "Paddy Straw Handling", ta: "வைக்கோல் கையாளுதல்" },
-] as const;
-
-const STRAW_HANDLING_TYPES = [
-  { value: "rolling", en: "Straw Rolling/Bundling", ta: "வைக்கோல் சுருட்டு கூலி" },
-  { value: "transportation", en: "Straw Transportation", ta: "வைக்கோல் போக்குவரத்து" },
-  { value: "arrangement", en: "Straw Arrangement Labor", ta: "வைக்கோல் அடுக்கு கூலி" },
+// Rice expenses share the single expense_records table (with the other crops).
+// expense_records.category has a DB check constraint with a fixed allowed list,
+// so each Rice expense type maps to the closest allowed category; the exact
+// sub-type is preserved in `stage` for filtering/display, since `category` alone
+// can't distinguish e.g. "Nursery" from "Transplantation" (both → 'labour').
+const RICE_EXPENSE_TYPES = [
+  { value: "land_preparation", en: "Land Preparation", ta: "நிலம் தயாரிப்பு", category: "land_preparation" },
+  { value: "seed_expense", en: "Seed Expense", ta: "விதை செலவு", category: "seeds" },
+  { value: "nursery", en: "Nursery Preparation", ta: "நாற்றங்கால்", category: "labour" },
+  { value: "transplantation", en: "Transplantation Labor", ta: "நடவு கூலி", category: "labour" },
+  { value: "weed_removal", en: "Weed Removal", ta: "களை எடுத்தல்", category: "labour" },
+  { value: "harvesting", en: "Harvesting Expense", ta: "அறுவடை செலவு", category: "machinery_repair" },
+  { value: "straw_rolling", en: "Straw Rolling Labor", ta: "வைக்கோல் சுருட்டு", category: "miscellaneous" },
+  { value: "straw_transport", en: "Straw Transportation", ta: "வைக்கோல் போக்குவரத்து", category: "miscellaneous" },
+  { value: "straw_arrangement", en: "Straw Arrangement Labor", ta: "வைக்கோல் அடுக்கு", category: "miscellaneous" },
+  { value: "transportation", en: "Transportation", ta: "போக்குவரத்து", category: "transport" },
+  { value: "misc_labor", en: "Miscellaneous Labor", ta: "இதர கூலி", category: "miscellaneous" },
 ];
 
 const NELL_INCOME_UNITS = [
@@ -641,6 +652,15 @@ export default function CropDetail() {
   const [turmericExpectedHarvestDate, setTurmericExpectedHarvestDate] = useState("");
   const [savingTurmericDetails, setSavingTurmericDetails] = useState(false);
 
+  // Nell (Rice) details
+  const [nellDetailsId, setNellDetailsId] = useState<string | null>(null);
+  const [nellVariety, setNellVariety] = useState("");
+  const [nellPlantingDate, setNellPlantingDate] = useState("");
+  const [nellSeedQuantity, setNellSeedQuantity] = useState("");
+  const [nellSeedUnit, setNellSeedUnit] = useState("kg");
+  const [nellExpectedHarvestDate, setNellExpectedHarvestDate] = useState("");
+  const [savingNellDetails, setSavingNellDetails] = useState(false);
+
   // Ellu details
   const [elluDetailsId, setElluDetailsId] = useState<string | null>(null);
   const [elluVariety, setElluVariety] = useState("");
@@ -657,8 +677,7 @@ export default function CropDetail() {
   const [elluSaleNotes, setElluSaleNotes] = useState("");
   const [savingElluIncome, setSavingElluIncome] = useState(false);
 
-  // Nell (Rice) — expense category totals + income
-  const [nellExpenseTotals, setNellExpenseTotals] = useState<Record<string, number>>({});
+  // Nell (Rice) — income
   const [nellIncomeRecords, setNellIncomeRecords] = useState<RiceIncome[]>([]);
   const [nellIncomeModalOpen, setNellIncomeModalOpen] = useState(false);
   const [nellEditingIncomeId, setNellEditingIncomeId] = useState<string | null>(null);
@@ -671,6 +690,21 @@ export default function CropDetail() {
   const [nellIncomeTotalManual, setNellIncomeTotalManual] = useState(false);
   const [nellIncomeNotes, setNellIncomeNotes] = useState("");
   const [savingNellIncome, setSavingNellIncome] = useState(false);
+
+  // Nell (Rice) — unified expense form
+  const [riceExpenseModalOpen, setRiceExpenseModalOpen] = useState(false);
+  const [riceExpenseEditingId, setRiceExpenseEditingId] = useState<string | null>(null);
+  const [riceExpenseType, setRiceExpenseType] = useState("land_preparation");
+  const [riceExpenseDate, setRiceExpenseDate] = useState("");
+  const [riceExpenseAmount, setRiceExpenseAmount] = useState("");
+  const [riceExpenseNotes, setRiceExpenseNotes] = useState("");
+  const [riceExpenseVariety, setRiceExpenseVariety] = useState("");
+  const [riceExpenseSeedQty, setRiceExpenseSeedQty] = useState("");
+  const [riceExpenseSeedUnit, setRiceExpenseSeedUnit] = useState("kg");
+  const [riceExpenseLaborers, setRiceExpenseLaborers] = useState("");
+  const [riceExpenseOwnerName, setRiceExpenseOwnerName] = useState("");
+  const [riceExpenseContact, setRiceExpenseContact] = useState("");
+  const [savingRiceExpense, setSavingRiceExpense] = useState(false);
 
   // Fodder corn cutting cycles
   const [cuttingDate, setCuttingDate] = useState("");
@@ -847,6 +881,10 @@ export default function CropDetail() {
   }, [isTurmeric, id]);
 
   useEffect(() => {
+    if (isNell) fetchNellDetails();
+  }, [isNell, id]);
+
+  useEffect(() => {
     if (isEllu) fetchElluDetails();
   }, [isEllu, id]);
 
@@ -855,23 +893,8 @@ export default function CropDetail() {
   }, [isKuchiKilangu, id]);
 
   useEffect(() => {
-    if (isNell) {
-      fetchNellExpenseTotals();
-      fetchNellIncome();
-    }
+    if (isNell) fetchNellIncome();
   }, [isNell, id]);
-
-  const fetchNellExpenseTotals = async () => {
-    const results = await Promise.all(
-      NELL_EXPENSE_TABLES.map((c) => supabase.from(c.table).select(c.costCol).eq("cultivation_id", id))
-    );
-    const totals: Record<string, number> = {};
-    results.forEach((res, i) => {
-      const { key, costCol } = NELL_EXPENSE_TABLES[i];
-      totals[key] = (res.data ?? []).reduce((s: number, r: Record<string, unknown>) => s + Number(r[costCol] ?? 0), 0);
-    });
-    setNellExpenseTotals(totals);
-  };
 
   const fetchNellIncome = async () => {
     const { data } = await supabase.from("rice_income").select("*").eq("cultivation_id", id).order("date", { ascending: false });
@@ -981,6 +1004,23 @@ export default function CropDetail() {
       setTurmericPlantingDate(d.planting_date ?? "");
       setTurmericSeedQuantity(String(d.seed_quantity ?? ""));
       setTurmericExpectedHarvestDate(d.expected_harvest_date ?? "");
+    }
+  };
+
+  const fetchNellDetails = async () => {
+    const { data, error } = await supabase
+      .from("nell_details")
+      .select("*")
+      .eq("cultivation_id", id)
+      .maybeSingle();
+    if (!error && data) {
+      const d = data as NellDetails;
+      setNellDetailsId(d.id);
+      setNellVariety(d.variety ?? "");
+      setNellPlantingDate(d.planting_date ?? "");
+      setNellSeedQuantity(String(d.seed_quantity ?? ""));
+      setNellSeedUnit(d.seed_unit ?? "kg");
+      setNellExpectedHarvestDate(d.expected_harvest_date ?? "");
     }
   };
 
@@ -1125,6 +1165,28 @@ export default function CropDetail() {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
     setSavingTurmericDetails(false);
+  };
+
+  const saveNellDetails = async () => {
+    setSavingNellDetails(true);
+    try {
+      const payload = {
+        cultivation_id: id,
+        variety: nellVariety.trim() || null,
+        planting_date: nellPlantingDate || null,
+        seed_quantity: parseFloat(nellSeedQuantity) || 0,
+        seed_unit: nellSeedUnit || null,
+        expected_harvest_date: nellExpectedHarvestDate || null,
+      };
+      const { error } = nellDetailsId
+        ? await supabase.from("nell_details").update(payload).eq("id", nellDetailsId)
+        : await supabase.from("nell_details").insert(payload);
+      if (error) reportError("Error saving rice details", error.message);
+      else fetchNellDetails();
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingNellDetails(false);
   };
 
   const saveElluDetails = async () => {
@@ -1345,8 +1407,12 @@ export default function CropDetail() {
   const nellIncomeRateNum = parseFloat(nellIncomeRate) || 0;
   const nellIncomeComputedTotal = nellIncomeQtyNum * nellIncomeRateNum;
   const nellTotalIncome = nellIncomeRecords.reduce((s, r) => s + Number(r.total_amount), 0);
-  const nellTotalExpenses = Object.values(nellExpenseTotals).reduce((s, v) => s + v, 0);
+  const nellTotalExpenses = expenseRecords.reduce((s, r) => s + Number(r.amount), 0);
   const nellNetPL = nellTotalIncome - nellTotalExpenses;
+  const riceExpenseTypeBreakdown = RICE_EXPENSE_TYPES.map((t) => ({
+    ...t,
+    total: expenseRecords.filter((r) => r.stage === t.value).reduce((s, r) => s + Number(r.amount), 0),
+  }));
   const nellQtyByUnit = nellIncomeRecords.reduce<Record<string, number>>((acc, r) => {
     acc[r.unit] = (acc[r.unit] ?? 0) + Number(r.quantity_sold);
     return acc;
@@ -1714,6 +1780,103 @@ export default function CropDetail() {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
     setSavingExpense(false);
+  };
+
+  // ---- Rice (Nell) unified expenses ----
+  const openAddRiceExpense = () => {
+    setRiceExpenseEditingId(null);
+    setRiceExpenseType("land_preparation");
+    setRiceExpenseDate("");
+    setRiceExpenseAmount("");
+    setRiceExpenseNotes("");
+    setRiceExpenseVariety("");
+    setRiceExpenseSeedQty("");
+    setRiceExpenseSeedUnit("kg");
+    setRiceExpenseLaborers("");
+    setRiceExpenseOwnerName("");
+    setRiceExpenseContact("");
+    setRiceExpenseModalOpen(true);
+  };
+
+  const openEditRiceExpense = (r: ExpenseRecord) => {
+    setRiceExpenseEditingId(r.id);
+    setRiceExpenseType(RICE_EXPENSE_TYPES.some((t) => t.value === r.stage) ? (r.stage as string) : "land_preparation");
+    setRiceExpenseDate(r.expense_date);
+    setRiceExpenseAmount(String(r.amount));
+    setRiceExpenseNotes(r.notes ?? "");
+    setRiceExpenseVariety("");
+    setRiceExpenseSeedQty("");
+    setRiceExpenseSeedUnit("kg");
+    setRiceExpenseLaborers("");
+    setRiceExpenseOwnerName("");
+    setRiceExpenseContact("");
+    if (r.description) {
+      try {
+        const extra = JSON.parse(r.description) as Record<string, string>;
+        if (extra.variety != null) setRiceExpenseVariety(extra.variety);
+        if (extra.qty != null) setRiceExpenseSeedQty(extra.qty);
+        if (extra.unit != null) setRiceExpenseSeedUnit(extra.unit);
+        if (extra.laborers != null) setRiceExpenseLaborers(extra.laborers);
+        if (extra.owner != null) setRiceExpenseOwnerName(extra.owner);
+        if (extra.contact != null) setRiceExpenseContact(extra.contact);
+      } catch {
+        // pre-existing record without structured extra fields — ignore
+      }
+    }
+    setRiceExpenseModalOpen(true);
+  };
+
+  const saveRiceExpense = async () => {
+    if (!cultivation) return;
+    if (!riceExpenseDate || !riceExpenseAmount || parseFloat(riceExpenseAmount) <= 0) {
+      alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      return;
+    }
+    if (riceExpenseContact && !/^\d+$/.test(riceExpenseContact)) {
+      alert(L("Contact number must contain numbers only", "தொடர்பு எண் எண்கள் மட்டும் இருக்க வேண்டும்"));
+      return;
+    }
+    setSavingRiceExpense(true);
+    try {
+      const typeInfo = RICE_EXPENSE_TYPES.find((t) => t.value === riceExpenseType);
+      let extra: Record<string, string> | null = null;
+      if (riceExpenseType === "seed_expense") {
+        extra = {
+          ...(riceExpenseVariety.trim() ? { variety: riceExpenseVariety.trim() } : {}),
+          ...(riceExpenseSeedQty.trim() ? { qty: riceExpenseSeedQty.trim() } : {}),
+          ...(riceExpenseSeedUnit ? { unit: riceExpenseSeedUnit } : {}),
+        };
+      } else if (riceExpenseType === "transplantation" && riceExpenseLaborers.trim()) {
+        extra = { laborers: riceExpenseLaborers.trim() };
+      } else if (riceExpenseType === "harvesting") {
+        extra = {
+          ...(riceExpenseOwnerName.trim() ? { owner: riceExpenseOwnerName.trim() } : {}),
+          ...(riceExpenseContact.trim() ? { contact: riceExpenseContact.trim() } : {}),
+        };
+      }
+      const payload = {
+        cultivation_id: id,
+        farm_id: cultivation.farm_id,
+        expense_date: riceExpenseDate || null,
+        category: typeInfo?.category ?? "miscellaneous",
+        stage: riceExpenseType,
+        amount: parseFloat(riceExpenseAmount) || 0,
+        description: extra && Object.keys(extra).length > 0 ? JSON.stringify(extra) : null,
+        vendor_name: null,
+        notes: riceExpenseNotes.trim() || null,
+      };
+      const { error } = riceExpenseEditingId
+        ? await supabase.from("expense_records").update(payload).eq("id", riceExpenseEditingId)
+        : await supabase.from("expense_records").insert(payload);
+      if (error) reportError("Error saving expense", error.message);
+      else {
+        setRiceExpenseModalOpen(false);
+        fetchExpenseRecords();
+      }
+    } catch (err) {
+      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+    }
+    setSavingRiceExpense(false);
   };
 
   // ---- Coconut labour ----
@@ -2669,10 +2832,37 @@ export default function CropDetail() {
                   <h2 className="text-sm font-semibold text-gray-800 mb-2">
                     🎋 {L("Sugarcane Cultivation Details", "கரும்பு பயிர் விவரங்கள்")}
                   </h2>
-                  <div className="text-sm text-gray-600 mb-1">
-                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Variety Name", "வகை பெயர்")}</label>
+                      <input type="text" value={varietyInput} onChange={(e) => setVarietyInput(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Quantity", "அளவு")}</label>
+                      <input type="number" step="0.01" value={quantityInput} onChange={(e) => setQuantityInput(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Unit", "அலகு")}</label>
+                      <select value={quantityUnitInput} onChange={(e) => setQuantityUnitInput(e.target.value)} className={inputCls}>
+                        {QUANTITY_CONFIG.sugarcane.units.map((u) => (
+                          <option className="text-gray-900" key={u.value} value={u.value}>{lang === "ta" ? u.ta : u.en}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Area (Acres)", "பரப்பு (ஏக்கர்)")}</label>
+                      <input type="text" disabled value={`${cultivation?.area ?? ""} ${L("Acres", "ஏக்கர்")}`} className={`${inputCls} bg-gray-100 text-gray-500`} />
+                    </div>
                   </div>
-                  {renderVarietyQuantityFields()}
+
+                  <button
+                    onClick={saveDetails}
+                    disabled={savingDetails}
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingDetails ? "..." : L("Save", "சேமி")}
+                  </button>
                 </>
               ) : isOnion ? (
                 <>
@@ -2716,20 +2906,81 @@ export default function CropDetail() {
                   <h2 className="text-sm font-semibold text-gray-800 mb-2">
                     🌽 {L("Fodder Corn Cultivation Details", "மக்காச்சோள பயிர் விவரங்கள்")}
                   </h2>
-                  <div className="text-sm text-gray-600 mb-1">
-                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Variety Name", "வகை பெயர்")}</label>
+                      <input type="text" value={varietyInput} onChange={(e) => setVarietyInput(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Quantity", "அளவு")}</label>
+                      <input type="number" step="0.01" value={quantityInput} onChange={(e) => setQuantityInput(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Unit", "அலகு")}</label>
+                      <select value={quantityUnitInput} onChange={(e) => setQuantityUnitInput(e.target.value)} className={inputCls}>
+                        {QUANTITY_CONFIG.fodder_corn.units.map((u) => (
+                          <option className="text-gray-900" key={u.value} value={u.value}>{lang === "ta" ? u.ta : u.en}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Area (Acres)", "பரப்பு (ஏக்கர்)")}</label>
+                      <input type="text" disabled value={`${cultivation?.area ?? ""} ${L("Acres", "ஏக்கர்")}`} className={`${inputCls} bg-gray-100 text-gray-500`} />
+                    </div>
                   </div>
-                  {renderVarietyQuantityFields()}
+
+                  <button
+                    onClick={saveDetails}
+                    disabled={savingDetails}
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingDetails ? "..." : L("Save", "சேமி")}
+                  </button>
                 </>
               ) : isNell ? (
                 <>
                   <h2 className="text-sm font-semibold text-gray-800 mb-2">
                     🌾 {L("Nell (Rice) Cultivation Details", "நெல் பயிர் விவரங்கள்")}
                   </h2>
-                  <div className="text-sm text-gray-600 mb-1">
-                    {cultivation?.area} {L("Acres", "ஏக்கர்")} · {cultivation?.status}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+                    <div>
+                      <label className={labelCls}>{L("Variety Name", "வகை பெயர்")}</label>
+                      <input type="text" value={nellVariety} onChange={(e) => setNellVariety(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Seed Quantity", "விதை அளவு")}</label>
+                      <input type="number" step="0.01" value={nellSeedQuantity} onChange={(e) => setNellSeedQuantity(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Unit", "அலகு")}</label>
+                      <select value={nellSeedUnit} onChange={(e) => setNellSeedUnit(e.target.value)} className={inputCls}>
+                        <option className="text-gray-900" value="kg">{L("kg", "கி.கி")}</option>
+                        <option className="text-gray-900" value="bags">{L("Bags", "பைகள்")}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Area (Acres)", "பரப்பு (ஏக்கர்)")}</label>
+                      <input type="text" disabled value={`${cultivation?.area ?? ""} ${L("Acres", "ஏக்கர்")}`} className={`${inputCls} bg-gray-100 text-gray-500`} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Planting Date", "நடவு தேதி")}</label>
+                      <input type="date" value={nellPlantingDate} onChange={(e) => setNellPlantingDate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{L("Expected Harvest Date", "எதிர்பார்க்கும் அறுவடை தேதி")}</label>
+                      <input type="date" value={nellExpectedHarvestDate} onChange={(e) => setNellExpectedHarvestDate(e.target.value)} className={inputCls} />
+                    </div>
                   </div>
-                  {renderVarietyQuantityFields()}
+
+                  <button
+                    onClick={saveNellDetails}
+                    disabled={savingNellDetails}
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  >
+                    {savingNellDetails ? "..." : L("Save", "சேமி")}
+                  </button>
                 </>
               ) : (
                 <div className="text-sm text-gray-600">
@@ -2772,9 +3023,9 @@ export default function CropDetail() {
                     <h2 className="text-sm font-semibold text-gray-800 mb-2">💸 {L("Total Expenses", "மொத்த செலவு")}</h2>
                     <p className="text-2xl font-bold text-danger mb-2">{inr(nellTotalExpenses)}</p>
                     <div className="flex flex-wrap gap-1.5 mb-2">
-                      {NELL_EXPENSE_TABLES.filter((c) => (nellExpenseTotals[c.key] ?? 0) > 0).map((c) => (
-                        <span key={c.key} className="bg-red-50 text-red-700 text-[10px] font-semibold px-2 py-1 rounded-full border border-red-100">
-                          {L(c.en, c.ta)}: {inr(nellExpenseTotals[c.key] ?? 0)}
+                      {riceExpenseTypeBreakdown.filter((c) => c.total > 0).map((c) => (
+                        <span key={c.value} className="bg-red-50 text-red-700 text-[10px] font-semibold px-2 py-1 rounded-full border border-red-100">
+                          {L(c.en, c.ta)}: {inr(c.total)}
                         </span>
                       ))}
                     </div>
@@ -2786,153 +3037,51 @@ export default function CropDetail() {
                     </div>
                   </div>
 
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_land_prep"
-                    titleEn="Land Preparation"
-                    titleTa="நிலம் தயாரிப்பு"
-                    icon="🚜"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_seed_expense"
-                    titleEn="Seed Expense"
-                    titleTa="விதை செலவு"
-                    icon="🌱"
-                    dateField="cultivation_start_date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "variety_name", en: "Variety Name", ta: "வகை பெயர்", type: "text" },
-                      { key: "seed_quantity", en: "Seed Quantity", ta: "விதை அளவு", type: "number", mustBePositive: true },
-                      { key: "unit", en: "Unit", ta: "அலகு", type: "select", options: [
-                        { value: "kg", en: "kg", ta: "கி.கி" },
-                        { value: "bags", en: "Bags", ta: "பைகள்" },
-                        { value: "packets", en: "Packets", ta: "பாக்கெட்டுகள்" },
-                      ] },
-                      { key: "cultivation_start_date", en: "Cultivation Start Date", ta: "பயிரிடும் தொடக்க தேதி", type: "date", required: true },
-                      { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_nursery_expense"
-                    titleEn="Nursery Preparation"
-                    titleTa="நாற்றங்கால் தயாரிப்பு"
-                    icon="🌿"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "labor_cost", en: "Labor Cost (₹)", ta: "கூலி செலவு (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_transplantation_expense"
-                    titleEn="Transplantation Labor"
-                    titleTa="நடவு கூலி"
-                    icon="🧑‍🌾"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "labor_cost", en: "Labor Cost (₹)", ta: "கூலி செலவு (₹)", type: "number", required: true, isCost: true },
-                      { key: "number_of_laborers", en: "Number of Laborers", ta: "தொழிலாளர் எண்ணிக்கை", type: "number" },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_weed_removal"
-                    titleEn="Weed Removal"
-                    titleTa="களை எடுத்தல்"
-                    icon="🌿"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "labor_cost", en: "Labor Cost (₹)", ta: "கூலி செலவு (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_harvesting_expense"
-                    titleEn="Harvesting Expense"
-                    titleTa="அறுவடை செலவு"
-                    icon="🌾"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "harvesting_cost", en: "Harvesting Cost (₹)", ta: "அறுவடை செலவு (₹)", type: "number", required: true, isCost: true },
-                      { key: "machinery_owner_name", en: "Machinery Owner Name", ta: "இயந்திர உரிமையாளர் பெயர்", type: "text" },
-                      { key: "contact_number", en: "Contact Number", ta: "தொடர்பு எண்", type: "text", numericOnly: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_misc_labor"
-                    titleEn="Miscellaneous Labor"
-                    titleTa="இதர கூலி செலவு"
-                    icon="🧰"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "description", en: "Description", ta: "விவரம்", type: "text", required: true },
-                      { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_transportation"
-                    titleEn="Transportation"
-                    titleTa="போக்குவரத்து செலவு"
-                    icon="🚚"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", required: true, isCost: true },
-                      { key: "transport_details", en: "Transport Details", ta: "போக்குவரத்து விவரம்", type: "text" },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_straw_handling"
-                    titleEn="Paddy Straw Handling"
-                    titleTa="வைக்கோல் கையாளுதல்"
-                    icon="🌾"
-                    dateField="date"
-                    cultivationId={id}
-                    onChanged={fetchNellExpenseTotals}
-                    fields={[
-                      { key: "expense_type", en: "Type", ta: "வகை", type: "select", required: true, isDedupKey: true, options: STRAW_HANDLING_TYPES },
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
+                  <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-sm font-semibold text-gray-800">🌾 {L("Expenses", "செலவுகள்")}</h2>
+                      <button
+                        onClick={openAddRiceExpense}
+                        className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                      >
+                        + {L("Add Expense", "செலவு சேர்க்க")}
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                            <th className="py-1 px-1">{L("Date", "தேதி")}</th>
+                            <th className="py-1 px-1">{L("Type", "வகை")}</th>
+                            <th className="py-1 px-1">{L("Amount", "தொகை")}</th>
+                            <th className="py-1 px-1">{L("Notes", "குறிப்பு")}</th>
+                            <th className="py-1 px-1"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {expenseRecords.length === 0 ? (
+                            <tr><td colSpan={5} className="text-center py-4 text-gray-500">🌾 {L("No expense records yet", "செலவு பதிவுகள் இல்லை")}</td></tr>
+                          ) : (
+                            expenseRecords.map((r) => {
+                              const typeOpt = RICE_EXPENSE_TYPES.find((t) => t.value === r.stage);
+                              return (
+                                <tr key={r.id} className="border-b border-gray-50">
+                                  <td className="py-1 px-1 text-gray-900">{formatDMY(r.expense_date)}</td>
+                                  <td className="py-1 px-1 text-gray-900">{typeOpt ? L(typeOpt.en, typeOpt.ta) : r.category}</td>
+                                  <td className="py-1 px-1 text-danger font-medium">{inr(Number(r.amount))}</td>
+                                  <td className="py-1 px-1 text-gray-600">{r.notes || "—"}</td>
+                                  <td className="py-1 px-1 whitespace-nowrap">
+                                    <button onClick={() => openEditRiceExpense(r)} className="mr-2 hover:text-primary">✏️</button>
+                                    <button onClick={() => deleteExpenseRecord(r.id)} className="hover:text-danger">🗑️</button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -3713,19 +3862,24 @@ export default function CropDetail() {
                     ]}
                   />
 
-                  <CropRecordSection
-                    lang={lang}
-                    table="rice_weed_removal"
-                    titleEn="Weed Removal"
-                    titleTa="களை நடவடிக்கை"
-                    icon="🌿"
-                    dateField="date"
-                    cultivationId={id}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "labor_cost", en: "Labor Cost (₹)", ta: "கூலி செலவு (₹)", type: "number", required: true, isCost: true },
-                    ]}
-                  />
+                  <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+                    <h2 className="text-sm font-semibold text-gray-800 mb-2">🌿 {L("Weed Removal", "களை நடவடிக்கை")}</h2>
+                    <p className="text-[11px] text-gray-500 mb-2">
+                      {L("Add or edit Weed Removal entries from the Finance tab's Expenses section.", "களை எடுத்தல் பதிவுகளை நிதி தாவலின் செலவுகள் பகுதியில் சேர்க்கவும்/திருத்தவும்.")}
+                    </p>
+                    {expenseRecords.filter((r) => r.stage === "weed_removal").length === 0 ? (
+                      <p className="text-xs text-gray-500 text-center py-3">🌿 {L("No weed removal records yet", "களை எடுத்தல் பதிவுகள் இல்லை")}</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {expenseRecords.filter((r) => r.stage === "weed_removal").map((r) => (
+                          <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
+                            <span>{formatDMY(r.expense_date)} {r.notes ? `· ${r.notes}` : ""}</span>
+                            <span className="font-semibold text-danger">{inr(Number(r.amount))}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -4236,6 +4390,90 @@ export default function CropDetail() {
                   {savingOnionStorageExpense ? "..." : L("Save", "சேமி")}
                 </button>
                 <button onClick={() => setOnionStorageModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                  {L("Cancel", "ரத்து")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {riceExpenseModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-primary">
+                {riceExpenseEditingId ? L("Edit Expense", "செலவைத் திருத்து") : L("Add Expense", "செலவு சேர்க்க")}
+              </h2>
+              <button onClick={() => setRiceExpenseModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>{L("Expense Type", "செலவு வகை")}</label>
+                <select value={riceExpenseType} onChange={(e) => setRiceExpenseType(e.target.value)} className={inputCls}>
+                  {RICE_EXPENSE_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{L(t.en, t.ta)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>{L("Date", "தேதி")} *</label>
+                <input type="date" value={riceExpenseDate} onChange={(e) => setRiceExpenseDate(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")} *</label>
+                <input type="number" value={riceExpenseAmount} onChange={(e) => setRiceExpenseAmount(e.target.value)} className={inputCls} />
+              </div>
+
+              {riceExpenseType === "seed_expense" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <label className={labelCls}>{L("Variety Name", "வகை பெயர்")}</label>
+                    <input type="text" value={riceExpenseVariety} onChange={(e) => setRiceExpenseVariety(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Seed Quantity", "விதை அளவு")}</label>
+                    <input type="number" value={riceExpenseSeedQty} onChange={(e) => setRiceExpenseSeedQty(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Unit", "அலகு")}</label>
+                    <select value={riceExpenseSeedUnit} onChange={(e) => setRiceExpenseSeedUnit(e.target.value)} className={inputCls}>
+                      <option value="kg">{L("kg", "கி.கி")}</option>
+                      <option value="bags">{L("Bags", "பைகள்")}</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {riceExpenseType === "transplantation" && (
+                <div>
+                  <label className={labelCls}>{L("Number of Laborers", "தொழிலாளர் எண்ணிக்கை")}</label>
+                  <input type="number" value={riceExpenseLaborers} onChange={(e) => setRiceExpenseLaborers(e.target.value)} className={inputCls} />
+                </div>
+              )}
+
+              {riceExpenseType === "harvesting" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>{L("Machinery Owner Name", "இயந்திர உரிமையாளர் பெயர்")}</label>
+                    <input type="text" value={riceExpenseOwnerName} onChange={(e) => setRiceExpenseOwnerName(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Contact Number", "தொடர்பு எண்")}</label>
+                    <input type="text" value={riceExpenseContact} onChange={(e) => setRiceExpenseContact(e.target.value)} className={inputCls} />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
+                <textarea value={riceExpenseNotes} onChange={(e) => setRiceExpenseNotes(e.target.value)} className={inputCls} rows={2} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveRiceExpense} disabled={savingRiceExpense} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                  {savingRiceExpense ? "..." : L("Save", "சேமி")}
+                </button>
+                <button onClick={() => setRiceExpenseModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
