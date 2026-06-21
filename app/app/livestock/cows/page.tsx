@@ -257,7 +257,7 @@ export default function CowsListPage() {
                         {cow.current_status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{cow.breed || "—"}</p>
+                    <p className="text-xs text-gray-600 mt-1">{cow.breed || "—"}</p>
                     <p className="text-xs text-gray-600 mt-1 font-medium">
                       {t(lang, "avgPerDay")}: {avgLitresPerDay(cow.id).toFixed(1)} L
                     </p>

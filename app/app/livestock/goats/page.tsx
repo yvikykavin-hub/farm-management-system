@@ -227,7 +227,7 @@ export default function GoatsListPage() {
                         {goat.current_status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{goat.breed || "—"} · {goat.gender || "—"}</p>
+                    <p className="text-xs text-gray-600 mt-1">{goat.breed || "—"} · {goat.gender || "—"}</p>
                     <p className="text-xs text-gray-600 mt-1 font-medium">
                       {t(lang, "weight")}: {goat.weight_kg != null ? `${goat.weight_kg} kg` : "—"}
                     </p>

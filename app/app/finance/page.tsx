@@ -77,6 +77,8 @@ export default function FinancePage() {
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [cultivations, setCultivations] = useState<Cultivation[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [incomeRows, setIncomeRows] = useState<Row[]>([]);
@@ -90,8 +92,9 @@ export default function FinancePage() {
     fetchAll();
   }, []);
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const fetchAll = async (isRefresh = false) => {
+    if (isRefresh) setIsRefreshing(true);
+    else setLoading(true);
     const [
       { data: cultivationsData },
       { data: farmsData },
@@ -122,6 +125,11 @@ export default function FinancePage() {
     setIncomeRows(income);
     setExpenseRows(expense);
     setLoading(false);
+    if (isRefresh) {
+      setIsRefreshing(false);
+      setToast(L("Data updated!", "தரவு புதுப்பிக்கப்பட்டது!"));
+      setTimeout(() => setToast(null), 2000);
+    }
   };
 
   const cultivationMap = useMemo(() => {
@@ -201,13 +209,29 @@ export default function FinancePage() {
               ← {L("Back to Dashboard", "முகப்புக்கு திரும்பு")}
             </Link>
             <h1 className="text-xl font-bold text-primary">💰 {L("Finance", "நிதி நிலை")}</h1>
-            <button
-              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-              className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
-            >
-              {lang === "ta" ? "English" : "தமிழ்"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchAll(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+              >
+                <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
+                {isRefreshing ? L("Refreshing...", "புதுப்பிக்கிறது...") : L("Refresh", "புதுப்பி")}
+              </button>
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+            </div>
           </div>
+
+          {toast && (
+            <div className="fixed bottom-4 right-4 bg-success text-white px-4 py-2 rounded-lg shadow-lg text-sm font-semibold z-50">
+              ✅ {toast}
+            </div>
+          )}
 
           {/* Filters */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2">

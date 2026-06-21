@@ -67,6 +67,8 @@ export default function CropsPage() {
   const [activeCrops, setActiveCrops] = useState<Cultivation[]>([]);
   const [completedCrops, setCompletedCrops] = useState<Cultivation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [justUpdated, setJustUpdated] = useState(false);
   const [search, setSearch] = useState("");
   const [farmFilter, setFarmFilter] = useState("");
 
@@ -74,8 +76,9 @@ export default function CropsPage() {
     fetchAll();
   }, []);
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const fetchAll = async (isRefresh = false) => {
+    if (isRefresh) setIsRefreshing(true);
+    else setLoading(true);
     const [{ data: farmsData }, { data: activeData }, { data: completedData }] = await Promise.all([
       supabase.from("farms").select("id, name").order("name", { ascending: true }),
       supabase
@@ -93,6 +96,11 @@ export default function CropsPage() {
     if (activeData) setActiveCrops(activeData);
     if (completedData) setCompletedCrops(completedData);
     setLoading(false);
+    if (isRefresh) {
+      setIsRefreshing(false);
+      setJustUpdated(true);
+      setTimeout(() => setJustUpdated(false), 1500);
+    }
   };
 
   const farmName = (farmId: string) => farms.find((f) => f.id === farmId)?.name ?? "—";
@@ -117,7 +125,21 @@ export default function CropsPage() {
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h1 className="text-xl font-bold text-primary">🌾 {L("Crops", "பயிர்கள்")}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-primary">🌾 {L("Crops", "பயிர்கள்")}</h1>
+              <button
+                onClick={() => fetchAll(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+              >
+                <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
+                {isRefreshing
+                  ? L("Refreshing...", "புதுப்பிக்கிறது...")
+                  : justUpdated
+                  ? L("Updated!", "புதுப்பிக்கப்பட்டது!")
+                  : L("Refresh", "புதுப்பி")}
+              </button>
+            </div>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"

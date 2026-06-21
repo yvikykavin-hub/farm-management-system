@@ -677,6 +677,10 @@ function UsageTab({
       return;
     }
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    if (durationHours > 24) {
+      alert(L("Duration cannot exceed 24 hours in one entry.", "ஒரு பதிவில் கால அளவு 24 மணி நேரத்தை தாண்டக்கூடாது."));
+      return;
+    }
     setSaving(true);
     try {
       const payload = {

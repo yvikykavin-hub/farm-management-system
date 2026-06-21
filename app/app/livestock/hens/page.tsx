@@ -222,7 +222,7 @@ export default function HensListPage() {
                         {hen.current_status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{hen.breed || "—"}</p>
+                    <p className="text-xs text-gray-600 mt-1">{hen.breed || "—"}</p>
                     <p className="text-xs text-gray-600 mt-1 font-medium">
                       {t(lang, "weight")}: {hen.weight_kg != null ? `${hen.weight_kg} kg` : "—"}
                     </p>

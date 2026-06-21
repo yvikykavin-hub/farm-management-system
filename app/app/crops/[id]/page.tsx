@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
 import CropRecordSection from "../../../components/CropRecordSection";
 import { supabase } from "../../../lib/supabase";
+import { phoneError as getPhoneError } from "../../../lib/validators";
 
 type Cultivation = {
   id: string;
@@ -624,6 +625,7 @@ export default function CropDetail() {
   const [activeTab, setActiveTab] = useState<"overview" | "finance" | "activities" | "income">("overview");
 
   const [endDateInput, setEndDateInput] = useState("");
+  const [endDateError, setEndDateError] = useState("");
   const [savingEndDate, setSavingEndDate] = useState(false);
   const [deletingCultivation, setDeletingCultivation] = useState(false);
 
@@ -705,6 +707,7 @@ export default function CropDetail() {
   const [riceExpenseLaborers, setRiceExpenseLaborers] = useState("");
   const [riceExpenseOwnerName, setRiceExpenseOwnerName] = useState("");
   const [riceExpenseContact, setRiceExpenseContact] = useState("");
+  const [riceExpenseContactError, setRiceExpenseContactError] = useState("");
   const [savingRiceExpense, setSavingRiceExpense] = useState(false);
 
   // Fodder corn cutting cycles
@@ -919,6 +922,11 @@ export default function CropDetail() {
 
   const saveEndDate = async () => {
     if (!cultivation) return;
+    if (endDateInput && cultivation.start_date && endDateInput <= cultivation.start_date) {
+      setEndDateError(L("End date must be after start date", "முடிவு தேதி தொடக்க தேதிக்கு பிறகு இருக்க வேண்டும்"));
+      return;
+    }
+    setEndDateError("");
     setSavingEndDate(true);
     try {
       const { error } = await supabase
@@ -1801,6 +1809,7 @@ export default function CropDetail() {
     setRiceExpenseLaborers("");
     setRiceExpenseOwnerName("");
     setRiceExpenseContact("");
+    setRiceExpenseContactError("");
     setRiceExpenseModalOpen(true);
   };
 
@@ -1816,6 +1825,7 @@ export default function CropDetail() {
     setRiceExpenseLaborers("");
     setRiceExpenseOwnerName("");
     setRiceExpenseContact("");
+    setRiceExpenseContactError("");
     if (r.description) {
       try {
         const extra = JSON.parse(r.description) as Record<string, string>;
@@ -1838,8 +1848,9 @@ export default function CropDetail() {
       alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
-    if (riceExpenseContact && !/^\d+$/.test(riceExpenseContact)) {
-      alert(L("Contact number must contain numbers only", "தொடர்பு எண் எண்கள் மட்டும் இருக்க வேண்டும்"));
+    const contactErr = getPhoneError(riceExpenseContact, lang);
+    if (contactErr) {
+      setRiceExpenseContactError(contactErr);
       return;
     }
     setSavingRiceExpense(true);
@@ -2633,13 +2644,25 @@ export default function CropDetail() {
 
                   <div className="flex items-center gap-1">
                     <label className="text-[10px] text-gray-500">{L("End", "முடிவு")}</label>
-                    <input
-                      type="date"
-                      title={L("Leave empty until cultivation is complete", "முடியும் வரை வெறுமையாக விடவும்")}
-                      value={endDateInput}
-                      onChange={(e) => setEndDateInput(e.target.value)}
-                      className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white text-gray-900 w-32"
-                    />
+                    <div className="flex flex-col">
+                      <input
+                        type="date"
+                        title={L("Leave empty until cultivation is complete", "முடியும் வரை வெறுமையாக விடவும்")}
+                        value={endDateInput}
+                        onChange={(e) => {
+                          setEndDateInput(e.target.value);
+                          if (endDateError) setEndDateError("");
+                        }}
+                        className={`border rounded px-1.5 py-0.5 text-xs bg-white text-gray-900 w-32 focus:outline-none focus:ring-2 ${
+                          endDateError ? "border-red-400 bg-red-50 focus:ring-red-400" : "border-gray-300 focus:ring-green-500"
+                        }`}
+                      />
+                      {endDateError && (
+                        <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1">
+                          <span>⚠️</span> {endDateError}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {endDateInput ? (
@@ -4429,7 +4452,20 @@ export default function CropDetail() {
                   </div>
                   <div>
                     <label className={labelCls}>{L("Contact Number", "தொடர்பு எண்")}</label>
-                    <input type="text" value={riceExpenseContact} onChange={(e) => setRiceExpenseContact(e.target.value)} className={inputCls} />
+                    <input
+                      type="text"
+                      value={riceExpenseContact}
+                      onChange={(e) => {
+                        setRiceExpenseContact(e.target.value);
+                        if (riceExpenseContactError) setRiceExpenseContactError("");
+                      }}
+                      className={`${inputCls} ${riceExpenseContactError ? "border-red-400 bg-red-50 focus:ring-red-400" : ""}`}
+                    />
+                    {riceExpenseContactError && (
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <span>⚠️</span> {riceExpenseContactError}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

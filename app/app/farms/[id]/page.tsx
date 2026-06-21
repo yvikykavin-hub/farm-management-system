@@ -190,8 +190,18 @@ export default function FarmDetail() {
       return;
     }
     const newArea = parseFloat(cropArea);
+    if (newArea <= 0 || newArea >= 1000) {
+      alert(lang === "ta" ? "பரப்பளவு 0 முதல் 1000 ஏக்கருக்கு இடையில் இருக்க வேண்டும்" : "Area must be greater than 0 and less than 1000 acres");
+      return;
+    }
     if (newArea > remainingArea) {
       alert(notEnoughAreaMessage(remainingArea));
+      return;
+    }
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    if (new Date(cropStartDate) > oneYearFromNow) {
+      alert(lang === "ta" ? "தொடக்க தேதி ஒரு வருடத்திற்கு மேல் எதிர்காலத்தில் இருக்க முடியாது" : "Start date cannot be more than 1 year in the future");
       return;
     }
     setAddingCultivation(true);
@@ -502,7 +512,7 @@ export default function FarmDetail() {
                             )}
                           </div>
                           {isDone && (
-                            <p className="text-xs text-gray-400 mt-0.5">
+                            <p className="text-xs text-gray-600 mt-0.5">
                               {t.completedOn}: {formatDMY(item.end_date)}
                             </p>
                           )}

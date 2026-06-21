@@ -7,6 +7,7 @@ import Sidebar from "../../../../components/Sidebar";
 import { supabase } from "../../../../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../../../../lib/geminiOCR";
 import { t } from "../../../../lib/labels";
+import { milkRateWarning } from "../../../../lib/validators";
 
 type Cow = {
   id: string;
@@ -1080,6 +1081,9 @@ export default function CowDetailPage() {
               <div>
                 <label className={labelCls}>{t(lang, "newRate")}</label>
                 <input type="number" value={newRate} onChange={(e) => setNewRate(e.target.value)} className={inputCls} />
+                {milkRateWarning(newRate, lang) && (
+                  <p className="text-amber-600 text-xs mt-1">{milkRateWarning(newRate, lang)}</p>
+                )}
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "effectiveFromDate")}</label>
