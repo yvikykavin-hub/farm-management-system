@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
+import PageWrapper from "../../../components/PageWrapper";
 import CropRecordSection from "../../../components/CropRecordSection";
+import toast from "react-hot-toast";
 import { supabase } from "../../../lib/supabase";
 import { phoneError as getPhoneError } from "../../../lib/validators";
 
@@ -1117,7 +1119,7 @@ export default function CropDetail() {
     if (!error && data) setIrrigationRecords(data);
   };
 
-  const reportError = (label: string, message: string) => alert(`${label}: ${message}`);
+  const reportError = (label: string, message: string) => toast.error(`${label}: ${message}`);
 
   // ---- Coconut tree tracking ----
   const totalTreesNum = parseFloat(totalTrees) || 0;
@@ -1128,7 +1130,7 @@ export default function CropDetail() {
 
   const saveCoconutTrees = async () => {
     if (treesMismatch) {
-      alert(
+      toast.error(
         L(
           "Small Trees + Large Trees must equal Total Trees",
           "சிறிய மரங்கள் + பெரிய மரங்கள் மொத்த மரங்களுக்கு சமமாக இருக்க வேண்டும்"
@@ -1260,7 +1262,7 @@ export default function CropDetail() {
   const saveCoconutIncome = async () => {
     if (!cultivation) return;
     if (!harvestDate || totalCoconutCount <= 0) {
-      alert(L("Harvest date and at least one coconut count are required", "அறுவடை தேதி மற்றும் எண்ணிக்கை தேவை"));
+      toast.error(L("Harvest date and at least one coconut count are required", "அறுவடை தேதி மற்றும் எண்ணிக்கை தேவை"));
       return;
     }
     const notes =
@@ -1309,7 +1311,7 @@ export default function CropDetail() {
   const saveIncome = async () => {
     if (!cultivation) return;
     if (!incomeDate || !incomeAmount) {
-      alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      toast.error(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
     setSavingIncome(true);
@@ -1345,7 +1347,7 @@ export default function CropDetail() {
   const saveSugarcaneIncome = async () => {
     if (!cultivation) return;
     if (!sugarcaneSaleDate || sugarcaneQuantityTonsNum <= 0) {
-      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      toast.error(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingSugarcaneIncome(true);
@@ -1384,7 +1386,7 @@ export default function CropDetail() {
   const saveElluIncome = async () => {
     if (!cultivation) return;
     if (!elluSaleDate || elluQuantitySoldNum <= 0) {
-      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      toast.error(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingElluIncome(true);
@@ -1460,11 +1462,11 @@ export default function CropDetail() {
 
   const saveNellIncome = async () => {
     if (!nellIncomeDate || nellIncomeQtyNum <= 0 || nellIncomeRateNum <= 0) {
-      alert(L("Date, quantity, and rate are required", "தேதி, அளவு மற்றும் விலை தேவை"));
+      toast.error(L("Date, quantity, and rate are required", "தேதி, அளவு மற்றும் விலை தேவை"));
       return;
     }
     if (nellIncomeDate > new Date().toISOString().slice(0, 10)) {
-      alert(L("Date cannot be in the future.", "தேதி எதிர்காலத்தில் இருக்கக்கூடாது."));
+      toast.error(L("Date cannot be in the future.", "தேதி எதிர்காலத்தில் இருக்கக்கூடாது."));
       return;
     }
     setSavingNellIncome(true);
@@ -1510,7 +1512,7 @@ export default function CropDetail() {
   const saveCutting = async () => {
     if (!cultivation) return;
     if (!cuttingDate || cuttingQtyNum <= 0) {
-      alert(L("Cutting date and quantity are required", "வெட்டும் தேதி மற்றும் அளவு தேவை"));
+      toast.error(L("Cutting date and quantity are required", "வெட்டும் தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingCutting(true);
@@ -1597,11 +1599,11 @@ export default function CropDetail() {
   const saveOnionSale = async () => {
     if (!cultivation) return;
     if (!onionSaleDate || onionQtySoldNum <= 0 || onionRateNum <= 0) {
-      alert(L("Sale date, quantity, and rate are required", "விற்பனை தேதி, அளவு மற்றும் விலை தேவை"));
+      toast.error(L("Sale date, quantity, and rate are required", "விற்பனை தேதி, அளவு மற்றும் விலை தேவை"));
       return;
     }
     if (onionContact.trim() && !/^\d+$/.test(onionContact.trim())) {
-      alert(L("Contact number must contain numbers only", "தொடர்பு எண்ணில் எண்கள் மட்டும் இருக்க வேண்டும்"));
+      toast.error(L("Contact number must contain numbers only", "தொடர்பு எண்ணில் எண்கள் மட்டும் இருக்க வேண்டும்"));
       return;
     }
     setSavingOnionSale(true);
@@ -1669,7 +1671,7 @@ export default function CropDetail() {
   const saveOnionStorageExpense = async () => {
     if (!cultivation) return;
     if (!onionStorageDate || !onionStorageAmount || parseFloat(onionStorageAmount) <= 0) {
-      alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      toast.error(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
     setSavingOnionStorageExpense(true);
@@ -1714,7 +1716,7 @@ export default function CropDetail() {
   const saveKuchiIncome = async () => {
     if (!cultivation) return;
     if (!kuchiSaleDate || kuchiQtySoldNum <= 0) {
-      alert(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      toast.error(L("Sale date and quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingKuchiSale(true);
@@ -1759,11 +1761,11 @@ export default function CropDetail() {
     if (!cultivation) return;
     if (isSugarcaneLabour) {
       if (!expenseDate || sugarcaneLabourRateNum <= 0 || sugarcaneLabourTonsNum <= 0) {
-        alert(L("Date, rate per ton, and total tons are required", "தேதி, டன் விலை மற்றும் டன் அளவு தேவை"));
+        toast.error(L("Date, rate per ton, and total tons are required", "தேதி, டன் விலை மற்றும் டன் அளவு தேவை"));
         return;
       }
     } else if (!expenseDate || !expenseAmount) {
-      alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      toast.error(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
     setSavingExpense(true);
@@ -1845,7 +1847,7 @@ export default function CropDetail() {
   const saveRiceExpense = async () => {
     if (!cultivation) return;
     if (!riceExpenseDate || !riceExpenseAmount || parseFloat(riceExpenseAmount) <= 0) {
-      alert(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      toast.error(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
     const contactErr = getPhoneError(riceExpenseContact, lang);
@@ -1904,7 +1906,7 @@ export default function CropDetail() {
   const saveCoconutLabour = async () => {
     if (!cultivation) return;
     if (!labourDate || treesHarvestedNum <= 0 || pricePerTreeNum <= 0) {
-      alert(L("Date, trees and price per tree are required", "தேதி, மரங்கள் மற்றும் விலை தேவை"));
+      toast.error(L("Date, trees and price per tree are required", "தேதி, மரங்கள் மற்றும் விலை தேவை"));
       return;
     }
     setSavingLabour(true);
@@ -1936,7 +1938,7 @@ export default function CropDetail() {
   // ---- Harvest ----
   const saveHarvest = async () => {
     if (!harvestRecordDate || !yieldQuantity) {
-      alert(L("Date and yield quantity are required", "தேதி மற்றும் அளவு தேவை"));
+      toast.error(L("Date and yield quantity are required", "தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingHarvest(true);
@@ -1964,7 +1966,7 @@ export default function CropDetail() {
   // ---- Fertilizer ----
   const saveFertilizer = async () => {
     if (!fertDate || !fertName || !fertQty || !fertCost) {
-      alert(L("Date, fertilizer name, quantity and cost are required", "தேதி, உரம் பெயர், அளவு மற்றும் செலவு தேவை"));
+      toast.error(L("Date, fertilizer name, quantity and cost are required", "தேதி, உரம் பெயர், அளவு மற்றும் செலவு தேவை"));
       return;
     }
     setSavingFert(true);
@@ -2008,7 +2010,7 @@ export default function CropDetail() {
 
   const saveWeedRemoval = async () => {
     if (!weedStart || !weedEnd || weedDays <= 0 || weedWorkersNum <= 0 || weedCostPerDayNum <= 0) {
-      alert(L("All weed removal fields are required", "அனைத்து புல் அகற்றும் தகவல்களும் தேவை"));
+      toast.error(L("All weed removal fields are required", "அனைத்து புல் அகற்றும் தகவல்களும் தேவை"));
       return;
     }
     setSavingWeed(true);
@@ -2041,7 +2043,7 @@ export default function CropDetail() {
   // ---- Irrigation ----
   const saveIrrigation = async () => {
     if (!irrigationDate || !irrigationDuration) {
-      alert(L("Date and duration are required", "தேதி மற்றும் கால அளவு தேவை"));
+      toast.error(L("Date and duration are required", "தேதி மற்றும் கால அளவு தேவை"));
       return;
     }
     setSavingIrrigation(true);
@@ -2123,7 +2125,7 @@ export default function CropDetail() {
     const values = formValues[sub.key] || {};
     const dateField = sub.dateField ?? "date";
     if (!values[dateField]) {
-      alert(L("Date is required", "தேதி தேவை"));
+      toast.error(L("Date is required", "தேதி தேவை"));
       return;
     }
     const amount = sub.computeAmount(values);
@@ -2205,7 +2207,7 @@ export default function CropDetail() {
   const saveTurmericIncome = async () => {
     if (!cultivation) return;
     if (!turmericSaleDate || (turmericBulbQtyNum <= 0 && turmericFingerQtyNum <= 0)) {
-      alert(L("Sale date and at least one quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
+      toast.error(L("Sale date and at least one quantity are required", "விற்பனை தேதி மற்றும் அளவு தேவை"));
       return;
     }
     setSavingTurmericSale(true);
@@ -2548,6 +2550,7 @@ export default function CropDetail() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-3">
+        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
           {/* Header */}
@@ -4211,6 +4214,7 @@ export default function CropDetail() {
           )}
 
         </div>
+        </PageWrapper>
       </main>
 
       {nellIncomeModalOpen && (
