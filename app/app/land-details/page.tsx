@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
+import PageWrapper from "../../components/PageWrapper";
+import AnimatedCard from "../../components/AnimatedCard";
+import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 
 type Farm = {
@@ -79,6 +82,7 @@ export default function LandDetailsPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -107,62 +111,68 @@ export default function LandDetailsPage() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded-2xl animate-pulse" />
+                <SkeletonCard key={i} />
               ))}
             </div>
           ) : farms.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-gray-500">
-              <div className="text-4xl mb-2">🌾</div>
-              {L("No farms found.", "நிலங்கள் இல்லை.")}
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="text-5xl mb-4 opacity-60">🌾</div>
+              <h3 className="text-base font-semibold text-gray-700 mb-1">
+                {L("No farms added yet", "நிலங்கள் சேர்க்கப்படவில்லை")}
+              </h3>
+              <p className="text-sm text-gray-400 max-w-xs">{L("No farms found.", "நிலங்கள் இல்லை.")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {farms.map((f) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {farms.map((f, i) => {
                 const soil = f.soil_type ? SOIL_LABELS[f.soil_type] : null;
                 const water = f.water_source ? WATER_SOURCE_LABELS[f.water_source] : null;
                 const area = effectiveArea(f);
                 const well = effectiveWell(f);
                 const motor = effectiveMotor(f);
                 return (
-                  <Link key={f.id} href={`/land-details/${f.id}`}>
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-green-300 transition-all cursor-pointer flex flex-col gap-1.5 h-full">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-bold text-gray-900">🌾 {f.name || "—"}</p>
-                        <span className="text-xs font-semibold text-gray-700">{area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
+                  <AnimatedCard key={f.id} delay={Math.min(i, 5) * 0.06}>
+                    <Link href={`/land-details/${f.id}`}>
+                      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer active:scale-[0.99] flex flex-col gap-1.5 h-full">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-bold text-gray-900">🌾 {f.name || "—"}</p>
+                          <span className="text-xs font-semibold text-gray-700">{area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {L("Survey", "சர்வே")}: {f.survey_numbers || "—"} • {L("Patta", "பட்டா")}: {f.patta_number || "—"}
+                        </p>
+                        {f.owner_name && (
+                          <p className="text-xs text-gray-600">{L("Owner", "உரிமையாளர்")}: {f.owner_name}</p>
+                        )}
+                        {soil && (
+                          <p className="text-xs text-gray-600">{L("Soil", "மண்")}: {L(soil.en, soil.ta)}</p>
+                        )}
+                        {water && (
+                          <p className="text-xs text-gray-600">{L("Water Source", "நீர் ஆதாரம்")}: {L(water.en, water.ta)}</p>
+                        )}
+                        <p className="text-xs text-gray-700">
+                          {well
+                            ? `🟢 ${L("Well", "கிணறு")}: ${L("Yes", "உண்டு")}${f.well_depth ? ` (${f.well_depth})` : ""}`
+                            : `⭕ ${L("Well", "கிணறு")}: ${L("No", "இல்லை")}`}
+                        </p>
+                        <p className="text-xs text-gray-700">
+                          {motor
+                            ? `🟢 ${L("Motor", "மோட்டார்")}: ${L("Yes", "உண்டு")}${f.motor_details ? ` • ${f.motor_details}` : ""}`
+                            : `⭕ ${L("Motor", "மோட்டார்")}: ${L("No", "இல்லை")}`}
+                        </p>
+                        <div className="flex justify-end mt-1">
+                          <span className="text-xs font-semibold text-primary">{L("View Details", "விவரம் காண")} →</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-600">
-                        {L("Survey", "சர்வே")}: {f.survey_numbers || "—"} • {L("Patta", "பட்டா")}: {f.patta_number || "—"}
-                      </p>
-                      {f.owner_name && (
-                        <p className="text-xs text-gray-600">{L("Owner", "உரிமையாளர்")}: {f.owner_name}</p>
-                      )}
-                      {soil && (
-                        <p className="text-xs text-gray-600">{L("Soil", "மண்")}: {L(soil.en, soil.ta)}</p>
-                      )}
-                      {water && (
-                        <p className="text-xs text-gray-600">{L("Water Source", "நீர் ஆதாரம்")}: {L(water.en, water.ta)}</p>
-                      )}
-                      <p className="text-xs text-gray-700">
-                        {well
-                          ? `🟢 ${L("Well", "கிணறு")}: ${L("Yes", "உண்டு")}${f.well_depth ? ` (${f.well_depth})` : ""}`
-                          : `⭕ ${L("Well", "கிணறு")}: ${L("No", "இல்லை")}`}
-                      </p>
-                      <p className="text-xs text-gray-700">
-                        {motor
-                          ? `🟢 ${L("Motor", "மோட்டார்")}: ${L("Yes", "உண்டு")}${f.motor_details ? ` • ${f.motor_details}` : ""}`
-                          : `⭕ ${L("Motor", "மோட்டார்")}: ${L("No", "இல்லை")}`}
-                      </p>
-                      <div className="flex justify-end mt-1">
-                        <span className="text-xs font-semibold text-primary">{L("View Details", "விவரம் காண")} →</span>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </AnimatedCard>
                 );
               })}
             </div>
           )}
 
         </div>
+        </PageWrapper>
       </main>
     </div>
   );

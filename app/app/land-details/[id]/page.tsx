@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import Sidebar from "../../../components/Sidebar";
+import PageWrapper from "../../../components/PageWrapper";
 import { supabase } from "../../../lib/supabase";
 
 type Farm = {
@@ -123,12 +126,8 @@ export default function LandDetailPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "location" | "drawing">("overview");
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
-  };
+  const showToast = (msg: string) => toast.success(msg);
 
   // Section 1 - Basic Info
   const [name, setName] = useState("");
@@ -220,14 +219,14 @@ export default function LandDetailPage() {
         .eq("id", id);
       if (error) {
         console.error("Error saving basic info:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
         fetchFarm();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSavingBasic(false);
   };
@@ -250,14 +249,14 @@ export default function LandDetailPage() {
         .eq("id", id);
       if (error) {
         console.error("Error saving water info:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
         fetchFarm();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSavingWater(false);
   };
@@ -268,14 +267,14 @@ export default function LandDetailPage() {
       const { error } = await supabase.from("farms").update({ soil_type: soilType || null }).eq("id", id);
       if (error) {
         console.error("Error saving soil info:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
         fetchFarm();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSavingSoil(false);
   };
@@ -289,14 +288,14 @@ export default function LandDetailPage() {
         .eq("id", id);
       if (error) {
         console.error("Error saving Google Maps link:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
         fetchFarm();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSavingLocation(false);
   };
@@ -310,7 +309,7 @@ export default function LandDetailPage() {
 
   const saveDrawing = async () => {
     if (!drawingTitle.trim() || !drawingFile) {
-      alert(L("Title and photo or PDF are required.", "தலைப்பு மற்றும் படம்/PDF தேவை."));
+      toast.error(L("Title and photo or PDF are required.", "தலைப்பு மற்றும் படம்/PDF தேவை."));
       return;
     }
     setSavingDrawing(true);
@@ -326,14 +325,14 @@ export default function LandDetailPage() {
       });
       if (error) {
         console.error("Error saving drawing:", error);
-        alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         setDrawingModalOpen(false);
         fetchDrawings();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
     }
     setSavingDrawing(false);
   };
@@ -362,6 +361,7 @@ export default function LandDetailPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PageWrapper>
         <div className="max-w-3xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -668,6 +668,7 @@ export default function LandDetailPage() {
           )}
 
         </div>
+        </PageWrapper>
       </main>
 
       {viewerUrl && (
@@ -677,9 +678,21 @@ export default function LandDetailPage() {
         </div>
       )}
 
+      <AnimatePresence>
       {drawingModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5"
+          >
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-primary">{L("Upload Drawing", "வரைபடம் பதிவேற்ற")}</h2>
               <button onClick={() => setDrawingModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
@@ -747,15 +760,10 @@ export default function LandDetailPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 bg-success text-white px-4 py-2 rounded-lg shadow-lg text-sm font-semibold z-50">
-          ✅ {toast}
-        </div>
-      )}
+      </AnimatePresence>
     </div>
   );
 }
