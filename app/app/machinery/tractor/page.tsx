@@ -87,7 +87,6 @@ export default function TractorPage() {
   const [loadingShared, setLoadingShared] = useState(true);
 
   // Engine oil service interval (editable, persisted in tractor_settings)
-  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [oilChangeInterval, setOilChangeInterval] = useState(DEFAULT_OIL_CHANGE_INTERVAL);
   const [intervalInput, setIntervalInput] = useState(String(DEFAULT_OIL_CHANGE_INTERVAL));
   const [savingInterval, setSavingInterval] = useState(false);
@@ -113,7 +112,6 @@ export default function TractorPage() {
     const { data } = await supabase.from("tractor_settings").select("*").limit(1).maybeSingle();
     if (data) {
       const s = data as TractorSettings;
-      setSettingsId(s.id);
       setOilChangeInterval(Number(s.oil_change_interval_hours));
       setIntervalInput(String(s.oil_change_interval_hours));
     } else {
@@ -123,7 +121,6 @@ export default function TractorPage() {
         .select()
         .single();
       if (!error && created) {
-        setSettingsId(created.id);
         setOilChangeInterval(Number(created.oil_change_interval_hours));
         setIntervalInput(String(created.oil_change_interval_hours));
       }
@@ -138,8 +135,9 @@ export default function TractorPage() {
     }
     setSavingInterval(true);
     try {
-      const { error } = settingsId
-        ? await supabase.from("tractor_settings").update({ oil_change_interval_hours: value }).eq("id", settingsId)
+      const { data: existing } = await supabase.from("tractor_settings").select("id").maybeSingle();
+      const { error } = existing
+        ? await supabase.from("tractor_settings").update({ oil_change_interval_hours: value }).eq("id", existing.id)
         : await supabase.from("tractor_settings").insert({ oil_change_interval_hours: value });
       if (error) {
         console.error("Error saving interval:", error);

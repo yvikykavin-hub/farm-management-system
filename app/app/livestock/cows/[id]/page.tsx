@@ -745,8 +745,8 @@ export default function CowDetailPage() {
                       <tbody>
                         {rates.map((r) => (
                           <tr key={r.id} className="border-b border-gray-50">
-                            <td className="py-1">{formatDMY(r.effective_from)}</td>
-                            <td className="py-1">{inr(Number(r.rate_per_litre))}</td>
+                            <td className="py-1 text-gray-900">{formatDMY(r.effective_from)}</td>
+                            <td className="py-1 text-gray-900 font-medium">{inr(Number(r.rate_per_litre))}</td>
                           </tr>
                         ))}
                       </tbody>
