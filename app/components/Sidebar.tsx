@@ -60,14 +60,14 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
         {/* Logo area */}
         <div className="p-6 border-b border-green-700/30 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#F4A261]/20 rounded-xl flex items-center justify-center text-2xl shrink-0">
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-2xl shrink-0">
               🌾
             </div>
             <div>
               <h1 className="text-white font-bold text-sm leading-tight">
                 {lang === "ta" ? "தாய் நிலம் AGRO" : "Thaai Nilam AGRO"}
               </h1>
-              <p className="text-[#F4A261] text-xs leading-tight mt-0.5">
+              <p className="text-green-300 text-xs leading-tight mt-0.5">
                 {lang === "ta" ? "நிலமே தாய், விளைவே வாழ்வு" : "Our Land, Our Legacy"}
               </p>
             </div>
@@ -84,15 +84,15 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                 href={item.href}
                 title={item.label}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group border-l-2 ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative border-l-2 ${
                   isActive
-                    ? "bg-[#F4A261]/20 text-[#F4A261] border-[#F4A261] shadow-sm"
-                    : "text-green-200 border-transparent hover:bg-[#F4A261]/10 hover:text-[#F4A261]"
+                    ? "bg-white/10 text-white font-medium border-green-300"
+                    : "text-green-200 border-transparent hover:bg-white/[0.08] hover:text-white"
                 }`}
               >
-                <span className={`text-lg transition-all duration-200 ${isActive ? "drop-shadow-[0_0_4px_rgba(244,162,97,0.6)]" : ""}`}>{item.icon}</span>
+                <span className="text-lg">{item.icon}</span>
                 <span className="text-sm font-medium">{lang === "ta" ? item.labelTa : item.label}</span>
-                {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#F4A261]" />}
+                {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-300" />}
               </Link>
             );
           })}
