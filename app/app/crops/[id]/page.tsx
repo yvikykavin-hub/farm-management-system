@@ -124,11 +124,12 @@ type TurmericDetails = {
 type NellDetails = {
   id: string;
   cultivation_id: string;
-  variety: string | null;
-  planting_date: string | null;
+  variety_name: string | null;
   seed_quantity: number | null;
-  seed_unit: string | null;
+  unit: string | null;
+  planting_date: string | null;
   expected_harvest_date: string | null;
+  notes: string | null;
 };
 
 type ElluDetails = {
@@ -1016,10 +1017,10 @@ export default function CropDetail() {
     if (!error && data) {
       const d = data as NellDetails;
       setNellDetailsId(d.id);
-      setNellVariety(d.variety ?? "");
+      setNellVariety(d.variety_name ?? "");
       setNellPlantingDate(d.planting_date ?? "");
       setNellSeedQuantity(String(d.seed_quantity ?? ""));
-      setNellSeedUnit(d.seed_unit ?? "kg");
+      setNellSeedUnit(d.unit ?? "kg");
       setNellExpectedHarvestDate(d.expected_harvest_date ?? "");
     }
   };
@@ -1172,14 +1173,19 @@ export default function CropDetail() {
     try {
       const payload = {
         cultivation_id: id,
-        variety: nellVariety.trim() || null,
-        planting_date: nellPlantingDate || null,
+        variety_name: nellVariety.trim() || null,
         seed_quantity: parseFloat(nellSeedQuantity) || 0,
-        seed_unit: nellSeedUnit || null,
+        unit: nellSeedUnit || null,
+        planting_date: nellPlantingDate || null,
         expected_harvest_date: nellExpectedHarvestDate || null,
       };
-      const { error } = nellDetailsId
-        ? await supabase.from("nell_details").update(payload).eq("id", nellDetailsId)
+      const { data: existing } = await supabase
+        .from("nell_details")
+        .select("id")
+        .eq("cultivation_id", id)
+        .maybeSingle();
+      const { error } = existing
+        ? await supabase.from("nell_details").update(payload).eq("id", existing.id)
         : await supabase.from("nell_details").insert(payload);
       if (error) reportError("Error saving rice details", error.message);
       else fetchNellDetails();
@@ -3828,24 +3834,6 @@ export default function CropDetail() {
                 <>
                   <CropRecordSection
                     lang={lang}
-                    table="rice_fertilizer"
-                    titleEn="Fertilizer Tracking"
-                    titleTa="உரம்"
-                    icon="🌱"
-                    dateField="date"
-                    cultivationId={id}
-                    fields={[
-                      { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                      { key: "fertilizer_name", en: "Fertilizer Name", ta: "உர பெயர்", type: "text", required: true },
-                      { key: "fertilizer_type", en: "Fertilizer Type", ta: "உர வகை", type: "text", required: true },
-                      { key: "crop_stage", en: "Crop Stage / Month", ta: "பயிர் நிலை / மாதம்", type: "text" },
-                      { key: "quantity", en: "Quantity", ta: "அளவு", type: "number", mustBePositive: true },
-                      { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", isCost: true },
-                    ]}
-                  />
-
-                  <CropRecordSection
-                    lang={lang}
                     table="rice_pesticide"
                     titleEn="Pesticide & Spray"
                     titleTa="பூச்சிக்கொல்லி"
@@ -3861,25 +3849,6 @@ export default function CropDetail() {
                       { key: "amount", en: "Amount (₹)", ta: "தொகை (₹)", type: "number", isCost: true },
                     ]}
                   />
-
-                  <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
-                    <h2 className="text-sm font-semibold text-gray-800 mb-2">🌿 {L("Weed Removal", "களை நடவடிக்கை")}</h2>
-                    <p className="text-[11px] text-gray-500 mb-2">
-                      {L("Add or edit Weed Removal entries from the Finance tab's Expenses section.", "களை எடுத்தல் பதிவுகளை நிதி தாவலின் செலவுகள் பகுதியில் சேர்க்கவும்/திருத்தவும்.")}
-                    </p>
-                    {expenseRecords.filter((r) => r.stage === "weed_removal").length === 0 ? (
-                      <p className="text-xs text-gray-500 text-center py-3">🌿 {L("No weed removal records yet", "களை எடுத்தல் பதிவுகள் இல்லை")}</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {expenseRecords.filter((r) => r.stage === "weed_removal").map((r) => (
-                          <div key={r.id} className="flex justify-between text-xs text-gray-700 border-b border-gray-100 py-1">
-                            <span>{formatDMY(r.expense_date)} {r.notes ? `· ${r.notes}` : ""}</span>
-                            <span className="font-semibold text-danger">{inr(Number(r.amount))}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </>
               )}
 
