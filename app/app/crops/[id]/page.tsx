@@ -302,6 +302,16 @@ const ONION_STORAGE_EXPENSE_TYPES = [
   { value: "other", en: "Other", ta: "மற்றவை" },
 ];
 
+// expense_records.category has a DB check constraint with a fixed allowed list.
+// Map each onion storage sub-type to the closest allowed value; the specific
+// sub-type itself is preserved in `description` so it can still be displayed/edited.
+const ONION_STORAGE_CATEGORY_MAP: Record<string, string> = {
+  storage_rent: "storage",
+  cold_storage: "storage",
+  maintenance: "maintenance",
+  other: "miscellaneous",
+};
+
 
 const formatDMY = (iso: string | null | undefined) => {
   if (!iso) return "";
@@ -1568,7 +1578,9 @@ export default function CropDetail() {
   const openEditOnionStorageExpense = (r: ExpenseRecord) => {
     setOnionStorageEditingId(r.id);
     setOnionStorageDate(r.expense_date);
-    setOnionStorageType(r.category ?? "storage_rent");
+    setOnionStorageType(
+      ONION_STORAGE_EXPENSE_TYPES.some((t) => t.value === r.description) ? (r.description as string) : "storage_rent"
+    );
     setOnionStorageAmount(String(r.amount));
     setOnionStorageNotes(r.notes ?? "");
     setOnionStorageModalOpen(true);
@@ -1586,9 +1598,11 @@ export default function CropDetail() {
         cultivation_id: id,
         farm_id: cultivation.farm_id,
         expense_date: onionStorageDate || null,
-        category: onionStorageType,
+        category: ONION_STORAGE_CATEGORY_MAP[onionStorageType] ?? "miscellaneous",
         stage: "storage",
         amount: parseFloat(onionStorageAmount) || 0,
+        description: onionStorageType,
+        vendor_name: null,
         notes: onionStorageNotes.trim() || null,
       };
       const { error } = onionStorageEditingId
@@ -3599,7 +3613,7 @@ export default function CropDetail() {
                           <tr><td colSpan={5} className="text-center py-4 text-gray-500">🧅 {L("No storage records yet", "சேமிப்பு பதிவுகள் இல்லை")}</td></tr>
                         ) : (
                           onionStorageRecords.map((r) => {
-                            const typeOpt = ONION_STORAGE_EXPENSE_TYPES.find((t) => t.value === r.category);
+                            const typeOpt = ONION_STORAGE_EXPENSE_TYPES.find((t) => t.value === r.description);
                             return (
                               <tr key={r.id} className="border-b border-gray-50">
                                 <td className="py-1 px-1 text-gray-900">{formatDMY(r.expense_date)}</td>
