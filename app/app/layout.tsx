@@ -7,8 +7,8 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "தாய் நிலம் AGRO",
-  description: "நிலமே தாய், விளைவே வாழ்வு",
+  title: "Marutham FMS",
+  description: "Marutham Farm Management System - Rooted in Tradition, Driven by Data",
 };
 
 export default function RootLayout({

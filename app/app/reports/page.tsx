@@ -332,12 +332,12 @@ export default function ReportsPage() {
 
     pdf.setFontSize(18);
     pdf.setTextColor(45, 106, 79);
-    pdf.text("Thaai Nilam AGRO Farms", pageWidth / 2, y, { align: "center" });
+    pdf.text("Marutham Farm Management System", pageWidth / 2, y, { align: "center" });
     y += 8;
 
     pdf.setFontSize(10);
     pdf.setTextColor(100, 100, 100);
-    pdf.text("Our Land, Our Legacy", pageWidth / 2, y, { align: "center" });
+    pdf.text("Rooted in Tradition, Driven by Data", pageWidth / 2, y, { align: "center" });
     y += 10;
 
     pdf.setFontSize(14);
@@ -540,8 +540,8 @@ export default function ReportsPage() {
 
                     {/* Report header */}
                     <div className="text-center border-b border-gray-200 pb-4">
-                      <p className="text-lg font-bold text-primary">🌾 Thaai Nilam AGRO Farms</p>
-                      <p className="text-xs text-gray-500">நிலமே தாய், விளைவே வாழ்வு</p>
+                      <p className="text-lg font-bold text-primary">👨‍🌾 {L("Marutham Farm Management System", "மருதம் பண்ணை மேலாண்மை அமைப்பு")}</p>
+                      <p className="text-xs text-gray-500">{L("Rooted in Tradition, Driven by Data", "உழைப்பே உயர்வு")}</p>
                       <p className="text-base font-semibold text-gray-900 mt-3">{L("Crop Profit & Loss Report", "பயிர் இலாப நஷ்ட அறிக்கை")}</p>
                       <div className="text-xs text-gray-600 mt-3 flex flex-col gap-0.5">
                         <p>{L("Generated", "தயாரிக்கப்பட்டது")}: {formatDMY(report.generatedAt)} &nbsp; {L("ID", "எண்")}: {report.id}</p>

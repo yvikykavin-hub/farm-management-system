@@ -38,12 +38,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-page p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-green-100 p-6">
         <div className="flex flex-col items-center mb-4">
-          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-3xl mb-3">
-            🌾
-          </div>
-          <h1 className="text-2xl font-bold text-primary text-center">Thaai Nilam AGRO Farms</h1>
-          <p className="text-xs text-gray-500 italic text-center mt-1">
-            உங்கள் பண்ணை நிர்வாகத்திற்கு வரவேற்கிறோம்
+          <div className="text-6xl mb-4">👨‍🌾</div>
+          <h1 className="text-2xl font-bold text-gray-900 text-center">Marutham Farm Management System</h1>
+          <p className="text-sm text-gray-500 text-center mt-2">
+            Rooted in Tradition, Driven by Data
           </p>
         </div>
 

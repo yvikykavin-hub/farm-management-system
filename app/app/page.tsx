@@ -89,8 +89,8 @@ export default function Dashboard() {
   const totalArea = farms.reduce((sum, f) => sum + Number(f.total_area), 0);
 
   const t = {
-    title: lang === "ta" ? "தாய் நிலம் AGRO" : "Thaai Nilam AGRO",
-    tagline: lang === "ta" ? "நிலமே தாய், விளைவே வாழ்வு" : "Rooted in family, grown with love",
+    title: lang === "ta" ? "மருதம் பண்ணை மேலாண்மை அமைப்பு" : "Marutham Farm Management System",
+    tagline: lang === "ta" ? "உழைப்பே உயர்வு" : "Rooted in Tradition, Driven by Data",
     totalFarms: lang === "ta" ? "மொத்த நிலங்கள்" : "Total Farms",
     totalArea: lang === "ta" ? "மொத்த பரப்பு" : "Total Area",
     activeCrops: lang === "ta" ? "செயலில் உள்ள பயிர்கள்" : "Active Crops",
@@ -118,9 +118,12 @@ export default function Dashboard() {
 
           {/* Header */}
           <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex justify-between items-center shrink-0">
-            <div>
-              <h1 className="text-xl font-bold text-primary">{t.title}</h1>
-              <p className="text-primary text-sm font-medium mt-0.5">{t.tagline}</p>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl">👨‍🌾</span>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+                <p className="text-sm text-gray-500 mt-0.5">{t.tagline}</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               {/* Language Toggle */}

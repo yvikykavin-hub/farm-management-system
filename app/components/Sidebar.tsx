@@ -61,14 +61,14 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
         <div className="p-6 border-b border-green-700/30 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-2xl shrink-0">
-              🌾
+              👨‍🌾
             </div>
             <div>
               <h1 className="text-white font-bold text-sm leading-tight">
-                {lang === "ta" ? "தாய் நிலம் AGRO" : "Thaai Nilam AGRO"}
+                {lang === "ta" ? "மருதம் FMS" : "Marutham FMS"}
               </h1>
               <p className="text-green-300 text-xs leading-tight mt-0.5">
-                {lang === "ta" ? "நிலமே தாய், விளைவே வாழ்வு" : "Our Land, Our Legacy"}
+                {lang === "ta" ? "உழைப்பே உயர்வு" : "Rooted in Tradition, Driven by Data"}
               </p>
             </div>
           </div>
