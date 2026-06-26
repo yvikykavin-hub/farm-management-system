@@ -146,12 +146,16 @@ export default function MachineryLandingPage() {
 
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-primary">{L("Machinery Management", "இயந்திர மேலாண்மை")}</h1>
-            <button
-              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-              className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
-            >
-              {lang === "ta" ? "English" : "தமிழ்"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/profile-photo.png" alt="Profile" className="w-9 h-9 rounded-full object-cover border-2 border-green-200 cursor-pointer" />
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
