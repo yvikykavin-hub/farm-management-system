@@ -25,16 +25,12 @@ export default function LivestockLandingPage() {
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t(lang, "livestock")}</h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
-              >
-                {lang === "ta" ? "English" : "தமிழ்"}
-              </button>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/profile-photo.png" alt="Profile" className="w-9 h-9 rounded-full object-cover border-2 border-green-200 cursor-pointer" />
-            </div>
+            <button
+              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+              className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+            >
+              {lang === "ta" ? "English" : "தமிழ்"}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

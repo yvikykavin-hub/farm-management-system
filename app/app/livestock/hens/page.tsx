@@ -166,8 +166,6 @@ export default function HensListPage() {
               >
                 {lang === "ta" ? "English" : "தமிழ்"}
               </button>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/profile-photo.png" alt="Profile" className="w-9 h-9 rounded-full object-cover border-2 border-green-200 cursor-pointer" />
               <button
                 onClick={openAddModal}
                 className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition"

@@ -2571,8 +2571,6 @@ export default function CropDetail() {
               >
                 {lang === "ta" ? "English" : "தமிழ்"}
               </button>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/profile-photo.png" alt="Profile" className="w-9 h-9 rounded-full object-cover border-2 border-green-200 cursor-pointer ml-2" />
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">

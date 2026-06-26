@@ -60,14 +60,8 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
         {/* Logo area */}
         <div className="p-6 border-b border-green-700/30 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/profile-photo.png"
-                alt="Kavin"
-                className="w-10 h-10 rounded-full object-cover border-2 border-green-300"
-              />
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-green-800" />
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-2xl shrink-0">
+              👨‍🌾
             </div>
             <div>
               <h1 className="text-white font-bold text-sm leading-tight">

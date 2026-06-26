@@ -152,12 +152,9 @@ export default function Dashboard() {
               >
                 {lang === "ta" ? "English" : "தமிழ்"}
               </button>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/profile-photo.png"
-                alt="Kavin"
-                className="w-10 h-10 rounded-full object-cover border-2 border-green-500 cursor-pointer hover:opacity-90 transition-opacity"
-              />
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-green-200">
+                🧑‍🌾
+              </div>
             </div>
           </div>
 

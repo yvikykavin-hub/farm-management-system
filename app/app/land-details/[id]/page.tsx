@@ -366,16 +366,12 @@ export default function LandDetailPage() {
               ← {L("Back", "திரும்பு")}
             </Link>
             <h1 className="text-lg font-bold text-primary text-center">{farm?.name}</h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
-              >
-                {lang === "ta" ? "English" : "தமிழ்"}
-              </button>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/profile-photo.png" alt="Profile" className="w-9 h-9 rounded-full object-cover border-2 border-green-200 cursor-pointer" />
-            </div>
+            <button
+              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+              className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+            >
+              {lang === "ta" ? "English" : "தமிழ்"}
+            </button>
           </div>
 
           <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 w-fit overflow-x-auto">
