@@ -15,6 +15,10 @@ export default function SettingsPage() {
   const router = useRouter();
 
   const handleLogout = async () => {
+    const confirmed = window.confirm(
+      L("Logout from this device?", "இந்த சாதனத்தில் இருந்து வெளியேற விரும்புகிறீர்களா?")
+    );
+    if (!confirmed) return;
     setLoading(true);
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) {
@@ -66,7 +70,7 @@ export default function SettingsPage() {
 
           <div className="bg-white rounded-2xl shadow-sm p-6 max-w-md border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              🔐 {L("Session Management", "அமர்வு மேலாண்மை")}
+              🔐 {L("Session Management", "அமர்வு நிர்வாகம்")}
             </h2>
 
             <p className="text-sm text-gray-500 mb-6">
