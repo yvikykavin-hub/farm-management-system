@@ -142,9 +142,9 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
       {/* Chat toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-green-600 hover:bg-green-700 text-white text-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#2D6A4F] hover:bg-[#1B4332] shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-2xl"
       >
-        {isOpen ? "✕" : "🤖"}
+        {isOpen ? <span className="text-white">✕</span> : "👨‍🌾"}
       </button>
 
       {/* Chat window */}
@@ -152,15 +152,20 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
         <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
 
           {/* Header */}
-          <div className="bg-green-600 px-4 py-3 flex items-center gap-3">
-            <div className="text-2xl">🌾</div>
+          <div className="bg-[#2D6A4F] px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-xl">
+              👨‍🌾
+            </div>
             <div>
               <p className="text-white font-semibold text-sm">
                 {language === "ta" ? "பண்ணை உதவியாளர்" : "Farm Assistant"}
               </p>
               <p className="text-green-200 text-xs">Marutham FMS AI</p>
             </div>
-            <div className="ml-auto w-2 h-2 rounded-full bg-green-300 animate-pulse" />
+            <div className="ml-auto flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
+              <span className="text-green-200 text-xs">{language === "ta" ? "இயங்குகிறது" : "Online"}</span>
+            </div>
           </div>
 
           {/* Messages */}
@@ -170,8 +175,8 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
                 <div
                   className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
                     msg.role === "user"
-                      ? "bg-green-600 text-white rounded-br-sm"
-                      : "bg-white text-gray-900 shadow-sm rounded-bl-sm border border-gray-100"
+                      ? "bg-[#2D6A4F] text-white rounded-br-sm"
+                      : "bg-white text-gray-900 shadow-sm rounded-bl-sm border border-green-100"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.text}</p>
@@ -203,7 +208,7 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
                   <button
                     key={i}
                     onClick={() => sendMessage(q)}
-                    className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-1 hover:bg-green-100 transition-colors"
+                    className="text-xs bg-green-50 text-green-800 border border-green-200 rounded-full px-2 py-1 hover:bg-green-100 transition-colors"
                   >
                     {q}
                   </button>
@@ -218,7 +223,7 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
               <button
                 onClick={startVoice}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
-                  isListening ? "bg-red-500 text-white animate-pulse" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  isListening ? "bg-red-500 text-white animate-pulse" : "bg-green-50 text-green-700 hover:bg-green-100"
                 }`}
               >
                 🎤
@@ -230,13 +235,13 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
                 placeholder={language === "ta" ? "உங்கள் கேள்வியை தமிழில் கேளுங்கள்..." : "Ask about your farm..."}
-                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600"
               />
 
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || loading}
-                className="w-10 h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0"
+                className="w-10 h-10 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0"
               >
                 →
               </button>
