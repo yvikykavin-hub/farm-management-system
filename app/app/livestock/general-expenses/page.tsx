@@ -3,6 +3,7 @@
 import toast from "react-hot-toast";
 import PageWrapper from "../../../components/PageWrapper";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
@@ -172,6 +173,10 @@ export default function GeneralExpensesPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
+
+          <Link href="/livestock" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {t(lang, "backToLivestock")}
+          </Link>
 
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>

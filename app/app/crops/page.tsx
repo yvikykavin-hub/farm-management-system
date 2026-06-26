@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import PageWrapper from "../../components/PageWrapper";
 import { supabase } from "../../lib/supabase";
@@ -125,6 +126,10 @@ export default function CropsPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
+
+          <Link href="/" className="text-primary hover:text-primary text-sm font-semibold">
+            ← {L("Back to Dashboard", "முகப்புக்கு திரும்பு")}
+          </Link>
 
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">

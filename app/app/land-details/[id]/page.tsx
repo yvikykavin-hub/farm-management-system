@@ -211,7 +211,6 @@ export default function LandDetailPage() {
         .update({
           name: name.trim() || null,
           owner_name: ownerName.trim() || null,
-          area: parseFloat(area) || 0,
           total_area: parseFloat(area) || 0,
           survey_numbers: surveyNumbers.trim() || null,
           patta_number: pattaNumber.trim() || null,
@@ -237,10 +236,8 @@ export default function LandDetailPage() {
       const { error } = await supabase
         .from("farms")
         .update({
-          well,
           has_well: well,
           well_depth: well ? wellDepth.trim() || null : null,
-          motor,
           has_motor: motor,
           motor_details: motor ? motorDetails.trim() || null : null,
           water_source: waterSource || null,
