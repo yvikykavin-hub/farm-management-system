@@ -7,6 +7,7 @@ import Sidebar from "../components/Sidebar";
 import PageWrapper from "../components/PageWrapper";
 import AnimatedCard from "../components/AnimatedCard";
 import { SkeletonRow } from "../components/Skeleton";
+import ChatWidget from "../components/ChatWidget";
 import { supabase } from "../lib/supabase";
 
 type Farm = {
@@ -286,6 +287,7 @@ export default function Dashboard() {
         </div>
         </PageWrapper>
       </main>
+      <ChatWidget language={lang} />
     </div>
   );
 }
