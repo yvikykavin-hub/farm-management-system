@@ -22,6 +22,9 @@ type SpeechRecognitionLike = {
 
 export default function ChatWidget({ language = "en" }: { language?: "ta" | "en" }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [pos, setPos] = useState({ x: 24, y: 24 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, right: 24, bottom: 24 });
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -122,6 +125,45 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
     recognition.start();
   };
 
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(false);
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    dragStart.current = {
+      x: clientX,
+      y: clientY,
+      right: pos.x,
+      bottom: pos.y,
+    };
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      const cx = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const cy = "touches" in e ? e.touches[0].clientY : e.clientY;
+      const dx = dragStart.current.x - cx;
+      const dy = dragStart.current.y - cy;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        setIsDragging(true);
+      }
+      setPos({
+        x: Math.max(10, dragStart.current.right + dx),
+        y: Math.max(10, dragStart.current.bottom + dy),
+      });
+    };
+
+    const handleEnd = () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
+      setTimeout(() => setIsDragging(false), 100);
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleMove);
+    window.addEventListener("touchend", handleEnd);
+  };
+
   const suggestedQuestions =
     language === "ta"
       ? [
@@ -141,21 +183,32 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
     <>
       {/* Chat toggle button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#2D6A4F] hover:bg-[#1B4332] shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-2xl"
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        onClick={() => !isDragging && setIsOpen(!isOpen)}
+        className="fixed z-50 w-14 h-14 rounded-full shadow-lg hover:shadow-xl overflow-hidden border-2 border-white cursor-grab active:cursor-grabbing transition-shadow duration-200"
+        style={{ bottom: pos.y, right: pos.x }}
       >
-        {isOpen ? <span className="text-white">✕</span> : "👨‍🌾"}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/farmer-icon.png" alt="Farm Assistant" className="w-full h-full object-cover" />
       </button>
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+        <div
+          className="fixed z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+          style={{
+            bottom: `${pos.y + 64}px`,
+            right: `${pos.x}px`,
+            height: "min(500px, calc(100vh - 120px))",
+            maxHeight: "80vh",
+          }}
+        >
 
           {/* Header */}
           <div className="bg-[#2D6A4F] px-4 py-3 flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-xl">
-              👨‍🌾
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/farmer-icon.png" alt="Farm Assistant" className="w-9 h-9 rounded-full object-cover border-2 border-white/30" />
             <div>
               <p className="text-white font-semibold text-sm">
                 {language === "ta" ? "பண்ணை உதவியாளர்" : "Farm Assistant"}
