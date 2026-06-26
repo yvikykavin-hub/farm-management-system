@@ -9,6 +9,13 @@ interface Message {
   time: string;
 }
 
+type SpeechRecognitionResultLike = { isFinal: boolean; [index: number]: { transcript: string } };
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: { length: number; [index: number]: SpeechRecognitionResultLike };
+};
+
 type SpeechRecognitionLike = {
   lang: string;
   continuous: boolean;
@@ -16,8 +23,9 @@ type SpeechRecognitionLike = {
   onstart: () => void;
   onend: () => void;
   onerror: () => void;
-  onresult: (event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => void;
+  onresult: (event: SpeechRecognitionEventLike) => void;
   start: () => void;
+  stop: () => void;
 };
 
 export default function ChatWidget({ language = "en" }: { language?: "ta" | "en" }) {
@@ -98,7 +106,13 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
     }
   };
 
-  const startVoice = () => {
+  const toggleVoice = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
     const w = window as unknown as {
       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
       SpeechRecognition?: new () => SpeechRecognitionLike;
@@ -112,15 +126,25 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
     const recognition = new SpeechRecognitionCtor();
     recognitionRef.current = recognition;
     recognition.lang = language === "ta" ? "ta-IN" : "en-IN";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
 
     recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
+
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      setInput(finalTranscript || interimTranscript);
     };
+
+    recognition.onend = () => setIsListening(false);
     recognition.onerror = () => setIsListening(false);
     recognition.start();
   };
@@ -164,6 +188,33 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
     window.addEventListener("touchend", handleEnd);
   };
 
+  const getChatWindowStyle = () => {
+    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth;
+    const chatWidth = 384; // w-96
+
+    // Determine vertical direction
+    // If button is in top half → open downward
+    // If button is in bottom half → open upward
+    const buttonBottom = pos.y;
+    const buttonFromTop = windowHeight - buttonBottom - 56;
+
+    const openDownward = buttonFromTop < windowHeight / 2;
+
+    // Determine horizontal position
+    const rightPos = Math.max(10, Math.min(pos.x, windowWidth - chatWidth - 10));
+
+    return {
+      position: "fixed" as const,
+      right: `${rightPos}px`,
+      ...(openDownward ? { top: `${buttonFromTop + 70}px` } : { bottom: `${buttonBottom + 70}px` }),
+      width: "384px",
+      height: `min(500px, calc(100vh - 120px))`,
+      maxHeight: "80vh",
+      zIndex: 50,
+    };
+  };
+
   const suggestedQuestions =
     language === "ta"
       ? [
@@ -196,13 +247,8 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
       {/* Chat window */}
       {isOpen && (
         <div
-          className="fixed z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-          style={{
-            bottom: `${pos.y + 64}px`,
-            right: `${pos.x}px`,
-            height: "min(500px, calc(100vh - 120px))",
-            maxHeight: "80vh",
-          }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+          style={getChatWindowStyle()}
         >
 
           {/* Header */}
@@ -274,12 +320,21 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
           <div className="p-3 bg-white border-t border-gray-100">
             <div className="flex gap-2">
               <button
-                onClick={startVoice}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
-                  isListening ? "bg-red-500 text-white animate-pulse" : "bg-green-50 text-green-700 hover:bg-green-100"
+                onClick={toggleVoice}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0 relative ${
+                  isListening ? "bg-red-500 text-white" : "bg-green-50 text-green-700 hover:bg-green-100"
                 }`}
               >
-                🎤
+                {isListening ? (
+                  <>
+                    {/* Pulsing record indicator */}
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full animate-ping" />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                    🔴
+                  </>
+                ) : (
+                  "🎤"
+                )}
               </button>
 
               <input
@@ -299,6 +354,14 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
                 →
               </button>
             </div>
+            {isListening && (
+              <div className="flex items-center gap-2 px-1 mt-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-xs text-red-500 font-medium">
+                  {language === "ta" ? "கேட்கிறது... மீண்டும் அழுத்தி நிறுத்துங்கள்" : "Listening... Click mic to stop"}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
