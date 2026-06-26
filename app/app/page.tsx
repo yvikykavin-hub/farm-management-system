@@ -86,6 +86,24 @@ export default function Dashboard() {
     setSaving(false);
   };
 
+  const deleteFarm = async (e: React.MouseEvent, farm: Farm) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      lang === "ta"
+        ? `${farm.name} நீக்கவா? இதை மீட்டெடுக்க முடியாது.`
+        : `Delete ${farm.name}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    const { error } = await supabase.from("farms").delete().eq("id", farm.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(lang === "ta" ? "நிலம் நீக்கப்பட்டது" : "Farm deleted successfully");
+    fetchFarms();
+  };
+
   const totalArea = farms.reduce((sum, f) => sum + Number(f.total_area), 0);
 
   const t = {
@@ -245,9 +263,18 @@ export default function Dashboard() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-primary font-bold text-sm">{farm.total_area}</span>
-                        <span className="text-primary text-xs font-medium ml-1">{t.acres}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span className="text-primary font-bold text-sm">{farm.total_area}</span>
+                          <span className="text-primary text-xs font-medium ml-1">{t.acres}</span>
+                        </div>
+                        <button
+                          onClick={(e) => deleteFarm(e, farm)}
+                          title={lang === "ta" ? "நீக்கு" : "Delete"}
+                          className="text-red-400 hover:text-red-600 text-sm p-1 shrink-0 transition-colors"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </div>
                   </Link>
