@@ -132,9 +132,9 @@ export default function Dashboard() {
     <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar lang={lang} setLang={setLang} />
 
-      <main className="flex-1 p-3 overflow-hidden overflow-x-hidden flex flex-col">
+      <main className="flex-1 p-3 overflow-y-auto overflow-x-hidden flex flex-col pb-20">
         <PageWrapper>
-        <div className="max-w-6xl mx-auto w-full flex flex-col gap-3 h-full">
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-3">
 
           {/* Header */}
           <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 shrink-0">
@@ -228,8 +228,8 @@ export default function Dashboard() {
           </div>
 
           {/* Farms List */}
-          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex-1 flex flex-col min-h-0">
-            <h2 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2 shrink-0">
+          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3">
+            <h2 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
               <span className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center text-xs">🌳</span>
               {t.myFarms}
             </h2>
@@ -249,7 +249,7 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-400 max-w-xs">{t.noFarms}</p>
               </div>
             ) : (
-              <div className="space-y-2 overflow-y-auto max-h-48">
+              <div className="space-y-2">
                 {farms.map((farm) => (
                   <Link key={farm.id} href={`/farms/${farm.id}`}>
                     <div className="flex flex-wrap justify-between items-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-primary/40 hover:bg-green-50/30 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] group">
