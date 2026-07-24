@@ -4,11 +4,12 @@ import toast from "react-hot-toast";
 import PageWrapper from "../../../../components/PageWrapper";
 import { useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../../components/Sidebar";
 import { supabase } from "../../../../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../../../../lib/geminiOCR";
 import { t } from "../../../../lib/labels";
+import { useLang } from "../../../../lib/useLang";
 import { milkRateWarning } from "../../../../lib/validators";
 
 type Cow = {
@@ -104,9 +105,10 @@ const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
 export default function CowDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const [cow, setCow] = useState<Cow | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "milk" | "income" | "expenses">("overview");
@@ -213,6 +215,19 @@ export default function CowDetailPage() {
       toast.error(t(lang, "saveFailedMessage"));
     }
     setSavingOverview(false);
+  };
+
+  const handleDeleteAnimal = async () => {
+    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+
+    const { error } = await supabase.from("cows").delete().eq("id", id);
+
+    if (error) {
+      toast.error(t(lang, "couldNotDelete"));
+    } else {
+      toast.success(t(lang, "deletedSuccessfully"));
+      router.push("/livestock/cows");
+    }
   };
 
   // ---------------- Milk Collection: rate ----------------
@@ -649,6 +664,14 @@ export default function CowDetailPage() {
                     </>
                   )}
                   <div className="sm:col-span-2"><span className="text-gray-500">{t(lang, "notes")}:</span> <span className="font-medium text-gray-800">{cow?.notes || "—"}</span></div>
+                  <div className="sm:col-span-2 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={handleDeleteAnimal}
+                      className="bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-4 py-2 text-sm font-semibold transition"
+                    >
+                      🗑️ {t(lang, "deleteAnimal")}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

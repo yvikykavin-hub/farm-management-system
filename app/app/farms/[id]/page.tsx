@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
+import { useLang } from "../../../lib/useLang";
 
 type Farm = {
   id: string;
@@ -90,7 +91,7 @@ export default function FarmDetail() {
   const params = useParams();
   const id = params.id as string;
 
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [cultivations, setCultivations] = useState<Cultivation[]>([]);
   const [loading, setLoading] = useState(true);

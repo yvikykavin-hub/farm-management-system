@@ -9,6 +9,7 @@ import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
+import { useLang } from "../../../lib/useLang";
 
 type Cow = {
   id: string;
@@ -59,7 +60,7 @@ const rateForDate = (rates: MilkRate[], date: string) => {
 };
 
 export default function CowsListPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const [cows, setCows] = useState<Cow[]>([]);
   const [collections, setCollections] = useState<MilkCollection[]>([]);
   const [rates, setRates] = useState<MilkRate[]>([]);
@@ -128,6 +129,19 @@ export default function CowsListPage() {
     setForm(emptyForm);
     setFormErrors({});
     setModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+
+    const { error } = await supabase.from("cows").delete().eq("id", id);
+
+    if (error) {
+      toast.error(t(lang, "couldNotDelete"));
+    } else {
+      toast.success(t(lang, "deletedSuccessfully"));
+      fetchAll();
+    }
   };
 
   const saveCow = async () => {
@@ -252,23 +266,31 @@ export default function CowsListPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {cows.map((cow, i) => (
                 <AnimatedCard key={cow.id} delay={Math.min(i, 8) * 0.05}>
-                <Link href={`/livestock/cows/${cow.id}`}>
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-3 cursor-pointer">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-900">🐄 {cow.name}</h3>
-                        <p className="text-xs text-gray-500">{cow.tag_number || "—"}</p>
-                      </div>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-3">
+                  <div className="flex items-start justify-between">
+                    <Link href={`/livestock/cows/${cow.id}`} className="flex-1 cursor-pointer">
+                      <h3 className="text-sm font-bold text-gray-900">🐄 {cow.name}</h3>
+                      <p className="text-xs text-gray-500">{cow.tag_number || "—"}</p>
+                    </Link>
+                    <div className="flex items-center gap-1 shrink-0">
                       <span className={`${STATUS_BADGE[cow.current_status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
                         {cow.current_status}
                       </span>
+                      <button
+                        onClick={() => handleDelete(cow.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors duration-200 p-1"
+                      >
+                        🗑️
+                      </button>
                     </div>
+                  </div>
+                  <Link href={`/livestock/cows/${cow.id}`} className="cursor-pointer">
                     <p className="text-xs text-gray-600 mt-1">{cow.breed || "—"}</p>
                     <p className="text-xs text-gray-600 mt-1 font-medium">
                       {t(lang, "avgPerDay")}: {avgLitresPerDay(cow.id).toFixed(1)} L
                     </p>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
                 </AnimatedCard>
               ))}
             </div>

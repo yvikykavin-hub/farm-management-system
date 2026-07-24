@@ -8,6 +8,7 @@ import PageWrapper from "../../../components/PageWrapper";
 import CropRecordSection from "../../../components/CropRecordSection";
 import toast from "react-hot-toast";
 import { supabase } from "../../../lib/supabase";
+import { useLang } from "../../../lib/useLang";
 import { phoneError as getPhoneError } from "../../../lib/validators";
 
 type Cultivation = {
@@ -618,7 +619,7 @@ export default function CropDetail() {
   const router = useRouter();
   const id = params.id as string;
 
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [cultivation, setCultivation] = useState<Cultivation | null>(null);

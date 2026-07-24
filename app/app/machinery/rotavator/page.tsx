@@ -6,6 +6,7 @@ import Sidebar from "../../../components/Sidebar";
 import PageWrapper from "../../../components/PageWrapper";
 import MachineryRecordSection from "../../../components/MachineryRecordSection";
 import { supabase } from "../../../lib/supabase";
+import { useLang } from "../../../lib/useLang";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const formatDMY = (iso: string | null | undefined) => {
@@ -15,7 +16,7 @@ const formatDMY = (iso: string | null | undefined) => {
 };
 
 export default function RotavatorPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [activeTab, setActiveTab] = useState<"overview" | "blades" | "expenses">("overview");

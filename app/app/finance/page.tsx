@@ -19,6 +19,7 @@ import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
+import { useLang } from "../../lib/useLang";
 
 type Cultivation = { id: string; farm_id: string; crop_type: string };
 type Farm = { id: string; name: string };
@@ -77,7 +78,7 @@ const CustomTooltip = ({
 const toggleIn = (arr: string[], val: string) => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 
 export default function FinancePage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [loading, setLoading] = useState(true);

@@ -7,6 +7,7 @@ import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
+import { useLang } from "../../lib/useLang";
 
 type Farm = {
   id: string;
@@ -53,7 +54,7 @@ const WATER_SOURCE_LABELS: Record<string, { en: string; ta: string }> = {
 };
 
 export default function LandDetailsPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [farms, setFarms] = useState<Farm[]>([]);

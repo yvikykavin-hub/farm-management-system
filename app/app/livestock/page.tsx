@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { t } from "../../lib/labels";
+import { useLang } from "../../lib/useLang";
 
 export default function LivestockLandingPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
 
   const cards = [
     { href: "/livestock/cows", icon: "🐄", label: t(lang, "cows") },

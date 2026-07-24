@@ -9,6 +9,7 @@ import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
+import { useLang } from "../../../lib/useLang";
 
 type Hen = {
   id: string;
@@ -55,7 +56,7 @@ const emptyForm = {
 };
 
 export default function HensListPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const [hens, setHens] = useState<Hen[]>([]);
   const [sales, setSales] = useState<HenSale[]>([]);
   const [expenses, setExpenses] = useState<HenExpense[]>([]);
@@ -100,6 +101,19 @@ export default function HensListPage() {
     setForm(emptyForm);
     setFormErrors({});
     setModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+
+    const { error } = await supabase.from("hens").delete().eq("id", id);
+
+    if (error) {
+      toast.error(t(lang, "couldNotDelete"));
+    } else {
+      toast.success(t(lang, "deletedSuccessfully"));
+      fetchAll();
+    }
   };
 
   const saveHen = async () => {
@@ -217,23 +231,31 @@ export default function HensListPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {hens.map((hen, i) => (
                 <AnimatedCard key={hen.id} delay={Math.min(i, 8) * 0.05}>
-                <Link href={`/livestock/hens/${hen.id}`}>
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-3 cursor-pointer">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-900">🐔 {hen.name}</h3>
-                        <p className="text-xs text-gray-500">{hen.tag_number || "—"}</p>
-                      </div>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-3">
+                  <div className="flex items-start justify-between">
+                    <Link href={`/livestock/hens/${hen.id}`} className="flex-1 cursor-pointer">
+                      <h3 className="text-sm font-bold text-gray-900">🐔 {hen.name}</h3>
+                      <p className="text-xs text-gray-500">{hen.tag_number || "—"}</p>
+                    </Link>
+                    <div className="flex items-center gap-1 shrink-0">
                       <span className={`${STATUS_BADGE[hen.current_status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
                         {hen.current_status}
                       </span>
+                      <button
+                        onClick={() => handleDelete(hen.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors duration-200 p-1"
+                      >
+                        🗑️
+                      </button>
                     </div>
+                  </div>
+                  <Link href={`/livestock/hens/${hen.id}`} className="cursor-pointer">
                     <p className="text-xs text-gray-600 mt-1">{hen.breed || "—"}</p>
                     <p className="text-xs text-gray-600 mt-1 font-medium">
                       {t(lang, "weight")}: {hen.weight_kg != null ? `${hen.weight_kg} kg` : "—"}
                     </p>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
                 </AnimatedCard>
               ))}
             </div>

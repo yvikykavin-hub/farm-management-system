@@ -196,6 +196,10 @@ export const labels = {
     transport: "Transport",
     allFarmsShort: "All Farms",
     editExpense: "Edit Expense",
+    deleteAnimal: "Delete Animal",
+    deleteConfirmAnimal: "Delete this animal? This cannot be undone.",
+    deletedSuccessfully: "Deleted successfully!",
+    couldNotDelete: "Could not delete",
   },
   ta: {
     livestock: "கால்நடை மேலாண்மை",
@@ -379,6 +383,10 @@ export const labels = {
     transport: "போக்குவரத்து",
     allFarmsShort: "அனைத்தும்",
     editExpense: "செலவைத் திருத்து",
+    deleteAnimal: "விலங்கை நீக்கு",
+    deleteConfirmAnimal: "இந்த விலங்கை நீக்கவா? இதை மீட்டெடுக்க முடியாது.",
+    deletedSuccessfully: "நீக்கப்பட்டது!",
+    couldNotDelete: "நீக்க முடியவில்லை",
   },
 } as const;
 

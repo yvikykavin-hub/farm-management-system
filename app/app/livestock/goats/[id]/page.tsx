@@ -4,10 +4,11 @@ import toast from "react-hot-toast";
 import PageWrapper from "../../../../components/PageWrapper";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../../components/Sidebar";
 import { supabase } from "../../../../lib/supabase";
 import { t } from "../../../../lib/labels";
+import { useLang } from "../../../../lib/useLang";
 
 type Goat = {
   id: string;
@@ -68,9 +69,10 @@ const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
 export default function GoatDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const [goat, setGoat] = useState<Goat | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "income" | "expenses">("overview");
@@ -166,6 +168,19 @@ export default function GoatDetailPage() {
       toast.error(t(lang, "saveFailedMessage"));
     }
     setSavingOverview(false);
+  };
+
+  const handleDeleteAnimal = async () => {
+    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+
+    const { error } = await supabase.from("goats").delete().eq("id", id);
+
+    if (error) {
+      toast.error(t(lang, "couldNotDelete"));
+    } else {
+      toast.success(t(lang, "deletedSuccessfully"));
+      router.push("/livestock/goats");
+    }
   };
 
   // ---------------- Income (Sales) ----------------
@@ -386,6 +401,14 @@ export default function GoatDetailPage() {
                     </>
                   )}
                   <div className="sm:col-span-2"><span className="text-gray-500">{t(lang, "notes")}:</span> <span className="font-medium text-gray-800">{goat?.notes || "—"}</span></div>
+                  <div className="sm:col-span-2 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={handleDeleteAnimal}
+                      className="bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-4 py-2 text-sm font-semibold transition"
+                    >
+                      🗑️ {t(lang, "deleteAnimal")}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

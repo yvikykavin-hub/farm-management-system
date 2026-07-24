@@ -7,6 +7,7 @@ import Sidebar from "../../../components/Sidebar";
 import PageWrapper from "../../../components/PageWrapper";
 import MachineryRecordSection from "../../../components/MachineryRecordSection";
 import { supabase } from "../../../lib/supabase";
+import { useLang } from "../../../lib/useLang";
 
 type TractorUsage = {
   id: string;
@@ -78,7 +79,7 @@ const convertToBase64 = (file: File): Promise<string> => {
 };
 
 export default function TractorPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [activeTab, setActiveTab] = useState<"overview" | "diesel" | "usage" | "maintenance" | "photos">("overview");

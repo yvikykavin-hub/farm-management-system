@@ -5,6 +5,7 @@ import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import PageWrapper from "../../components/PageWrapper";
 import { supabase } from "../../lib/supabase";
+import { useLang } from "../../lib/useLang";
 
 type Cultivation = {
   id: string;
@@ -62,7 +63,7 @@ const daysBetween = (start: string, end: string) => {
 };
 
 export default function CropsPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [farms, setFarms] = useState<Farm[]>([]);

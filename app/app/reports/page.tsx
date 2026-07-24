@@ -7,6 +7,7 @@ import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
+import { useLang } from "../../lib/useLang";
 
 type Cultivation = { id: string; farm_id: string; crop_type: string };
 type Farm = { id: string; name: string };
@@ -98,7 +99,7 @@ type ReportSnapshot = {
 };
 
 export default function ReportsPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [loading, setLoading] = useState(true);

@@ -7,6 +7,7 @@ import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
+import { useLang } from "../../../lib/useLang";
 
 type GeneralExpense = {
   id: string;
@@ -59,7 +60,7 @@ const emptyForm = {
 };
 
 export default function GeneralExpensesPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const [expenses, setExpenses] = useState<GeneralExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [farmFilter, setFarmFilter] = useState("");

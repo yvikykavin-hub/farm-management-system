@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import Sidebar from "../../../components/Sidebar";
 import PageWrapper from "../../../components/PageWrapper";
 import { supabase } from "../../../lib/supabase";
+import { useLang } from "../../../lib/useLang";
 
 type Farm = {
   id: string;
@@ -120,7 +121,7 @@ export default function LandDetailPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [activeTab, setActiveTab] = useState<"overview" | "location" | "drawing">("overview");

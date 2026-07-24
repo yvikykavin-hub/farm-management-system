@@ -7,6 +7,7 @@ import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
+import { useLang } from "../../lib/useLang";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const formatDMY = (iso: string | null | undefined) => {
@@ -18,7 +19,7 @@ const formatDMY = (iso: string | null | undefined) => {
 const DEFAULT_OIL_CHANGE_INTERVAL = 300;
 
 export default function MachineryLandingPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [loading, setLoading] = useState(true);

@@ -7,9 +7,10 @@ import toast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import PageWrapper from "../../components/PageWrapper";
 import { supabase } from "../../lib/supabase";
+import { useLang } from "../../lib/useLang";
 
 export default function SettingsPage() {
-  const [lang, setLang] = useState<"ta" | "en">("en");
+  const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
