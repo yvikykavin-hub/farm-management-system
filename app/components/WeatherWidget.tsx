@@ -78,11 +78,7 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
 
   if (loading || !weather) {
     return (
-      <div className="flex-shrink-0 w-full md:w-auto bg-gradient-to-br from-blue-50 to-sky-100 border border-blue-200 rounded-2xl p-3 min-w-[160px] text-center shadow-sm animate-pulse">
-        <div className="h-6 w-16 bg-blue-200/60 rounded mx-auto mb-2" />
-        <div className="h-3 w-20 bg-blue-200/60 rounded mx-auto mb-2" />
-        <div className="h-3 w-24 bg-blue-200/60 rounded mx-auto" />
-      </div>
+      <div className="w-full bg-gradient-to-r from-blue-50 to-sky-100 border border-blue-200 rounded-xl px-4 py-2 h-9 animate-pulse" />
     );
   }
 
@@ -90,31 +86,25 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
   const condition = language === "ta" ? weatherTa : weatherEn;
 
   return (
-    <div className="flex-shrink-0 w-full md:w-auto bg-gradient-to-br from-blue-50 to-sky-100 border border-blue-200 rounded-2xl p-3 min-w-[160px] text-center shadow-sm relative overflow-hidden">
-      {/* Animated background circle */}
-      <div className="absolute top-0 right-0 w-12 h-12 bg-white/30 rounded-full -mr-4 -mt-4 animate-pulse" />
+    <div className="w-full bg-gradient-to-r from-blue-50 to-sky-100 border border-blue-200 rounded-xl px-3 sm:px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto">
+      {/* Left: icon + temp + condition */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <span className="text-base sm:text-lg" style={{ animation: "float 3s ease-in-out infinite" }}>
+          {weatherIcon}
+        </span>
+        <span className="text-xs sm:text-sm font-bold text-gray-900">{weather.temperature}°C</span>
+        <span className="text-xs text-gray-600">{condition}</span>
+      </div>
 
-      <div className="relative z-10">
-        {/* Weather icon + temp */}
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="text-2xl" style={{ animation: "float 3s ease-in-out infinite" }}>
-            {weatherIcon}
-          </span>
-          <span className="text-xl font-bold text-gray-900">{weather.temperature}°C</span>
-        </div>
+      {/* Middle: location */}
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-xs text-blue-500">📍 Kangayam</span>
+      </div>
 
-        {/* Condition */}
-        <p className="text-xs font-medium text-gray-700 mb-1">{condition}</p>
-
-        {/* Details in one line */}
-        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-          <span>💧{weather.humidity}%</span>
-          <span>•</span>
-          <span>🌬️{weather.windSpeed}km/h</span>
-        </div>
-
-        {/* Location */}
-        <p className="text-xs text-blue-500 mt-1">📍 Kangayam</p>
+      {/* Right: humidity + wind */}
+      <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-500 shrink-0">
+        <span>💧 {weather.humidity}%</span>
+        <span>🌬️ {weather.windSpeed}km/h</span>
       </div>
     </div>
   );
