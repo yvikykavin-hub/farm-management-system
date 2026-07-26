@@ -421,23 +421,55 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
           {/* Input area */}
           <div className="p-3 bg-white border-t border-gray-100">
             <div className="flex gap-2">
-              <button
-                onClick={toggleVoice}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0 relative ${
-                  isListening ? "bg-red-500 text-white" : "bg-green-50 text-green-700 hover:bg-green-100"
-                }`}
-              >
-                {isListening ? (
-                  <>
-                    {/* Pulsing record indicator */}
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full animate-ping" />
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
-                    🔴
-                  </>
-                ) : (
-                  "🎤"
-                )}
-              </button>
+              {isListening ? (
+                <div className="flex items-center gap-2 flex-1">
+                  {/* Animated recording button */}
+                  <button
+                    onClick={toggleVoice}
+                    className="relative w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center flex-shrink-0 shadow-lg"
+                  >
+                    {/* Outer pulse ring 1 */}
+                    <span className="absolute inset-0 rounded-xl bg-red-400 animate-ping opacity-40" />
+
+                    {/* Outer pulse ring 2 */}
+                    <span
+                      className="absolute -inset-1 rounded-xl bg-red-300 animate-ping opacity-20"
+                      style={{ animationDelay: "150ms" }}
+                    />
+
+                    {/* Stop icon */}
+                    <span className="relative z-10 w-3 h-3 bg-white rounded-sm" />
+                  </button>
+
+                  {/* Sound wave animation */}
+                  <div className="flex items-center gap-0.5 flex-1 h-8 px-2 bg-red-50 rounded-xl border border-red-100">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                      <div
+                        key={i}
+                        className="w-0.5 bg-red-400 rounded-full animate-wave"
+                        style={{
+                          height: `${Math.random() * 20 + 8}px`,
+                          animationDelay: `${i * 100}ms`,
+                          animationDuration: `${Math.random() * 400 + 400}ms`,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Recording duration text */}
+                  <span className="text-red-500 text-xs font-medium flex-shrink-0">
+                    {language === "ta" ? "பேசுங்கள்..." : "Listening..."}
+                  </span>
+                </div>
+              ) : (
+                /* Normal mic button */
+                <button
+                  onClick={toggleVoice}
+                  className="w-10 h-10 rounded-xl bg-green-50 text-green-700 hover:bg-green-100 flex items-center justify-center transition-all duration-200 flex-shrink-0 text-lg"
+                >
+                  🎤
+                </button>
+              )}
 
               <input
                 type="text"
@@ -457,10 +489,18 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
               </button>
             </div>
             {isListening && (
-              <div className="flex items-center gap-2 px-1 mt-1">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <div className="flex items-center gap-2 px-1 mt-1.5">
+                <div className="flex gap-0.5">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="w-1 h-1 bg-red-500 rounded-full animate-bounce"
+                      style={{ animationDelay: `${i * 150}ms` }}
+                    />
+                  ))}
+                </div>
                 <span className="text-xs text-red-500 font-medium">
-                  {language === "ta" ? "கேட்கிறது... மீண்டும் அழுத்தி நிறுத்துங்கள்" : "Listening... Click mic to stop"}
+                  {language === "ta" ? "கேட்கிறது... மீண்டும் அழுத்தி நிறுத்துங்கள்" : "Recording... tap mic to stop"}
                 </span>
               </div>
             )}
