@@ -39,7 +39,39 @@ type FarmDrawing = {
   file_type: string | null;
 };
 
+type LandDocument = {
+  id: string;
+  farm_id: string;
+  title: string;
+  document_type: string;
+  file_data: string;
+  file_type: string;
+  file_name: string;
+  notes: string | null;
+};
+
 const MAX_RECOMMENDED_PDF_BYTES = 5 * 1024 * 1024;
+const MAX_RECOMMENDED_DOCUMENT_BYTES = 5 * 1024 * 1024;
+
+const DOCUMENT_TYPES = [
+  { value: "patta", en: "Patta", ta: "பட்டா" },
+  { value: "survey", en: "Survey Document", ta: "சர்வே ஆவணம்" },
+  { value: "registration", en: "Land Registration", ta: "பதிவு ஆவணம்" },
+  { value: "tax_receipt", en: "Tax Receipt", ta: "வரி ரசீது" },
+  { value: "court", en: "Court Document", ta: "நீதிமன்ற ஆவணம்" },
+  { value: "photo", en: "Photo", ta: "புகைப்படம்" },
+  { value: "other", en: "Other", ta: "மற்றவை" },
+] as const;
+
+const DOCUMENT_TYPE_BADGE: Record<string, string> = {
+  patta: "bg-blue-100 text-blue-700",
+  survey: "bg-green-100 text-green-700",
+  registration: "bg-purple-100 text-purple-700",
+  tax_receipt: "bg-amber-100 text-amber-700",
+  court: "bg-red-100 text-red-700",
+  photo: "bg-pink-100 text-pink-700",
+  other: "bg-gray-100 text-gray-700",
+};
 
 const WATER_SOURCES = [
   { value: "borewell", en: "Borewell", ta: "துளை கிணறு" },
@@ -124,7 +156,7 @@ export default function LandDetailPage() {
   const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "location" | "drawing">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "location" | "drawing" | "documents">("overview");
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -166,10 +198,21 @@ export default function LandDetailPage() {
   const [savingDrawing, setSavingDrawing] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
 
+  // Documents tab
+  const [documents, setDocuments] = useState<LandDocument[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [docTitle, setDocTitle] = useState("");
+  const [docType, setDocType] = useState<typeof DOCUMENT_TYPES[number]["value"]>("patta");
+  const [docNotes, setDocNotes] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [savingDocument, setSavingDocument] = useState(false);
+
   useEffect(() => {
     if (id) {
       fetchFarm();
       fetchDrawings();
+      fetchDocuments();
     }
   }, [id]);
 
@@ -202,6 +245,13 @@ export default function LandDetailPage() {
     const { data, error } = await supabase.from("farm_drawings").select("*").eq("farm_id", id).order("id", { ascending: false });
     if (!error && data) setDrawings(data);
     setLoadingDrawings(false);
+  };
+
+  const fetchDocuments = async () => {
+    setLoadingDocuments(true);
+    const { data, error } = await supabase.from("land_documents").select("*").eq("farm_id", id).order("id", { ascending: false });
+    if (!error && data) setDocuments(data);
+    setLoadingDocuments(false);
   };
 
   const saveBasicInfo = async () => {
@@ -341,6 +391,69 @@ export default function LandDetailPage() {
     if (!error) fetchDrawings();
   };
 
+  const openAddDocument = () => {
+    setDocTitle("");
+    setDocType("patta");
+    setDocNotes("");
+    setDocFile(null);
+    setDocumentModalOpen(true);
+  };
+
+  const saveDocument = async () => {
+    if (!docTitle.trim() || !docType || !docFile) {
+      toast.error(L("Title, document type and file are required.", "தலைப்பு, ஆவண வகை மற்றும் கோப்பு தேவை."));
+      return;
+    }
+    setSavingDocument(true);
+    try {
+      const base64 = await convertToBase64(docFile);
+      const fileType = docFile.type.includes("pdf") ? "pdf" : "image";
+      const { error } = await supabase.from("land_documents").insert({
+        farm_id: id,
+        title: docTitle.trim(),
+        document_type: docType,
+        file_data: base64,
+        file_type: fileType,
+        file_name: docFile.name,
+        notes: docNotes.trim() || null,
+      });
+      if (error) {
+        console.error("Error saving document:", error);
+        toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      } else {
+        setDocumentModalOpen(false);
+        fetchDocuments();
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+    }
+    setSavingDocument(false);
+  };
+
+  const deleteDocument = async (documentId: string) => {
+    if (!confirm(L("Delete this document? Cannot be undone.", "இந்த ஆவணத்தை நீக்கவா?"))) return;
+    const { error } = await supabase.from("land_documents").delete().eq("id", documentId);
+    if (!error) fetchDocuments();
+  };
+
+  const viewDocument = (doc: LandDocument) => {
+    const newTab = window.open();
+    if (!newTab) return;
+    if (doc.file_type === "pdf") {
+      newTab.document.write(`<iframe src="${doc.file_data}" width="100%" height="100%" style="border:0"></iframe>`);
+    } else {
+      newTab.document.write(
+        `<img src="${doc.file_data}" style="max-width:100%;height:auto;display:block;margin:0 auto;" />`
+      );
+    }
+  };
+
+  const documentTypeLabel = (value: string) => {
+    const t = DOCUMENT_TYPES.find((d) => d.value === value);
+    return t ? L(t.en, t.ta) : value;
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen overflow-hidden bg-page">
@@ -380,6 +493,7 @@ export default function LandDetailPage() {
               ["overview", L("Overview", "நில கண்ணோட்டம்")],
               ["location", L("Location", "இடம்")],
               ["drawing", L("Land Drawing", "நில வரைபடம்")],
+              ["documents", L("Documents", "ஆவணங்கள்")],
             ] as const).map(([key, label]) => (
               <button
                 key={key}
@@ -665,6 +779,75 @@ export default function LandDetailPage() {
             </div>
           )}
 
+          {/* DOCUMENTS TAB */}
+          {activeTab === "documents" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-end">
+                <button onClick={openAddDocument} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                  + {L("Upload Document", "ஆவணம் பதிவேற்ற")}
+                </button>
+              </div>
+
+              {loadingDocuments ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-gray-200 rounded-2xl animate-pulse" />)}
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="text-5xl mb-4">📄</div>
+                  <h3 className="text-base font-semibold text-gray-700">
+                    {L("No documents uploaded yet", "ஆவணங்கள் எதுவும் பதிவேற்றப்படவில்லை")}
+                  </h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {L("Upload your land documents, patta, survey maps etc.", "பட்டா, சர்வே வரைபடம் போன்ற ஆவணங்களை பதிவேற்றுங்கள்")}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {documents.map((d) => {
+                    const isPdf = d.file_type === "pdf";
+                    return (
+                      <div key={d.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        {isPdf ? (
+                          <div
+                            className="w-full h-32 border-b border-gray-100 flex items-center justify-center bg-gray-50 cursor-pointer text-5xl"
+                            onClick={() => viewDocument(d)}
+                          >
+                            📄
+                          </div>
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={d.file_data}
+                            alt={d.title}
+                            className="w-full h-32 object-cover cursor-pointer"
+                            onClick={() => viewDocument(d)}
+                          />
+                        )}
+                        <div className="p-2">
+                          <p className="text-xs font-bold text-gray-900">{d.title}</p>
+                          <span className={`${DOCUMENT_TYPE_BADGE[d.document_type] ?? DOCUMENT_TYPE_BADGE.other} inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1`}>
+                            {documentTypeLabel(d.document_type)}
+                          </span>
+                          {isPdf && <p className="text-[11px] text-gray-500 mt-1 truncate">{d.file_name}</p>}
+                          {d.notes && <p className="text-[11px] text-gray-500 mt-0.5">{d.notes}</p>}
+                          <div className="flex items-center gap-2 mt-1">
+                            <button onClick={() => viewDocument(d)} className="text-[11px] text-primary hover:underline">
+                              👁️ {L("View", "காண")}
+                            </button>
+                            <button onClick={() => deleteDocument(d.id)} className="text-[11px] text-danger hover:underline">
+                              🗑️ {L("Delete", "நீக்கு")}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
         </PageWrapper>
       </main>
@@ -754,6 +937,97 @@ export default function LandDetailPage() {
                   {savingDrawing ? "..." : L("Save", "சேமி")}
                 </button>
                 <button onClick={() => setDrawingModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                  {L("Cancel", "ரத்து")}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+      {documentModalOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-primary">{L("Upload Document", "ஆவணம் பதிவேற்ற")}</h2>
+              <button onClick={() => setDocumentModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>{L("Title", "தலைப்பு")} *</label>
+                <input
+                  type="text"
+                  placeholder={L("e.g. Patta Document, Survey Map", "எ.கா. பட்டா ஆவணம், சர்வே வரைபடம்")}
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>{L("Document Type", "ஆவண வகை")} *</label>
+                <select
+                  value={docType}
+                  onChange={(e) => setDocType(e.target.value as typeof DOCUMENT_TYPES[number]["value"])}
+                  className={inputCls}
+                >
+                  {DOCUMENT_TYPES.map((o) => (
+                    <option className="text-gray-900" key={o.value} value={o.value}>{`${o.en} (${o.ta})`}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>{L("File", "கோப்பு")} *</label>
+                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 hover:bg-green-50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="text-3xl mb-2">📄</div>
+                  <p className="text-gray-700 font-medium text-sm">
+                    {L("Click to upload document", "ஆவணத்தை பதிவேற்ற கிளிக் செய்யவும்")}
+                  </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    {docFile ? docFile.name : L("PDF, JPG, PNG supported", "PDF, JPG, PNG ஆதரிக்கப்படும்")}
+                  </p>
+                </div>
+                {docFile && docFile.size > MAX_RECOMMENDED_DOCUMENT_BYTES && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    ⚠️ {L(
+                      `File is large (${(docFile.size / (1024 * 1024)).toFixed(1)}MB). Consider compressing.`,
+                      `கோப்பு பெரியது (${(docFile.size / (1024 * 1024)).toFixed(1)}MB). சுருக்குவதை பரிசீலிக்கவும்.`
+                    )}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className={labelCls}>{L("Notes", "குறிப்புகள்")}</label>
+                <textarea
+                  value={docNotes}
+                  onChange={(e) => setDocNotes(e.target.value)}
+                  className={inputCls}
+                  rows={2}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveDocument} disabled={savingDocument} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                  {savingDocument ? "..." : L("Save", "சேமி")}
+                </button>
+                <button onClick={() => setDocumentModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
