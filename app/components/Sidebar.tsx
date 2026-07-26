@@ -53,7 +53,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
       )}
 
       <aside
-        className={`w-64 h-screen bg-gradient-to-b from-[#1B4332] to-[#2D6A4F] flex flex-col shadow-xl shrink-0 fixed sm:static z-50 transition-transform duration-200 ${
+        className={`w-64 h-dvh bg-gradient-to-b from-[#1B4332] to-[#2D6A4F] flex flex-col shadow-xl shrink-0 fixed sm:static z-50 transition-transform duration-200 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
         }`}
       >
