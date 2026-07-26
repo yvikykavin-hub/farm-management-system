@@ -113,15 +113,14 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
   const advice = farmAdvice(weather.weatherCode, language);
 
   return (
-    <div className="w-full overflow-hidden rounded-xl shadow-sm relative">
-      {/* Animated gradient background */}
+    <div className="w-full overflow-hidden rounded-xl border border-sky-100 shadow-sm relative">
+      {/* Soft gradient background */}
       <div
         className={`absolute inset-0 ${
           isDay
-            ? "bg-gradient-to-r from-amber-100 via-sky-100 to-blue-200"
-            : "bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-800"
-        } animate-pulse`}
-        style={{ animationDuration: "4s" }}
+            ? "bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50"
+            : "bg-gradient-to-r from-slate-100 via-blue-100 to-indigo-100"
+        }`}
       />
 
       {/* Content */}
@@ -131,10 +130,8 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
           <span className="text-xl animate-bounce" style={{ animationDuration: "2s" }}>
             {weatherIcon}
           </span>
-          <span className={`text-sm font-bold ${isDay ? "text-gray-900" : "text-white"}`}>
-            {weather.temperature}°C
-          </span>
-          <span className={`text-xs hidden sm:block ${isDay ? "text-gray-600" : "text-gray-300"}`}>{condition}</span>
+          <span className="text-sm font-bold text-gray-700">{weather.temperature}°C</span>
+          <span className="text-xs hidden sm:block text-gray-500">{condition}</span>
         </div>
 
         {/* Middle: location with pin animation */}
@@ -142,20 +139,18 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
           <span className="text-xs animate-pulse" style={{ animationDuration: "3s" }}>
             📍
           </span>
-          <span className={`text-xs font-medium ${isDay ? "text-blue-600" : "text-blue-300"}`}>
-            V. Karukkampalayam, Sivagiri
-          </span>
+          <span className="text-xs font-medium text-sky-500">V. Karukkampalayam, Sivagiri</span>
         </div>
 
         {/* Right: weather details */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-1">
             <span className="text-sm">💧</span>
-            <span className={`text-xs ${isDay ? "text-gray-600" : "text-gray-300"}`}>{weather.humidity}%</span>
+            <span className="text-xs text-gray-400">{weather.humidity}%</span>
           </div>
           <div className="items-center gap-1 hidden sm:flex">
             <span className="text-sm">🌬️</span>
-            <span className={`text-xs ${isDay ? "text-gray-600" : "text-gray-300"}`}>{weather.windSpeed}km/h</span>
+            <span className="text-xs text-gray-400">{weather.windSpeed}km/h</span>
           </div>
           {/* Farming advice based on weather */}
           <div
