@@ -33,7 +33,6 @@ export default function SmartAlerts({ language = "en" }: { language?: "ta" | "en
       { data: settings },
       { data: oilRecords },
       { data: pendingPayments },
-      { data: activeCrops },
     ] = await Promise.all([
       supabase.from("milk_collections").select("collection_date, morning_litres, evening_litres"),
       supabase.from("expense_records").select("expense_date, amount"),
@@ -41,7 +40,6 @@ export default function SmartAlerts({ language = "en" }: { language?: "ta" | "en
       supabase.from("tractor_settings").select("oil_change_interval_hours").limit(1).maybeSingle(),
       supabase.from("tractor_engine_oil").select("hours_at_service").order("service_date", { ascending: false }).limit(1),
       supabase.from("milk_payments").select("id").eq("payment_status", "pending"),
-      supabase.from("cultivations").select("crop_type, start_date").is("end_date", null),
     ]);
 
     const detected: Alert[] = [];
@@ -127,20 +125,6 @@ export default function SmartAlerts({ language = "en" }: { language?: "ta" | "en
         ),
       });
     }
-
-    // Alert 5 — Long running crop
-    (activeCrops ?? []).forEach((crop) => {
-      if (!crop.start_date) return;
-      const days = Math.floor((Date.now() - new Date(crop.start_date).getTime()) / (1000 * 60 * 60 * 24));
-      if (days > 300) {
-        detected.push({
-          type: "info",
-          icon: "🌾",
-          title: L(`${crop.crop_type} Running Long`, `${crop.crop_type} நீண்ட காலமாக உள்ளது`),
-          message: L(`${days} days active — check status`, `${days} நாட்களாக செயலில் உள்ளது — நிலையை சரிபார்க்கவும்`),
-        });
-      }
-    });
 
     setAlerts(detected);
   };

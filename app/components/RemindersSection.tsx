@@ -167,18 +167,19 @@ export default function RemindersSection({ language = "en" }: { language?: "ta" 
       if (!crop.start_date) continue;
       const days = daysSince(crop.start_date);
 
-      let milestone: 30 | 60 | null = null;
-      if (days >= 60) milestone = 60;
-      else if (days >= 30) milestone = 30;
+      let milestone: "first" | "second" | null = null;
+      if (days >= 60) milestone = "second";
+      else if (days >= 30) milestone = "first";
       if (!milestone) continue;
 
       const label = `${crop.crop_type}${farmName(crop.farm_id) ? ` — ${farmName(crop.farm_id)}` : ""}`;
-      const reminderTitle = `Fertilizer Due for ${label} (Day ${milestone})`;
+      const reminderTitle =
+        milestone === "first" ? `First Fertilizer Due for ${label}` : `Second Fertilizer Due for ${label}`;
       if (existingTitles.has(reminderTitle)) continue;
 
       await supabase.from("reminders").insert({
         title: reminderTitle,
-        description: `Your ${crop.crop_type} is ${days} days old`,
+        description: "Fertilizer application due",
         reminder_date: todayISO(),
         reminder_type: "fertilizer",
         related_to: "crop",
