@@ -260,15 +260,17 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
   const suggestedQuestions =
     language === "ta"
       ? [
-          "என் பண்ணையில் எந்த பயிர் உள்ளது?",
+          "எந்த பயிர் அதிக லாபம் தருகிறது?",
+          "மஞ்சள் சாகுபடி முழு செயல்முறை என்ன?",
+          "அடுத்த சீசனில் என்ன பயிர் பயிரிடலாம்?",
           "இந்த மாதம் பால் வருமானம் எவ்வளவு?",
-          "மொத்த செலவு என்ன?",
-          "டிராக்டர் ஆயில் மாற்ற எத்தனை மணி நேரம் உள்ளது?",
+          "டிராக்டர் ஆயில் மாற்ற எத்தனை மணி?",
         ]
       : [
-          "What crops are active on my farm?",
+          "Which crop gives highest profit?",
+          "What is the complete turmeric cultivation process?",
+          "What crop should I plant next season?",
           "What is my milk income this month?",
-          "What is my total expense?",
           "How many hours until tractor oil change?",
         ];
 

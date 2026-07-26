@@ -47,83 +47,206 @@ export async function POST(req: NextRequest) {
     { data: kalappaiBlades },
     { data: goats },
     { data: hens },
+    { data: fertilizerApplications },
+    { data: weedRemovals },
+    { data: harvestRecords },
+    { data: irrigationRecords },
   ] = await Promise.all([
     supabase.from("farms").select("*"),
-    supabase.from("cultivations").select("*").order("created_at", { ascending: false }).limit(20),
-    supabase.from("income_records").select("*").order("income_date", { ascending: false }).limit(20),
-    supabase.from("expense_records").select("*").order("expense_date", { ascending: false }).limit(20),
+    supabase.from("cultivations").select("*").order("created_at", { ascending: false }).limit(75),
+    supabase.from("income_records").select("*").order("income_date", { ascending: false }).limit(75),
+    supabase.from("expense_records").select("*").order("expense_date", { ascending: false }).limit(75),
     supabase.from("cows").select("*"),
-    supabase.from("milk_collections").select("*").order("collection_date", { ascending: false }).limit(30),
-    supabase.from("milk_payments").select("*").order("payment_date", { ascending: false }).limit(10),
-    supabase.from("tractor_usage").select("*").order("date", { ascending: false }).limit(10),
-    supabase.from("tractor_diesel").select("*").order("date", { ascending: false }).limit(10),
+    supabase.from("milk_collections").select("*").order("collection_date", { ascending: false }).limit(75),
+    supabase.from("milk_payments").select("*").order("payment_date", { ascending: false }).limit(75),
+    supabase.from("tractor_usage").select("*").order("date", { ascending: false }).limit(75),
+    supabase.from("tractor_diesel").select("*").order("date", { ascending: false }).limit(75),
     supabase.from("coconut_details").select("*"),
     supabase.from("turmeric_details").select("*"),
     supabase.from("kuchi_kilangu_details").select("*"),
     supabase.from("ellu_details").select("*"),
     supabase.from("nell_details").select("*"),
-    supabase.from("goat_income").select("*").limit(10),
-    supabase.from("goat_expenses").select("*").limit(10),
-    supabase.from("hen_income").select("*").limit(10),
-    supabase.from("hen_expenses").select("*").limit(10),
-    supabase.from("cow_expenses").select("*").limit(10),
+    supabase.from("goat_income").select("*").limit(75),
+    supabase.from("goat_expenses").select("*").limit(75),
+    supabase.from("hen_income").select("*").limit(75),
+    supabase.from("hen_expenses").select("*").limit(75),
+    supabase.from("cow_expenses").select("*").limit(75),
     supabase.from("milk_rates").select("*"),
-    supabase.from("tractor_engine_oil").select("*").limit(5),
+    supabase.from("tractor_engine_oil").select("*").limit(75),
     supabase.from("tractor_settings").select("*"),
-    supabase.from("rotavator_blades").select("*").limit(5),
-    supabase.from("kalappai_blades").select("*").limit(5),
+    supabase.from("rotavator_blades").select("*").limit(75),
+    supabase.from("kalappai_blades").select("*").limit(75),
     supabase.from("goats").select("*"),
     supabase.from("hens").select("*"),
+    supabase.from("fertilizer_applications").select("*").order("application_date", { ascending: false }).limit(500),
+    supabase.from("weed_removals").select("*").order("start_date", { ascending: false }).limit(500),
+    supabase.from("harvest_records").select("*").order("harvest_date", { ascending: false }).limit(500),
+    supabase.from("irrigation_records").select("*").order("irrigation_date", { ascending: false }).limit(500),
   ]);
 
+  // Sugarcane, onion, and fodder corn have no dedicated *_details table — their
+  // variety/quantity info lives directly on each cultivation row, so derive a
+  // sugarcane-specific slice from cultivations rather than querying a table
+  // that doesn't exist.
+  const sugarcaneDetails = cultivations?.filter((c) => c.crop_type === "sugarcane");
+
   const farmContext = `
-You are an expert farm assistant AI for Marutham FMS.
-You have access to ALL farm data below.
-Always perform calculations when asked (totals, averages, differences, profit/loss etc).
-Be specific with numbers — never say data not available if it exists in the context.
-Answer in ${language === "ta" ? "Tamil" : "English"} only.
-Use ₹ for money. Format numbers with Indian number system.
+You are an expert AI farm advisor for Marutham Farm
+Management System owned by a Tamil Nadu farmer.
 
-FARM DATA:
-Farms: ${JSON.stringify(farms)}
-Active Cultivations: ${JSON.stringify(cultivations?.filter((c) => !c.end_date))}
-Completed Cultivations: ${JSON.stringify(cultivations?.filter((c) => c.end_date))}
-Recent Income: ${JSON.stringify(incomeRecords)}
-Recent Expenses: ${JSON.stringify(expenseRecords)}
+You have access to COMPLETE historical farm data
+spanning multiple years. Use ALL this data for:
+1. Answering factual questions accurately
+2. Identifying patterns and trends
+3. Making predictions and recommendations
+4. Reconstructing complete cultivation processes
 
-Coconut Details: ${JSON.stringify(coconutDetails)}
-Turmeric Details: ${JSON.stringify(turmericDetails)}
-Kuchi Kilangu Details: ${JSON.stringify(kuchiKilanguDetails)}
-Ellu Details: ${JSON.stringify(elluDetails)}
-Nell (Rice) Details: ${JSON.stringify(nellDetails)}
-(Note: Sugarcane, Onion, and Fodder Corn variety/quantity info is stored directly on each cultivation's variety_name/quantity/quantity_unit fields above, not in a separate details table.)
+LANGUAGE: Answer in ${language === "ta" ? "Tamil" : "English"} only.
 
-Cows: ${JSON.stringify(cows)}
-Cow Expenses: ${JSON.stringify(cowExpenses)}
-Milk Rates: ${JSON.stringify(milkRates)}
-Recent Milk Collections: ${JSON.stringify(milkCollections)}
-Milk Payments: ${JSON.stringify(milkPayments)}
+FORMAT RULES:
+- Use ₹ for money with Indian number format
+- Use emojis to make answers readable
+- Structure answers with clear sections
+- For predictions: show year-by-year comparison
+- For processes: show month-by-month timeline
+- Keep answers clear and practical for farmers
 
-Goats: ${JSON.stringify(goats)}
-Goat Income: ${JSON.stringify(goatIncome)}
-Goat Expenses: ${JSON.stringify(goatExpenses)}
+PREDICTION RULES:
+When asked for best crop or recommendations:
+1. Compare ALL crops across ALL years
+2. Calculate average profit per crop
+3. Identify which conditions gave best results
+4. Recommend based on patterns
+5. Give confidence level (High/Medium/Low)
 
-Hens: ${JSON.stringify(hens)}
-Hen Income: ${JSON.stringify(henIncome)}
-Hen Expenses: ${JSON.stringify(henExpenses)}
+PROCESS RECONSTRUCTION RULES:
+When asked about cultivation process:
+1. Find ALL records for that crop
+2. Sort chronologically
+3. Build complete timeline:
+   - Planting details (variety, quantity, date)
+   - Monthly fertilizer applications
+   - Pesticide/spray schedule
+   - Weed removal activities
+   - Labour and costs
+   - Harvest details
+   - Income and profit
+4. Present as actionable guide
 
-Tractor Usage: ${JSON.stringify(tractorUsage)}
-Tractor Diesel: ${JSON.stringify(tractorDiesel)}
-Tractor Engine Oil: ${JSON.stringify(tractorEngineOil)}
-Tractor Settings: ${JSON.stringify(tractorSettings)}
-Rotavator Blades: ${JSON.stringify(rotavatorBlades)}
-Kalappai Blades: ${JSON.stringify(kalappaiBlades)}
+CALCULATION RULES:
+- Always calculate totals when asked
+- Show profit = income - expense
+- Show year-wise comparison when relevant
+- Calculate averages across seasons
 
-Answer the following question based on this data:
-${message}
+FARM DATA (Complete Historical Records):
+═══════════════════════════════════════
 
-Keep answer short and clear.
-Use emojis where appropriate.
+FARMS:
+${JSON.stringify(farms)}
+
+CULTIVATIONS (All years):
+${JSON.stringify(cultivations)}
+
+INCOME RECORDS (All years):
+${JSON.stringify(incomeRecords)}
+
+EXPENSE RECORDS (All years):
+${JSON.stringify(expenseRecords)}
+
+COWS:
+${JSON.stringify(cows)}
+
+MILK COLLECTIONS (All records):
+${JSON.stringify(milkCollections)}
+
+MILK PAYMENTS:
+${JSON.stringify(milkPayments)}
+
+MILK RATES HISTORY:
+${JSON.stringify(milkRates)}
+
+COW EXPENSES:
+${JSON.stringify(cowExpenses)}
+
+GOATS:
+${JSON.stringify(goats)}
+
+GOAT INCOME:
+${JSON.stringify(goatIncome)}
+
+GOAT EXPENSES:
+${JSON.stringify(goatExpenses)}
+
+HENS:
+${JSON.stringify(hens)}
+
+HEN INCOME:
+${JSON.stringify(henIncome)}
+
+HEN EXPENSES:
+${JSON.stringify(henExpenses)}
+
+TRACTOR USAGE (All records):
+${JSON.stringify(tractorUsage)}
+
+TRACTOR DIESEL:
+${JSON.stringify(tractorDiesel)}
+
+TRACTOR ENGINE OIL:
+${JSON.stringify(tractorEngineOil)}
+
+TRACTOR SETTINGS:
+${JSON.stringify(tractorSettings)}
+
+ROTAVATOR BLADES:
+${JSON.stringify(rotavatorBlades)}
+
+KALAPPAI BLADES:
+${JSON.stringify(kalappaiBlades)}
+
+COCONUT DETAILS:
+${JSON.stringify(coconutDetails)}
+
+TURMERIC DETAILS:
+${JSON.stringify(turmericDetails)}
+
+SUGARCANE DETAILS:
+${JSON.stringify(sugarcaneDetails)}
+
+NELL/RICE DETAILS:
+${JSON.stringify(nellDetails)}
+
+KUCHI KILANGU DETAILS:
+${JSON.stringify(kuchiKilanguDetails)}
+
+ELLU DETAILS:
+${JSON.stringify(elluDetails)}
+
+FERTILIZER APPLICATIONS:
+${JSON.stringify(fertilizerApplications)}
+
+WEED REMOVAL RECORDS:
+${JSON.stringify(weedRemovals)}
+
+HARVEST RECORDS:
+${JSON.stringify(harvestRecords)}
+
+IRRIGATION RECORDS:
+${JSON.stringify(irrigationRecords)}
+
+═══════════════════════════════════════
+
+USER QUESTION: ${message}
+
+IMPORTANT:
+- Base ALL answers on the actual data above
+- Never make up data that is not in the records
+- If data is insufficient for prediction,
+  say so honestly and explain what data is needed
+- For Tamil questions, answer in Tamil
+- For English questions, answer in English
+- Always be helpful and practical
 `;
 
   const response = await fetch(
@@ -135,7 +258,7 @@ Use emojis where appropriate.
         contents: [{ parts: [{ text: farmContext }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 500,
+          maxOutputTokens: 1500,
         },
       }),
     }
