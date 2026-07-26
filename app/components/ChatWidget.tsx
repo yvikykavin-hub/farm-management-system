@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 
 interface Message {
@@ -8,6 +9,16 @@ interface Message {
   text: string;
   time: string;
 }
+
+const CHAT_HISTORY_KEY = "marutham_chat_history";
+const FONT_SIZES = ["small", "normal", "large"] as const;
+type FontSize = typeof FONT_SIZES[number];
+
+const fontSizeClass: Record<FontSize, string> = {
+  small: "text-xs",
+  normal: "text-sm",
+  large: "text-base",
+};
 
 type SpeechRecognitionResultLike = { isFinal: boolean; [index: number]: { transcript: string } };
 
@@ -28,22 +39,37 @@ type SpeechRecognitionLike = {
   stop: () => void;
 };
 
+const buildWelcomeMessage = (language: "ta" | "en"): Message => ({
+  id: Date.now(),
+  role: "assistant",
+  text:
+    language === "ta"
+      ? "வணக்கம்! நான் உங்கள் பண்ணை உதவியாளர். உங்கள் பண்ணை பற்றி என்னையும் கேளுங்கள்! 🌾"
+      : "Hello! I am your Farm Assistant. Ask me anything about your farm! 🌾",
+  time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+});
+
 export default function ChatWidget({ language = "en" }: { language?: "ta" | "en" }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [fontSize, setFontSize] = useState<FontSize>("normal");
   const [pos, setPos] = useState({ x: 24, y: 24 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, right: 24, bottom: 24 });
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      role: "assistant",
-      text:
-        language === "ta"
-          ? "வணக்கம்! நான் உங்கள் பண்ணை உதவியாளர். உங்கள் பண்ணை பற்றி என்னையும் கேளுங்கள்! 🌾"
-          : "Hello! I am your Farm Assistant. Ask me anything about your farm! 🌾",
-      time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem(CHAT_HISTORY_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {
+          // fall through to default welcome message
+        }
+      }
+    }
+    return [buildWelcomeMessage(language)];
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -53,6 +79,22 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (messages.length > 1) {
+      window.localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-20)));
+    }
+  }, [messages]);
+
+  const clearChat = () => {
+    setMessages([buildWelcomeMessage(language)]);
+    window.localStorage.removeItem(CHAT_HISTORY_KEY);
+  };
+
+  const cycleFontSize = () => {
+    const current = FONT_SIZES.indexOf(fontSize);
+    setFontSize(FONT_SIZES[(current + 1) % FONT_SIZES.length]);
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -248,41 +290,99 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
       {isOpen && (
         <div
           className="bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-          style={getChatWindowStyle()}
+          style={isMinimized ? { ...getChatWindowStyle(), height: "auto" } : getChatWindowStyle()}
         >
 
           {/* Header */}
-          <div className="bg-[#2D6A4F] px-4 py-3 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/farmer-icon.png" alt="Farm Assistant" className="w-9 h-9 rounded-full object-cover border-2 border-white/30" />
-            <div>
+          <div className="bg-[#2D6A4F] px-4 py-3 flex flex-col gap-1 shrink-0">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/farmer-icon.png" alt="Farm Assistant" className="w-9 h-9 rounded-full object-cover border-2 border-white/30" />
               <p className="text-white font-semibold text-sm">
                 {language === "ta" ? "பண்ணை உதவியாளர்" : "Farm Assistant"}
               </p>
-              <p className="text-green-200 text-xs">Marutham FMS AI</p>
-            </div>
-            <div className="ml-auto flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
-              <span className="text-green-200 text-xs">{language === "ta" ? "இயங்குகிறது" : "Online"}</span>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-[#2D6A4F] text-white rounded-br-sm"
-                      : "bg-white text-gray-900 shadow-sm rounded-bl-sm border border-green-100"
-                  }`}
+              <div className="ml-auto flex items-center gap-1">
+                {/* Font size */}
+                <button
+                  onClick={cycleFontSize}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs transition-all duration-200"
+                  title="Font size"
                 >
-                  <p className="whitespace-pre-wrap">{msg.text}</p>
-                  <p className={`text-xs mt-1 ${msg.role === "user" ? "text-green-200" : "text-gray-400"}`}>{msg.time}</p>
+                  A
+                </button>
+
+                {/* Clear chat */}
+                <button
+                  onClick={clearChat}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs transition-all duration-200"
+                  title={language === "ta" ? "அழி" : "Clear chat"}
+                >
+                  🗑️
+                </button>
+
+                {/* Minimize */}
+                <button
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition-all duration-200"
+                  title="Minimize"
+                >
+                  {isMinimized ? "□" : "—"}
+                </button>
+
+                {/* Close */}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 text-white flex items-center justify-center text-sm transition-all duration-200"
+                  title="Close"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {!isMinimized && (
+              <div className="flex items-center pl-12">
+                <p className="text-green-200 text-xs">Marutham FMS AI</p>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
+                  <span className="text-green-200 text-xs">{language === "ta" ? "இயங்குகிறது" : "Online"}</span>
                 </div>
               </div>
-            ))}
+            )}
+          </div>
+
+          {!isMinimized && (
+          <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+            {messages.map((msg) =>
+              msg.role === "assistant" ? (
+                <div key={msg.id} className="flex justify-start">
+                  <div className="relative group">
+                    <div className="max-w-[80%] rounded-2xl px-3 py-2 bg-white text-gray-900 shadow-sm rounded-bl-sm border border-green-100">
+                      <p className={`whitespace-pre-wrap ${fontSizeClass[fontSize]}`}>{msg.text}</p>
+                      <p className="text-xs mt-1 text-gray-400">{msg.time}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(msg.text);
+                        toast.success(language === "ta" ? "நகலெடுக்கப்பட்டது!" : "Copied!");
+                      }}
+                      className="absolute -bottom-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full"
+                    >
+                      📋 {language === "ta" ? "நகல்" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div key={msg.id} className="flex justify-end">
+                  <div className="max-w-[80%] rounded-2xl px-3 py-2 bg-[#2D6A4F] text-white rounded-br-sm">
+                    <p className={`whitespace-pre-wrap ${fontSizeClass[fontSize]}`}>{msg.text}</p>
+                    <p className="text-xs mt-1 text-green-200">{msg.time}</p>
+                  </div>
+                </div>
+              )
+            )}
 
             {loading && (
               <div className="flex justify-start">
@@ -363,6 +463,8 @@ export default function ChatWidget({ language = "en" }: { language?: "ta" | "en"
               </div>
             )}
           </div>
+          </>
+          )}
         </div>
       )}
     </>
