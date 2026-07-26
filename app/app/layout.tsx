@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   description: "Marutham Farm Management System - Rooted in Tradition, Driven by Data",
   manifest: "/manifest.json",
   icons: {
-    apple: "/farmer-icon.png",
+    icon: "/icon-192x192.png",
+    apple: "/icon-192x192.png",
   },
   other: {
     "mobile-web-app-capable": "yes",
