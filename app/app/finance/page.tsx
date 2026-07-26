@@ -5,7 +5,10 @@ import Link from "next/link";
 import {
   ResponsiveContainer,
   BarChart,
+  ComposedChart,
   Bar,
+  Line,
+  Legend,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -45,6 +48,11 @@ const cropLabel = (cropType: string, lang: "ta" | "en") => {
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const inrAxis = (value: number) =>
   value >= 0 ? `₹${(value / 100000).toFixed(1)}L` : `-₹${(Math.abs(value) / 100000).toFixed(1)}L`;
+const yearlyAxisFormatter = (value: number) => {
+  const abs = Math.abs(value);
+  const formatted = abs >= 100000 ? `₹${(abs / 100000).toFixed(1)}L` : `₹${(abs / 1000).toFixed(0)}K`;
+  return value < 0 ? `-${formatted}` : formatted;
+};
 
 type TooltipPayloadItem = { dataKey: string; value: number };
 
@@ -188,6 +196,37 @@ export default function FinancePage() {
       }))
       .sort((a, b) => b.net - a.net);
   }, [filteredIncome, filteredExpense, cultivationMap, lang]);
+
+  // Yearly comparison intentionally ignores the year pill-filter (respecting
+  // only crop/farm selection) — filtering it down to one year would defeat
+  // the purpose of a year-over-year comparison chart.
+  const matchesCropFarmFilters = (r: Row) => {
+    const c = cultivationMap.get(r.cultivation_id);
+    if (!c) return false;
+    if (selectedCrops.length > 0 && !selectedCrops.includes(c.crop_type)) return false;
+    if (selectedFarms.length > 0 && !selectedFarms.includes(c.farm_id)) return false;
+    return true;
+  };
+
+  const yearlyData = useMemo(() => {
+    const totals = new Map<string, { income: number; expense: number }>();
+    incomeRows.filter(matchesCropFarmFilters).forEach((r) => {
+      if (!/^\d{4}$/.test(r.year)) return;
+      const entry = totals.get(r.year) ?? { income: 0, expense: 0 };
+      entry.income += r.amount;
+      totals.set(r.year, entry);
+    });
+    expenseRows.filter(matchesCropFarmFilters).forEach((r) => {
+      if (!/^\d{4}$/.test(r.year)) return;
+      const entry = totals.get(r.year) ?? { income: 0, expense: 0 };
+      entry.expense += r.amount;
+      totals.set(r.year, entry);
+    });
+    return Array.from(totals.entries())
+      .map(([year, v]) => ({ year, income: v.income, expense: v.expense, net: v.income - v.expense }))
+      .sort((a, b) => a.year.localeCompare(b.year));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomeRows, expenseRows, cultivationMap, selectedCrops, selectedFarms]);
 
   const totalIncome = chartData.reduce((s, c) => s + c.income, 0);
   const totalExpense = chartData.reduce((s, c) => s + c.expense, 0);
@@ -369,6 +408,48 @@ export default function FinancePage() {
                   </div>
                 </div>
               </div>
+
+              {/* Yearly Comparison chart */}
+              {yearlyData.length > 0 && (
+                <div className="bg-white rounded-2xl shadow-sm p-5 mt-6">
+                  <h3 className="font-semibold text-gray-800 mb-4">
+                    📅 {L("Yearly Comparison", "ஆண்டு வாரியான ஒப்பீடு")}
+                  </h3>
+
+                  <div className="overflow-x-auto">
+                    <ComposedChart width={Math.max(300, yearlyData.length * 120)} height={300} data={yearlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+                      <YAxis tickFormatter={yearlyAxisFormatter} tick={{ fontSize: 12 }} />
+                      <Tooltip content={<CustomTooltip L={L} />} />
+                      <Legend />
+
+                      <Bar dataKey="income" name={L("Income", "வருமானம்")} fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="expense" name={L("Expense", "செலவு")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                      <Line
+                        dataKey="net"
+                        name={L("Net Profit", "நிகர லாபம்")}
+                        stroke="#22C55E"
+                        strokeWidth={2}
+                        dot={{ fill: "#22C55E", r: 4 }}
+                      />
+                    </ComposedChart>
+                  </div>
+
+                  {/* Year summary below chart */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                    {yearlyData.map((year) => (
+                      <div key={year.year} className="bg-gray-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-500">{year.year}</p>
+                        <p className={`text-sm font-bold mt-1 ${year.net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {year.net >= 0 ? "+" : "-"}₹{Math.abs(year.net).toLocaleString("en-IN")}
+                        </p>
+                        <p className="text-xs text-gray-400">{year.net >= 0 ? L("Profit", "இலாபம்") : L("Loss", "நஷ்டம்")}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

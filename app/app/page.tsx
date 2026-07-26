@@ -8,6 +8,9 @@ import PageWrapper from "../components/PageWrapper";
 import AnimatedCard from "../components/AnimatedCard";
 import { SkeletonRow } from "../components/Skeleton";
 import ChatWidget from "../components/ChatWidget";
+import WeatherWidget from "../components/WeatherWidget";
+import SmartAlerts from "../components/SmartAlerts";
+import RemindersSection from "../components/RemindersSection";
 import { supabase } from "../lib/supabase";
 import { useLang } from "../lib/useLang";
 
@@ -158,6 +161,15 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* Weather Widget */}
+          <WeatherWidget language={lang} />
+
+          {/* Smart Alerts */}
+          <SmartAlerts language={lang} />
+
+          {/* Reminders */}
+          <RemindersSection language={lang} />
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 shrink-0">
