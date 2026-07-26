@@ -137,30 +137,32 @@ export default function Dashboard() {
         <PageWrapper>
         <div className="max-w-6xl mx-auto w-full flex flex-col gap-3">
 
-          {/* Weather banner */}
-          <WeatherWidget language={lang} />
-
           {/* Header */}
-          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="text-4xl shrink-0">👨‍🌾</span>
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t.title}</h1>
-                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t.tagline}</p>
+          <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 flex flex-col gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-4xl shrink-0">👨‍🌾</span>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t.title}</h1>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t.tagline}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {/* Language Toggle */}
+                <button
+                  onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                  className="min-h-[44px] px-3 py-2 sm:px-4 sm:py-2 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+                >
+                  {lang === "ta" ? "English" : "தமிழ்"}
+                </button>
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-green-200 shrink-0">
+                  🧑‍🌾
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              {/* Language Toggle */}
-              <button
-                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-                className="min-h-[44px] px-3 py-2 sm:px-4 sm:py-2 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
-              >
-                {lang === "ta" ? "English" : "தமிழ்"}
-              </button>
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-green-200 shrink-0">
-                🧑‍🌾
-              </div>
-            </div>
+
+            {/* Weather banner BELOW title */}
+            <WeatherWidget language={lang} />
           </div>
 
           {/* Stats Cards */}
