@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import InactivityTimer from "../components/InactivityTimer";
@@ -9,6 +9,19 @@ const geist = Geist({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Marutham FMS",
   description: "Marutham Farm Management System - Rooted in Tradition, Driven by Data",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/farmer-icon.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-title": "Marutham FMS",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2D6A4F",
 };
 
 export default function RootLayout({
