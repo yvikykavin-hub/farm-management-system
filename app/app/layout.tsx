@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import InactivityTimer from "../components/InactivityTimer";
+import ErrorBoundary from "../components/ErrorBoundary";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -34,7 +35,7 @@ export default function RootLayout({
     <html lang="ta">
       <body className={`${geist.className} min-h-screen bg-green-50`}>
         <InactivityTimer />
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
         <Toaster
           position="top-right"
           toastOptions={{

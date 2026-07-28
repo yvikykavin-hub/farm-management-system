@@ -200,6 +200,14 @@ export default function LoginPage() {
             {loading ? L("Signing in...", "உள்நுழைகிறது...") : L("Sign In", "உள்நுழை")}
           </button>
         </form>
+
+        <p className="text-center text-xs text-gray-400 mt-4">
+          {L("By logging in you agree to our", "உள்நுழையும்போது எங்கள்")}{" "}
+          <a href="/privacy-policy" className="text-green-600 hover:underline">
+            {L("Privacy Policy", "தனியுரிமைக் கொள்கையை")}
+          </a>
+          {lang === "ta" && " ஒப்புக்கொள்கிறீர்கள்"}
+        </p>
       </div>
     </div>
   );

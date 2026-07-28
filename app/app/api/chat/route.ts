@@ -4,6 +4,14 @@ import { createRateLimiter, getClientIp } from "../../../lib/rateLimit";
 
 const rateLimit = createRateLimiter(20, 60 * 1000); // 20 requests per minute per IP
 
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY is not set!");
+}
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  console.error("NEXT_PUBLIC_SUPABASE_URL is not set!");
+}
+
 export async function POST(req: NextRequest) {
   if (!rateLimit(getClientIp(req))) {
     return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
