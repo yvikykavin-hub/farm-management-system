@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
-import PageWrapper from "../../components/PageWrapper";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 
@@ -125,7 +124,6 @@ export default function CropsPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
-        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <Link href="/" className="text-primary hover:text-primary text-sm font-semibold">
@@ -279,7 +277,6 @@ export default function CropsPage() {
             </div>
           )}
         </div>
-        </PageWrapper>
       </main>
     </div>
   );

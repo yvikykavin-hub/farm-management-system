@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind v4 uses CSS-first config: dark: variants only respond to OS
+   preference unless a custom variant tells them to key off a class instead.
+   This makes dark: react to the .dark class next-themes puts on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -47,13 +52,6 @@
   --color-sidebar-active-text: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -73,3 +71,108 @@ body {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
 }
+
+/* ---------------------------------------------------------------------
+   Dark mode
+   -------------------------------------------------------------------
+   Most of the app's ~25 pages were built with plain Tailwind classes
+   (bg-white, text-gray-900, border-gray-100, ...) rather than the
+   bg-page/bg-card/etc. design tokens above. Rewriting every className
+   across every page would be a huge, error-prone change, so instead
+   these rules retarget the small, consistent vocabulary of classes
+   that's actually reused across every page, scoped to .dark. Because
+   these rules live outside any @layer, they win over Tailwind's own
+   @layer utilities regardless of selector specificity (per the CSS
+   cascade layers spec), so no !important juggling is needed.
+   ------------------------------------------------------------------- */
+
+:root {
+  --bg-primary: #F7F8FA;
+  --bg-card: #FFFFFF;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --border-color: #E5E7EB;
+  --sidebar-bg: #1B4332;
+}
+
+.dark {
+  --bg-primary: #0F172A;
+  --bg-card: #1E293B;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --border-color: #334155;
+  --sidebar-bg: #0F2419;
+
+  color-scheme: dark;
+}
+
+/* !important: <body> also carries bg-green-50 (a light-mode page tint,
+   unrelated to the badge-color overrides below) — without this, the
+   .bg-green-50 override's higher selector specificity would win instead. */
+.dark body {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary);
+}
+
+/* Page shells + cards */
+.dark .bg-page,
+.dark .bg-gray-50 {
+  background-color: var(--bg-primary);
+}
+.dark .bg-white {
+  background-color: var(--bg-card);
+}
+.dark .bg-gray-100 {
+  background-color: #273449;
+}
+
+/* Borders */
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .divide-gray-50,
+.dark .divide-gray-100 {
+  border-color: var(--border-color);
+}
+.dark .border-green-100 {
+  border-color: #2d6a4f66;
+}
+
+/* Text */
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: var(--text-primary);
+}
+.dark .text-gray-700,
+.dark .text-gray-600 {
+  color: #cbd5e1;
+}
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: var(--text-secondary);
+}
+.dark .placeholder\:text-gray-400::placeholder,
+.dark .placeholder\:text-gray-500::placeholder {
+  color: #64748b;
+}
+
+/* Inputs and selects keep bg-white in light mode throughout the app */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+/* Pastel badge/status backgrounds (bg-*-50) read as washed-out white on a
+   dark card, so give them a translucent tint instead of a solid pastel. */
+.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.15); }
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15); }
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15); }
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15); }
+.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.15); }
+.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.15); }
+.dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.15); }
+.dark .bg-pink-50 { background-color: rgba(236, 72, 153, 0.15); }
+.dark .bg-gray-200 { background-color: #334155; }

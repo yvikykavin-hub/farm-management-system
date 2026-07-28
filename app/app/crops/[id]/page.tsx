@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
-import PageWrapper from "../../../components/PageWrapper";
 import CropRecordSection from "../../../components/CropRecordSection";
 import toast from "react-hot-toast";
 import { supabase } from "../../../lib/supabase";
@@ -2551,7 +2550,6 @@ export default function CropDetail() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-3">
-        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
           {/* Header */}
@@ -4215,7 +4213,6 @@ export default function CropDetail() {
           )}
 
         </div>
-        </PageWrapper>
       </main>
 
       {nellIncomeModalOpen && (

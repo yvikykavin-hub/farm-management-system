@@ -1,7 +1,6 @@
 "use client";
 
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/PageWrapper";
 import AnimatedCard from "../../../components/AnimatedCard";
 import { SkeletonCard } from "../../../components/Skeleton";
 import { useState, useEffect } from "react";
@@ -188,7 +187,6 @@ export default function CowsListPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
-        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           {/* Back */}
@@ -296,7 +294,6 @@ export default function CowsListPage() {
             </div>
           )}
         </div>
-        </PageWrapper>
       </main>
 
       {/* Add Cow Modal */}

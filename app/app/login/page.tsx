@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
+import DarkModeToggle from "../../components/DarkModeToggle";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
@@ -118,6 +119,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-page p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-green-100 p-6">
+        <div className="flex justify-end mb-1">
+          <DarkModeToggle />
+        </div>
         <div className="flex flex-col items-center mb-4">
           <div className="text-6xl mb-4">👨‍🌾</div>
           <h1 className="text-2xl font-bold text-gray-900 text-center">Marutham Farm Management System</h1>

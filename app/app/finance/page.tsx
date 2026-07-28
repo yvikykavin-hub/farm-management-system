@@ -18,7 +18,6 @@ import {
 } from "recharts";
 import hotToast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
-import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
@@ -244,7 +243,6 @@ export default function FinancePage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
-        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -453,7 +451,6 @@ export default function FinancePage() {
             </>
           )}
         </div>
-        </PageWrapper>
       </main>
     </div>
   );

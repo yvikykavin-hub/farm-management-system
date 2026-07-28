@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Sidebar from "../components/Sidebar";
-import PageWrapper from "../components/PageWrapper";
 import AnimatedCard from "../components/AnimatedCard";
-import { SkeletonRow } from "../components/Skeleton";
+import { SkeletonDashboard } from "../components/Skeleton";
+import DarkModeToggle from "../components/DarkModeToggle";
 import ChatWidget from "../components/ChatWidget";
 import WeatherWidget from "../components/WeatherWidget";
 import { supabase } from "../lib/supabase";
@@ -134,7 +134,6 @@ export default function Dashboard() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 p-3 overflow-y-auto overflow-x-hidden flex flex-col pb-20">
-        <PageWrapper>
         <div className="max-w-6xl mx-auto w-full flex flex-col gap-3">
 
           {/* Header */}
@@ -155,6 +154,7 @@ export default function Dashboard() {
                 >
                   {lang === "ta" ? "English" : "தமிழ்"}
                 </button>
+                <DarkModeToggle />
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-green-200 shrink-0">
                   🧑‍🌾
                 </div>
@@ -165,6 +165,10 @@ export default function Dashboard() {
             <WeatherWidget language={lang} />
           </div>
 
+          {loading ? (
+            <SkeletonDashboard />
+          ) : (
+          <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 shrink-0">
             {[
@@ -240,13 +244,7 @@ export default function Dashboard() {
               {t.myFarms}
             </h2>
 
-            {loading ? (
-              <div className="divide-y divide-gray-50">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <SkeletonRow key={i} />
-                ))}
-              </div>
-            ) : farms.length === 0 ? (
+            {farms.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="text-5xl mb-4 opacity-60">🌳</div>
                 <h3 className="text-base font-semibold text-gray-700 mb-1">
@@ -290,9 +288,10 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+          </>
+          )}
 
         </div>
-        </PageWrapper>
       </main>
       <ChatWidget language={lang} />
     </div>

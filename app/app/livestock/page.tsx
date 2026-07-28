@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
-import PageWrapper from "../../components/PageWrapper";
 import AnimatedCard from "../../components/AnimatedCard";
 import { t } from "../../lib/labels";
 import { useLang } from "../../lib/useLang";
@@ -21,7 +20,6 @@ export default function LivestockLandingPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
-        <PageWrapper>
         <div className="max-w-4xl mx-auto flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t(lang, "livestock")}</h1>
@@ -46,7 +44,6 @@ export default function LivestockLandingPage() {
             ))}
           </div>
         </div>
-        </PageWrapper>
       </main>
     </div>
   );

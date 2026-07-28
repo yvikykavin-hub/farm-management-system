@@ -1,7 +1,6 @@
 "use client";
 
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/PageWrapper";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
@@ -172,7 +171,6 @@ export default function GeneralExpensesPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
-        <PageWrapper>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <Link href="/livestock" className="text-primary hover:text-primary text-sm font-semibold">
@@ -303,7 +301,6 @@ export default function GeneralExpensesPage() {
             )}
           </div>
         </div>
-        </PageWrapper>
       </main>
 
       {/* Add/Edit Modal */}

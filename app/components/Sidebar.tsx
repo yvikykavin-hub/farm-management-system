@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+import DarkModeToggle from "./DarkModeToggle";
 
 const navItems = [
   { href: "/", icon: "🏠", label: "Dashboard", labelTa: "முகப்பு" },
@@ -24,7 +25,7 @@ type SidebarProps = {
 export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const toggleLang = () => setLang?.(lang === "ta" ? "en" : "ta");
 
@@ -37,26 +38,34 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
     <>
       {/* Mobile hamburger */}
       <button
-        onClick={() => setMobileOpen(true)}
-        className="sm:hidden fixed top-3 left-3 z-40 bg-primary text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-lg text-lg"
+        onClick={() => setIsOpen(true)}
+        className="lg:hidden fixed top-3 left-3 z-40 bg-primary text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-lg text-lg"
         title="Menu"
       >
         ☰
       </button>
 
       {/* Mobile overlay */}
-      {mobileOpen && (
+      {isOpen && (
         <div
-          className="sm:hidden fixed inset-0 bg-black/40 z-40"
-          onClick={() => setMobileOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={() => setIsOpen(false)}
         />
       )}
 
       <aside
-        className={`w-64 h-dvh bg-gradient-to-b from-[#1B4332] to-[#2D6A4F] flex flex-col shadow-xl shrink-0 fixed sm:static z-50 transition-transform duration-200 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
+        className={`w-64 h-dvh bg-gradient-to-b from-[#1B4332] to-[#2D6A4F] flex flex-col shadow-xl shrink-0 fixed lg:static z-50 transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
+        {/* Close button, mobile only */}
+        <button
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden absolute top-4 right-4 text-green-200 hover:text-white text-xl"
+        >
+          ✕
+        </button>
+
         {/* Logo area */}
         <div className="p-6 border-b border-green-700/30 shrink-0">
           <div className="flex items-center gap-3">
@@ -83,7 +92,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 title={item.label}
-                onClick={() => setMobileOpen(false)}
+                onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative border-l-2 ${
                   isActive
                     ? "bg-white/10 text-white font-medium border-green-300"
@@ -98,15 +107,18 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
           })}
         </nav>
 
-        {/* Bottom: language + logout */}
+        {/* Bottom: language + dark mode + logout */}
         <div className="p-3 border-t border-green-700/30 space-y-1 shrink-0">
-          <button
-            onClick={toggleLang}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white transition-all duration-200"
-          >
-            <span>🌐</span>
-            <span className="text-sm font-medium">{lang === "ta" ? "English" : "தமிழ்"}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleLang}
+              className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white transition-all duration-200 min-w-0"
+            >
+              <span>🌐</span>
+              <span className="text-sm font-medium truncate">{lang === "ta" ? "English" : "தமிழ்"}</span>
+            </button>
+            <DarkModeToggle variant="sidebar" />
+          </div>
           <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200"

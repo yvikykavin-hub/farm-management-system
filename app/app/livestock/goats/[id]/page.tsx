@@ -1,7 +1,6 @@
 "use client";
 
 import toast from "react-hot-toast";
-import PageWrapper from "../../../../components/PageWrapper";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -328,7 +327,6 @@ export default function GoatDetailPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
-        <PageWrapper>
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
 
           <Link href="/livestock/goats" className="text-primary hover:text-primary text-sm font-semibold">
@@ -592,7 +590,6 @@ export default function GoatDetailPage() {
           )}
 
         </div>
-        </PageWrapper>
       </main>
 
       {/* Add Sale Modal */}
