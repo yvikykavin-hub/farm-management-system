@@ -416,7 +416,7 @@ export default function ReportsPage() {
     pdf.text(Math.round(report.totalNet).toLocaleString("en-IN"), 160, y + 5);
     pdf.setFont("helvetica", "normal");
 
-    pdf.save(`ThaaiNilam-${report.id}.pdf`);
+    pdf.save(`MaruthamFMS-${report.id}.pdf`);
   };
 
   const pillCls = (active: boolean) =>
