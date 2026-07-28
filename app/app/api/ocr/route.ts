@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRateLimiter, getClientIp } from "../../../lib/rateLimit";
+
+const rateLimit = createRateLimiter(20, 60 * 1000); // 20 requests per minute per IP
 
 export async function POST(req: NextRequest) {
+  if (!rateLimit(getClientIp(req))) {
+    return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
+  }
+
   const { imageBase64 } = await req.json();
+
+  if (!imageBase64 || typeof imageBase64 !== "string") {
+    return NextResponse.json({ error: "Image is required" }, { status: 400 });
+  }
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,

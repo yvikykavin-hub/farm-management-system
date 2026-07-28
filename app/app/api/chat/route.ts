@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createRateLimiter, getClientIp } from "../../../lib/rateLimit";
+
+const rateLimit = createRateLimiter(20, 60 * 1000); // 20 requests per minute per IP
 
 export async function POST(req: NextRequest) {
+  if (!rateLimit(getClientIp(req))) {
+    return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
+  }
+
   const { message, language, accessToken } = await req.json();
 
-  if (!message || typeof message !== "string") {
-    return NextResponse.json({ error: "Message is required" }, { status: 400 });
+  const sanitizedMessage = message?.toString()?.slice(0, 1000)?.trim();
+
+  if (!sanitizedMessage) {
+    return NextResponse.json({ error: "Invalid message" }, { status: 400 });
   }
 
   // Authenticate the server-side client with the caller's session token so
@@ -237,7 +246,7 @@ ${JSON.stringify(irrigationRecords)}
 
 ═══════════════════════════════════════
 
-USER QUESTION: ${message}
+USER QUESTION: ${sanitizedMessage}
 
 IMPORTANT:
 - Base ALL answers on the actual data above
