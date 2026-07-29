@@ -26,10 +26,12 @@ export type MotorSharingSectionHandle = {
 };
 
 const DAY_OPTIONS = [1, 2, 3, 4, 5];
+const HOUR_OPTIONS = [1, 2, 3, 6, 12];
+const HOURS_PER_DAY = 24;
 
 const labelCls = "text-sm text-gray-600 dark:text-gray-400";
 const valueInputCls =
-  "w-full border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 min-h-[44px] text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500";
+  "w-full border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 block";
 const sectionTitleCls = "text-sm font-semibold text-gray-700 dark:text-gray-300";
 
 const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: string; language?: "ta" | "en" }>(
@@ -44,10 +46,14 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
     // Form states
     const [turnOwner, setTurnOwner] = useState("me");
     const [turnStart, setTurnStart] = useState("");
+    const [durationType, setDurationType] = useState<"hours" | "days">("days");
     const [turnDays, setTurnDays] = useState(2);
+    const [turnHours, setTurnHours] = useState(12);
     const [newPartnerName, setNewPartnerName] = useState("");
     const [newPartnerPhone, setNewPartnerPhone] = useState("");
     const [newPartnerDays, setNewPartnerDays] = useState(2);
+
+    const effectiveTurnDays = durationType === "hours" ? turnHours / HOURS_PER_DAY : turnDays;
 
     useEffect(() => {
       fetchMotorSharing();
@@ -67,7 +73,15 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
         setIsShared(sharingData.is_shared);
         setTurnOwner(sharingData.current_turn_owner || "me");
         setTurnStart(sharingData.current_turn_start ? new Date(sharingData.current_turn_start).toISOString().slice(0, 16) : "");
-        setTurnDays(sharingData.current_turn_days || 2);
+
+        const storedDays = Number(sharingData.current_turn_days) || 2;
+        if (storedDays < 1) {
+          setDurationType("hours");
+          setTurnHours(Math.round(storedDays * HOURS_PER_DAY));
+        } else {
+          setDurationType("days");
+          setTurnDays(Math.round(storedDays));
+        }
 
         const { data: partnersData } = await supabase
           .from("motor_sharing_neighbors")
@@ -97,7 +111,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
               is_shared: isShared,
               current_turn_owner: turnOwner,
               current_turn_start: turnStart || null,
-              current_turn_days: turnDays,
+              current_turn_days: effectiveTurnDays,
               updated_at: new Date().toISOString(),
             })
             .eq("id", sharing.id);
@@ -109,7 +123,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
               is_shared: isShared,
               current_turn_owner: turnOwner,
               current_turn_start: turnStart || null,
-              current_turn_days: turnDays,
+              current_turn_days: effectiveTurnDays,
             })
             .select()
             .single();
@@ -162,14 +176,18 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
       fetchMotorSharing();
     };
 
-    // Calculate upcoming schedule
+    // Calculate upcoming schedule. Duration is in fractional days (e.g. 0.5 =
+    // 12 hours), so end time is computed in milliseconds rather than via
+    // Date#setDate — which truncates fractional arguments to whole days.
+    // Whole-day turns still snap their handover to 6 PM as before; turns
+    // shorter than a day end exactly on time instead.
     const getSchedule = () => {
       if (!turnStart || !isShared) return [];
 
       const schedule = [];
       let currentDate = new Date(turnStart);
       const allParticipants = [
-        { name: "me", days: turnDays },
+        { name: "me", days: effectiveTurnDays },
         ...partners.map((p) => ({ name: p.partner_name, days: p.turn_days })),
       ];
 
@@ -178,9 +196,10 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
 
       for (let i = 0; i < 6; i++) {
         const participant = allParticipants[participantIndex % allParticipants.length];
-        const endDate = new Date(currentDate);
-        endDate.setDate(endDate.getDate() + participant.days);
-        endDate.setHours(18, 0, 0, 0);
+        const endDate = new Date(currentDate.getTime() + participant.days * HOURS_PER_DAY * 60 * 60 * 1000);
+        if (participant.days >= 1) {
+          endDate.setHours(18, 0, 0, 0);
+        }
 
         schedule.push({
           owner: participant.name,
@@ -235,51 +254,94 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
 
         {/* Shared motor details */}
         {isShared && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {/* Current turn info */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
               <p className={`${sectionTitleCls} mb-2`}>{language === "ta" ? "தற்போதைய முறை" : "Current Turn"}</p>
 
-              <div className="space-y-3">
-                {/* Who has current turn — pill buttons */}
+              <div className="space-y-2">
+                {/* Who has current turn — dropdown */}
                 <div>
-                  <p className={`${labelCls} mb-1`}>{language === "ta" ? "இப்போது யாருடைய முறை?" : "Whose turn is it now?"}</p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <button
-                      onClick={() => setTurnOwner("me")}
-                      className={`min-h-[44px] px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                        turnOwner === "me" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      🟢 {language === "ta" ? "என் முறை" : "My Turn"}
-                    </button>
+                  <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "தற்போது யாருடைய முறை?" : "Whose turn is it now?"}</label>
+                  <select
+                    value={turnOwner}
+                    onChange={(e) => setTurnOwner(e.target.value)}
+                    className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="me">{language === "ta" ? "என் முறை" : "My Turn"}</option>
                     {partners.map((partner) => (
-                      <button
-                        key={partner.id}
-                        onClick={() => setTurnOwner(partner.partner_name)}
-                        className={`min-h-[44px] px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                          turnOwner === partner.partner_name
-                            ? "bg-red-500 text-white"
-                            : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
-                        }`}
-                      >
+                      <option key={partner.id} value={partner.partner_name}>
                         {partner.partner_name}
-                      </button>
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 </div>
 
                 {/* Turn start date/time */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:items-center">
-                  <label className={labelCls}>{language === "ta" ? "தொடங்கிய நேரம்" : "Turn Started"}</label>
-                  <input type="datetime-local" value={turnStart} onChange={(e) => setTurnStart(e.target.value)} className={valueInputCls} />
+                <div>
+                  <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "முறை தொடங்கிய நேரம்" : "Turn Started"}</label>
+                  <input
+                    type="datetime-local"
+                    value={turnStart}
+                    onChange={(e) => setTurnStart(e.target.value)}
+                    className={valueInputCls}
+                    style={{ colorScheme: "light", minWidth: 0, width: "100%" }}
+                  />
+                  {turnStart && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(turnStart).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                  )}
                 </div>
 
-                {/* Turn duration — tap buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:items-center">
-                  <label className={labelCls}>{language === "ta" ? "கால அளவு" : "Duration"}</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={labelCls}>{language === "ta" ? "நாட்கள்:" : "Days:"}</span>
+                {/* Turn duration — hours or days */}
+                <div>
+                  <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "கால அளவு" : "Duration"}</label>
+
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => setDurationType("hours")}
+                      className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-all ${
+                        durationType === "hours" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      {language === "ta" ? "மணி நேரம்" : "Hours"}
+                    </button>
+                    <button
+                      onClick={() => setDurationType("days")}
+                      className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-all ${
+                        durationType === "days" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      {language === "ta" ? "நாட்கள்" : "Days"}
+                    </button>
+                  </div>
+
+                  {durationType === "hours" && (
+                    <div className="flex gap-1 flex-wrap">
+                      {HOUR_OPTIONS.map((hour) => (
+                        <button
+                          key={hour}
+                          onClick={() => setTurnHours(hour)}
+                          className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            turnHours === hour ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                          }`}
+                        >
+                          {hour}
+                          {language === "ta" ? "மணி" : "hr"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {durationType === "days" && (
                     <div className="flex gap-1">
                       {DAY_OPTIONS.map((day) => (
                         <button
@@ -293,7 +355,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                         </button>
                       ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -327,28 +389,28 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
               </button>
 
               {showAddPartner && (
-                <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 space-y-2 mt-2">
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 space-y-2 mt-2">
                   <input
                     type="text"
                     value={newPartnerName}
                     onChange={(e) => setNewPartnerName(e.target.value)}
                     placeholder={language === "ta" ? "பெயர் *" : "Name *"}
-                    className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 min-h-[44px] bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <input
                     type="tel"
                     value={newPartnerPhone}
                     onChange={(e) => setNewPartnerPhone(e.target.value)}
                     placeholder={language === "ta" ? "தொலைபேசி (விருப்பமானது)" : "Phone (optional)"}
-                    className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 min-h-[44px] bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-gray-500">{language === "ta" ? "நாட்கள்:" : "Days:"}</span>
+                    <span className="text-sm text-gray-500">{language === "ta" ? "நாட்கள்:" : "Days:"}</span>
                     {DAY_OPTIONS.map((day) => (
                       <button
                         key={day}
                         onClick={() => setNewPartnerDays(day)}
-                        className={`w-7 h-7 rounded-lg text-xs font-medium ${
+                        className={`w-7 h-7 rounded-lg text-sm font-medium ${
                           newPartnerDays === day ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
                         }`}
                       >
@@ -364,11 +426,11 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                         setNewPartnerPhone("");
                         setNewPartnerDays(2);
                       }}
-                      className="flex-1 text-xs py-2 rounded-lg bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
+                      className="flex-1 text-sm py-2 rounded-lg bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
                     >
                       {language === "ta" ? "ரத்து" : "Cancel"}
                     </button>
-                    <button onClick={addPartner} className="flex-1 text-xs py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium">
+                    <button onClick={addPartner} className="flex-1 text-sm py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium">
                       {language === "ta" ? "சேர்" : "Add"}
                     </button>
                   </div>
@@ -380,7 +442,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
             <div>
               <button
                 onClick={() => setShowSchedule(!showSchedule)}
-                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium mt-2"
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium mt-2"
               >
                 📅 {showSchedule ? (language === "ta" ? "அட்டவணையை மறை" : "Hide Schedule") : language === "ta" ? "அட்டவணை காட்டு" : "View Schedule"}
                 <span>{showSchedule ? "▲" : "▼"}</span>
