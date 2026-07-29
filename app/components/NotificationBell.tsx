@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 
 type Severity = "danger" | "warning" | "info";
@@ -288,8 +289,16 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
   };
 
   const clearAllDismissed = () => {
-    localStorage.removeItem(DISMISSED_KEY);
-    fetchNotifications();
+    // Mark every currently-visible notification as dismissed (merged with
+    // whatever was already dismissed, so this doesn't undo earlier
+    // dismissals for conditions that are still true but not shown right now).
+    const currentIds = items.map((n) => n.id);
+    const merged = Array.from(new Set([...getDismissedIds(), ...currentIds]));
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(merged));
+
+    setItems([]);
+
+    toast.success(language === "ta" ? "அனைத்து அறிவிப்புகளும் அழிக்கப்பட்டன" : "All notifications cleared");
   };
 
   const severityCls: Record<Severity, string> = {
