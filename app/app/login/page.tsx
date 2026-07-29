@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 import DarkModeToggle from "../../components/DarkModeToggle";
+import {
+  isBiometricSupported,
+  hasBiometricRegistered,
+  getRegisteredBiometricEmail,
+  authenticateWithBiometric,
+  registerBiometric,
+} from "../../lib/webauthn";
+import { clearLockedCookie } from "../../lib/lockCookie";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
@@ -59,6 +68,58 @@ export default function LoginPage() {
     typeof window !== "undefined" ? checkRateLimit() : { allowed: true, remaining: MAX_ATTEMPTS }
   );
 
+  const [showBiometric, setShowBiometric] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
+
+  useEffect(() => {
+    const checkBiometric = async () => {
+      if (!isBiometricSupported() || !hasBiometricRegistered()) return;
+
+      // Only worth showing the button if there's still a valid session for
+      // the same account the fingerprint was registered for — otherwise
+      // tapping it could only ever fail (session already gone).
+      const registeredEmail = getRegisteredBiometricEmail();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email && registeredEmail && user.email === registeredEmail) {
+        setShowBiometric(true);
+      }
+    };
+    checkBiometric();
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true);
+    try {
+      const biometricEmail = await authenticateWithBiometric();
+      if (!biometricEmail) {
+        toast.error(L("Fingerprint not recognized", "கைரேகை சரிபார்க்கவில்லை"));
+        return;
+      }
+
+      // Re-check the session at the moment of use — fingerprint only proves
+      // the enrolled person is present, the still-valid Supabase session
+      // (never anything stored by this app) is what actually grants access.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email && user.email === biometricEmail) {
+        clearLockedCookie();
+        router.push("/");
+        router.refresh();
+        return;
+      }
+
+      toast.error(L("Please login with password once", "மீண்டும் கடவுச்சொல்லால் உள்நுழையவும்"));
+    } catch (err) {
+      console.error("Biometric login failed:", err);
+      toast.error(L("Biometric login failed", "கைரேகை உள்நுழைவு தோல்வி"));
+    }
+    setBiometricLoading(false);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -112,6 +173,13 @@ export default function LoginPage() {
     clearAttempts();
     setRateCheck({ allowed: true, remaining: MAX_ATTEMPTS });
     setLoading(false);
+    clearLockedCookie();
+
+    if (isBiometricSupported() && !hasBiometricRegistered()) {
+      setShowRegisterPrompt(true);
+      return;
+    }
+
     router.push("/");
     router.refresh();
   };
@@ -139,6 +207,30 @@ export default function LoginPage() {
             <p className="text-red-500 text-xs mt-1">
               {L(`Try again in ${rateCheck.remainingMinutes} minutes`, `${rateCheck.remainingMinutes} நிமிடம் பிறகு முயற்சிக்கவும்`)}
             </p>
+          </div>
+        )}
+
+        {/* Fingerprint button - show if registered and still-valid session */}
+        {showBiometric && (
+          <button
+            type="button"
+            onClick={handleBiometricLogin}
+            disabled={biometricLoading}
+            className="w-full flex items-center justify-center gap-3 border-2 border-green-200 dark:border-green-800 hover:border-green-400 dark:hover:border-green-600 rounded-xl py-3 mb-4 transition-all duration-200 bg-green-50 dark:bg-green-900/20 disabled:opacity-50"
+          >
+            {biometricLoading ? <span className="animate-pulse text-2xl">👆</span> : <span className="text-2xl">👆</span>}
+            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+              {biometricLoading ? L("Verifying...", "சரிபார்க்கிறது...") : L("Login with Fingerprint", "கைரேகையால் உள்நுழை")}
+            </span>
+          </button>
+        )}
+
+        {/* Divider */}
+        {showBiometric && (
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-slate-600" />
+            <span className="text-xs text-gray-400">{L("or", "அல்லது")}</span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-slate-600" />
           </div>
         )}
 
@@ -213,6 +305,51 @@ export default function LoginPage() {
           {lang === "ta" && " ஒப்புக்கொள்கிறீர்கள்"}
         </p>
       </div>
+
+      {showRegisterPrompt && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <div className="text-5xl mb-4">👆</div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {L("Enable Fingerprint Login?", "கைரேகை உள்நுழைவு இயக்கவும்")}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              {L(
+                "Next time you can login with just your fingerprint. Much easier!",
+                "அடுத்த முறை கைரேகையால் உள்நுழையலாம். மிகவும் எளிதானது!"
+              )}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRegisterPrompt(false);
+                  router.push("/");
+                  router.refresh();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 text-sm font-medium"
+              >
+                {L("Not now", "இப்போது வேண்டாம்")}
+              </button>
+              <button
+                onClick={async () => {
+                  const success = await registerBiometric(email.trim());
+                  if (success) {
+                    toast.success(L("✅ Fingerprint login enabled!", "✅ கைரேகை உள்நுழைவு இயக்கப்பட்டது!"));
+                  } else {
+                    toast.error(L("Could not enable fingerprint", "கைரேகை பதிவு தோல்வி"));
+                  }
+                  setShowRegisterPrompt(false);
+                  router.push("/");
+                  router.refresh();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
+              >
+                {L("Enable", "இயக்கு")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

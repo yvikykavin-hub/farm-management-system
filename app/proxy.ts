@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { LOCK_COOKIE_NAME } from "./lib/lockCookie";
 
 const PUBLIC_PATHS = ["/login", "/manifest.json", "/forgot-password", "/reset-password", "/privacy-policy"];
 
@@ -27,13 +28,23 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const isLocked = request.cookies.get(LOCK_COOKIE_NAME)?.value === "1";
 
   if (!user && !isPublicPath) {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && pathname === "/login") {
+  // Soft-locked (inactivity timeout with biometric enabled): the Supabase
+  // session is still valid, but every protected page must bounce to /login
+  // until the user re-verifies with fingerprint or password — otherwise a
+  // locked device would still be fully browsable via direct URL/back button.
+  if (user && isLocked && !isPublicPath) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (user && !isLocked && pathname === "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

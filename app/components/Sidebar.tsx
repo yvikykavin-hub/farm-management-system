@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+import { clearLockedCookie } from "../lib/lockCookie";
 import DarkModeToggle from "./DarkModeToggle";
 
 const navItems = [
@@ -31,6 +32,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
 
   const logout = async () => {
     await supabase.auth.signOut();
+    clearLockedCookie();
     router.push("/login");
   };
 

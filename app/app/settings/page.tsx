@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
+import { isBiometricSupported, hasBiometricRegistered, removeBiometric } from "../../lib/webauthn";
+import { clearLockedCookie } from "../../lib/lockCookie";
 
 export default function SettingsPage() {
   const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricRegistered, setBiometricRegistered] = useState(false);
+
+  useEffect(() => {
+    setBiometricSupported(isBiometricSupported());
+    setBiometricRegistered(hasBiometricRegistered());
+  }, []);
+
+  const handleRemoveBiometric = () => {
+    removeBiometric();
+    clearLockedCookie();
+    setBiometricRegistered(false);
+    toast.success(L("Fingerprint login removed", "கைரேகை உள்நுழைவு நீக்கப்பட்டது"));
+  };
 
   const handleLogout = async () => {
     const confirmed = window.confirm(
@@ -26,6 +43,7 @@ export default function SettingsPage() {
       setLoading(false);
       return;
     }
+    clearLockedCookie();
     router.push("/login");
   };
 
@@ -44,6 +62,7 @@ export default function SettingsPage() {
       setLoading(false);
       return;
     }
+    clearLockedCookie();
     router.push("/login");
   };
 
@@ -103,6 +122,37 @@ export default function SettingsPage() {
               )}
             </p>
           </div>
+
+          {biometricSupported && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-6 max-w-md border border-gray-100 dark:border-slate-700 mt-4">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                👆 {L("Fingerprint Login", "கைரேகை உள்நுழைவு")}
+              </h2>
+
+              {biometricRegistered ? (
+                <div>
+                  <p className="text-sm text-green-600 dark:text-green-400 mb-4">
+                    ✅ {L("Fingerprint login is enabled", "கைரேகை உள்நுழைவு இயக்கப்பட்டுள்ளது")}
+                  </p>
+                  <button
+                    onClick={handleRemoveBiometric}
+                    className="w-full px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl text-sm transition-colors"
+                  >
+                    {L("Remove Fingerprint Login", "கைரேகை உள்நுழைவு நீக்கு")}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {L("Fingerprint login is not enabled", "கைரேகை உள்நுழைவு இயக்கப்படவில்லை")}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4">
+                    {L("To enable: Logout and login with password again", "இயக்க: வெளியேறி மீண்டும் கடவுச்சொல்லால் உள்நுழையவும்")}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </main>
