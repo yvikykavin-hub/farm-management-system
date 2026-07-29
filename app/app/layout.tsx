@@ -5,7 +5,6 @@ import { Toaster } from "react-hot-toast";
 import InactivityTimer from "../components/InactivityTimer";
 import ErrorBoundary from "../components/ErrorBoundary";
 import PageWrapper from "../components/PageWrapper";
-import QuickActions from "../components/QuickActions";
 import OfflineMessage from "../components/OfflineMessage";
 import "./globals.css";
 
@@ -44,7 +43,6 @@ export default function RootLayout({
           <ErrorBoundary>
             <PageWrapper>{children}</PageWrapper>
           </ErrorBoundary>
-          <QuickActions />
           <Toaster
             position="top-right"
             toastOptions={{
