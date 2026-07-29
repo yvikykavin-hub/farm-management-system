@@ -167,7 +167,12 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 z-50 max-h-96 overflow-y-auto">
+        <div
+          className="fixed sm:absolute z-50 top-[60px] left-2 right-2 sm:top-11 sm:left-auto sm:right-0
+                     w-auto max-w-[320px] ml-auto sm:w-80 sm:ml-0
+                     bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700
+                     max-h-96 overflow-y-auto"
+        >
           <div className="p-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">🔔 {L("Notifications", "அறிவிப்புகள்")}</h3>
             {items.length > 0 && <span className="text-xs text-gray-400">{items.length}</span>}
