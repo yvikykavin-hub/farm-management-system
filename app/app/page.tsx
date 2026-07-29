@@ -7,6 +7,7 @@ import Sidebar from "../components/Sidebar";
 import AnimatedCard from "../components/AnimatedCard";
 import { SkeletonDashboard } from "../components/Skeleton";
 import DarkModeToggle from "../components/DarkModeToggle";
+import NotificationBell from "../components/NotificationBell";
 import ChatWidget from "../components/ChatWidget";
 import WeatherWidget from "../components/WeatherWidget";
 import PullToRefresh from "../components/PullToRefresh";
@@ -154,6 +155,8 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
+                <NotificationBell language={lang} />
+                <DarkModeToggle />
                 {/* Language Toggle */}
                 <button
                   onClick={() => setLang(lang === "ta" ? "en" : "ta")}
@@ -161,7 +164,6 @@ export default function Dashboard() {
                 >
                   {lang === "ta" ? "English" : "தமிழ்"}
                 </button>
-                <DarkModeToggle />
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-green-200 shrink-0">
                   🧑‍🌾
                 </div>
