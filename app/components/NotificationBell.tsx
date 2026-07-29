@@ -48,6 +48,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         { data: pendingPayments },
         { data: activeCrops },
         { data: farms },
+        { data: motorData },
       ] = await Promise.all([
         supabase.from("tractor_usage").select("duration_hours"),
         supabase.from("tractor_settings").select("oil_change_interval_hours").limit(1).maybeSingle(),
@@ -55,6 +56,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         supabase.from("milk_payments").select("id").eq("payment_status", "pending"),
         supabase.from("cultivations").select("id, farm_id, crop_type, start_date").is("end_date", null),
         supabase.from("farms").select("id, name"),
+        supabase.from("motor_sharing").select("id, farm_id, current_turn_owner, current_turn_start, current_turn_days").eq("is_shared", true),
       ]);
 
       const detected: NotificationItem[] = [];
@@ -109,6 +111,50 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
               : L(`Second Fertilizer Due for ${label}`, `${label} க்கு இரண்டாம் உரம் தேவை`),
           message: L("Fertilizer application due", "உரம் இடும் நேரம் வந்துவிட்டது"),
         });
+      });
+
+      // Motor sharing — turn starting/ending soon
+      (motorData ?? []).forEach((motor) => {
+        if (!motor.current_turn_start) return;
+
+        const turnStart = new Date(motor.current_turn_start);
+        const turnEnd = new Date(turnStart);
+        turnEnd.setDate(turnEnd.getDate() + motor.current_turn_days);
+        turnEnd.setHours(18, 0, 0, 0);
+
+        const now = new Date();
+        const isMyTurn = motor.current_turn_owner === "me";
+        const farm = farmName(motor.farm_id);
+        const hoursUntilEnd = (turnEnd.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        if (isMyTurn && hoursUntilEnd > 0 && hoursUntilEnd <= 2) {
+          detected.push({
+            id: `motor-ending-${motor.id}`,
+            severity: "danger",
+            icon: "⏰",
+            title: L("Motor Turn Ending Soon!", "மோட்டார் முறை முடியும்!"),
+            message: L(
+              `${farm} - ends in ${Math.round(hoursUntilEnd)} hour(s)`,
+              `${farm} - ${Math.round(hoursUntilEnd)} மணி நேரத்தில் முடியும்`
+            ),
+          });
+        }
+
+        if (!isMyTurn) {
+          const hoursUntilMyTurn = (turnEnd.getTime() - now.getTime()) / (1000 * 60 * 60);
+          if (hoursUntilMyTurn > 0 && hoursUntilMyTurn <= 2) {
+            detected.push({
+              id: `motor-my-turn-${motor.id}`,
+              severity: "warning",
+              icon: "🚰",
+              title: L("Your Motor Turn Starting Soon!", "உங்கள் மோட்டார் முறை தொடங்கும்!"),
+              message: L(
+                `${farm} - starts in ${Math.round(hoursUntilMyTurn)} hour(s)`,
+                `${farm} - ${Math.round(hoursUntilMyTurn)} மணி நேரத்தில் தொடங்கும்`
+              ),
+            });
+          }
+        }
       });
 
       // Seasonal tip based on current month

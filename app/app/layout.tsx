@@ -6,6 +6,7 @@ import InactivityTimer from "../components/InactivityTimer";
 import ErrorBoundary from "../components/ErrorBoundary";
 import PageWrapper from "../components/PageWrapper";
 import OfflineMessage from "../components/OfflineMessage";
+import MotorTurnNotifier from "../components/MotorTurnNotifier";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -43,6 +44,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <PageWrapper>{children}</PageWrapper>
           </ErrorBoundary>
+          <MotorTurnNotifier />
           <Toaster
             position="top-right"
             toastOptions={{

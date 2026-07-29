@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
+import MotorSharingSection from "../../../components/MotorSharingSection";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 
@@ -323,7 +324,7 @@ export default function FarmDetail() {
               {t.farmInfo}
             </h2>
 
-            <div className="overflow-hidden flex-1">
+            <div className="overflow-y-auto flex-1">
               <div className="mb-1">
                 <label className="text-xs font-medium text-gray-600">{t.farmName}</label>
                 <input
@@ -395,6 +396,8 @@ export default function FarmDetail() {
                   className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
                 />
               </div>
+
+              {farm?.has_motor && <MotorSharingSection farmId={id} language={lang} />}
             </div>
 
             <button

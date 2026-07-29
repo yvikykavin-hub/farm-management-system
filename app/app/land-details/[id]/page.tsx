@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import Sidebar from "../../../components/Sidebar";
+import MotorSharingSection from "../../../components/MotorSharingSection";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 
@@ -594,6 +595,8 @@ export default function LandDetailPage() {
                 >
                   {savingWater ? "..." : L("Save", "சேமி")}
                 </button>
+
+                {(well || motor) && <MotorSharingSection farmId={id} language={lang} />}
               </div>
 
               <div className="bg-white rounded-xl shadow-sm p-4">
