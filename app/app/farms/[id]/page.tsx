@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
-import MotorSharingSection from "../../../components/MotorSharingSection";
+import MotorSharingSection, { type MotorSharingSectionHandle } from "../../../components/MotorSharingSection";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 
@@ -97,6 +97,7 @@ export default function FarmDetail() {
   const [cultivations, setCultivations] = useState<Cultivation[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const motorSharingRef = useRef<MotorSharingSectionHandle>(null);
 
   // Editable farm fields
   const [name, setName] = useState("");
@@ -169,6 +170,7 @@ export default function FarmDetail() {
       if (error) {
         alert("Error saving farm: " + error.message);
       } else {
+        await motorSharingRef.current?.save();
         fetchFarm();
       }
     } catch (err) {
@@ -397,7 +399,7 @@ export default function FarmDetail() {
                 />
               </div>
 
-              {farm?.has_motor && <MotorSharingSection farmId={id} language={lang} />}
+              {farm?.has_motor && <MotorSharingSection ref={motorSharingRef} farmId={id} language={lang} />}
             </div>
 
             <button

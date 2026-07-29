@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import Sidebar from "../../../components/Sidebar";
-import MotorSharingSection from "../../../components/MotorSharingSection";
+import MotorSharingSection, { type MotorSharingSectionHandle } from "../../../components/MotorSharingSection";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 
@@ -178,6 +178,7 @@ export default function LandDetailPage() {
   const [waterSource, setWaterSource] = useState("borewell");
   const [irrigationType, setIrrigationType] = useState("drip");
   const [savingWater, setSavingWater] = useState(false);
+  const motorSharingRef = useRef<MotorSharingSectionHandle>(null);
 
   // Section 3 - Soil Info
   const [soilType, setSoilType] = useState("red");
@@ -299,6 +300,7 @@ export default function LandDetailPage() {
         console.error("Error saving water info:", error);
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
+        await motorSharingRef.current?.save();
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
         fetchFarm();
       }
@@ -596,7 +598,7 @@ export default function LandDetailPage() {
                   {savingWater ? "..." : L("Save", "சேமி")}
                 </button>
 
-                {(well || motor) && <MotorSharingSection farmId={id} language={lang} />}
+                {(well || motor) && <MotorSharingSection ref={motorSharingRef} farmId={id} language={lang} />}
               </div>
 
               <div className="bg-white rounded-xl shadow-sm p-4">

@@ -2,12 +2,15 @@
 
 import { useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { useLang } from "../lib/useLang";
 
-export default function MotorTurnNotifier({ language }: { language?: "ta" | "en" }) {
-  const [storedLang] = useLang();
-  const lang = language ?? storedLang;
+const getUserLanguage = (): string => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("marutham_lang") || "en";
+  }
+  return "en";
+};
 
+export default function MotorTurnNotifier() {
   useEffect(() => {
     const registerServiceWorker = async () => {
       if (!("serviceWorker" in navigator)) return;
@@ -38,10 +41,44 @@ export default function MotorTurnNotifier({ language }: { language?: "ta" | "en"
       });
     };
 
-    const checkAndNotify = async () => {
-      const hasPermission = await requestNotificationPermission();
-      if (!hasPermission) return;
+    const checkTractorOil = async () => {
+      const [{ data: usage }, { data: settings }, { data: oilRecords }] = await Promise.all([
+        supabase.from("tractor_usage").select("duration_hours"),
+        supabase.from("tractor_settings").select("oil_change_interval_hours").limit(1).maybeSingle(),
+        supabase.from("tractor_engine_oil").select("hours_at_service").order("service_date", { ascending: false }).limit(1),
+      ]);
 
+      const totalHours = (usage ?? []).reduce((s, u) => s + Number(u.duration_hours), 0);
+      const interval = settings ? Number(settings.oil_change_interval_hours) : 300;
+      const lastServiceHours = oilRecords?.[0] ? Number(oilRecords[0].hours_at_service) : 0;
+      const hoursRemaining = interval - (totalHours - lastServiceHours);
+
+      const today = new Date().toDateString();
+      const lang = getUserLanguage();
+
+      if (hoursRemaining <= 5) {
+        const lastNotified = localStorage.getItem("tractor_notified_urgent");
+        if (lastNotified !== today) {
+          sendNotification(
+            lang === "ta" ? "🚨 டிராக்டர் ஆயில் மாற்றம் அவசியம்!" : "🚨 Tractor Oil Change Urgent!",
+            lang === "ta" ? `வெறும் ${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!` : `Only ${hoursRemaining.toFixed(1)} hours remaining!`,
+            true
+          );
+          localStorage.setItem("tractor_notified_urgent", today);
+        }
+      } else if (hoursRemaining <= 20) {
+        const lastNotified = localStorage.getItem("tractor_notified_warning");
+        if (lastNotified !== today) {
+          sendNotification(
+            lang === "ta" ? "⚠️ டிராக்டர் ஆயில் விரைவில் மாற்றவும்" : "⚠️ Tractor Oil Change Soon",
+            lang === "ta" ? `${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது` : `${hoursRemaining.toFixed(1)} hours remaining`
+          );
+          localStorage.setItem("tractor_notified_warning", today);
+        }
+      }
+    };
+
+    const checkMotorTurns = async () => {
       const [{ data: motorData }, { data: farms }] = await Promise.all([
         supabase.from("motor_sharing").select("*").eq("is_shared", true),
         supabase.from("farms").select("id, name"),
@@ -54,6 +91,7 @@ export default function MotorTurnNotifier({ language }: { language?: "ta" | "en"
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
+      const lang = getUserLanguage();
 
       motorData.forEach((motor) => {
         if (!motor.current_turn_start) return;
@@ -120,12 +158,19 @@ export default function MotorTurnNotifier({ language }: { language?: "ta" | "en"
       });
     };
 
+    const checkAndNotify = async () => {
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) return;
+
+      await Promise.all([checkMotorTurns(), checkTractorOil()]);
+    };
+
     registerServiceWorker();
     checkAndNotify();
 
     const interval = setInterval(checkAndNotify, 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [lang]);
+  }, []);
 
   return null; // No UI — runs in background
 }

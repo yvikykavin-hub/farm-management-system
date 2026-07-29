@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
     { data: weedRemovals },
     { data: harvestRecords },
     { data: irrigationRecords },
+    { data: motorSharing },
+    { data: motorSharingPartners },
   ] = await Promise.all([
     supabase.from("farms").select("*"),
     supabase.from("cultivations").select("*").order("created_at", { ascending: false }).limit(300),
@@ -99,6 +101,8 @@ export async function POST(req: NextRequest) {
     supabase.from("weed_removals").select("*").order("start_date", { ascending: false }).limit(500),
     supabase.from("harvest_records").select("*").order("harvest_date", { ascending: false }).limit(500),
     supabase.from("irrigation_records").select("*").order("irrigation_date", { ascending: false }).limit(500),
+    supabase.from("motor_sharing").select("*").eq("is_shared", true).limit(10),
+    supabase.from("motor_sharing_neighbors").select("*"),
   ]);
 
   // Sugarcane, onion, and fodder corn have no dedicated *_details table — their
@@ -155,6 +159,18 @@ CALCULATION RULES:
 - Show profit = income - expense
 - Show year-wise comparison when relevant
 - Calculate averages across seasons
+
+MOTOR TURN RULES:
+For motor turn questions:
+- Check MOTOR SHARING / SHARED MOTOR DATA below
+- current_turn_owner tells who has turn NOW ("me" = the farmer, otherwise a shared partner's name)
+- current_turn_start is when the current turn started
+- current_turn_days is the duration of that turn
+- Calculate end time: current_turn_start + current_turn_days, at 6PM
+- Tell the user whose turn it is now
+- Tell them when MY next turn starts (rotate through "me" and each partner in MOTOR SHARING PARTNERS, in order, for turn_days each)
+- Show the upcoming schedule if asked
+- Answer in Tamil or English per the LANGUAGE rule above
 
 FARM DATA (Complete Historical Records):
 ═══════════════════════════════════════
@@ -251,6 +267,12 @@ ${JSON.stringify(harvestRecords)}
 
 IRRIGATION RECORDS:
 ${JSON.stringify(irrigationRecords)}
+
+MOTOR SHARING / SHARED MOTOR DATA:
+${JSON.stringify(motorSharing)}
+
+MOTOR SHARING PARTNERS:
+${JSON.stringify(motorSharingPartners)}
 
 ═══════════════════════════════════════
 

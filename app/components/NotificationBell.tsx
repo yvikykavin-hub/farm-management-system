@@ -15,19 +15,44 @@ type NotificationItem = {
 
 const daysSince = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
 
-const SEASONAL_TIPS: Record<number, { icon: string; en: string; ta: string; msgEn: string; msgTa: string }> = {
-  0: { icon: "🌤️", en: "Winter Tip", ta: "குளிர்கால குறிப்பு", msgEn: "Monitor irrigation closely for winter crops.", msgTa: "குளிர்கால பயிர்களுக்கு பாசனத்தை கவனமாக கண்காணிக்கவும்." },
-  1: { icon: "🌤️", en: "Winter Tip", ta: "குளிர்கால குறிப்பு", msgEn: "Good time to plan land preparation for the next season.", msgTa: "அடுத்த பருவத்திற்கான நில தயாரிப்பை திட்டமிட ஏற்ற நேரம்." },
-  2: { icon: "☀️", en: "Summer Tip", ta: "கோடைகால குறிப்பு", msgEn: "Ensure adequate irrigation as temperatures rise.", msgTa: "வெப்பநிலை அதிகரிக்கும் போது போதிய பாசனம் உறுதி செய்யவும்." },
-  3: { icon: "☀️", en: "Summer Tip", ta: "கோடைகால குறிப்பு", msgEn: "Watch livestock for heat stress; ensure shade and water.", msgTa: "கால்நடைகளுக்கு வெப்ப அழுத்தம் ஏற்படாமல் நிழலும் நீரும் வழங்கவும்." },
-  4: { icon: "☀️", en: "Summer Tip", ta: "கோடைகால குறிப்பு", msgEn: "Check well and motor condition before peak summer demand.", msgTa: "கோடை உச்சத்திற்கு முன் கிணறு மற்றும் மோட்டார் நிலையை சரிபார்க்கவும்." },
-  5: { icon: "🌧️", en: "Monsoon Tip", ta: "பருவமழை குறிப்பு", msgEn: "Good time to plant kharif crops; check field drainage.", msgTa: "காரீஃப் பயிர்களை நடவு செய்ய ஏற்ற நேரம்; வயல் வடிகால் சரிபார்க்கவும்." },
-  6: { icon: "🌧️", en: "Monsoon Tip", ta: "பருவமழை குறிப்பு", msgEn: "Watch for fungal disease risk in high humidity.", msgTa: "அதிக ஈரப்பதத்தில் பூஞ்சை நோய் அபாயத்தை கவனிக்கவும்." },
-  7: { icon: "🌧️", en: "Monsoon Tip", ta: "பருவமழை குறிப்பு", msgEn: "Inspect shed roofing and drainage before heavy rain.", msgTa: "கனமழைக்கு முன் கொட்டகை கூரை மற்றும் வடிகாலை ஆய்வு செய்யவும்." },
-  8: { icon: "🍂", en: "Post-Monsoon Tip", ta: "பருவமழைக்குப் பின் குறிப்பு", msgEn: "Begin preparing storage ahead of the harvest season.", msgTa: "அறுவடை பருவத்திற்கு முன் சேமிப்பு தயார் செய்யத் தொடங்கவும்." },
-  9: { icon: "🌾", en: "Harvest Tip", ta: "அறுவடை குறிப்பு", msgEn: "Service harvesting machinery before the busy season.", msgTa: "பணிச்சுமை பருவத்திற்கு முன் அறுவடை இயந்திரங்களை பராமரிக்கவும்." },
-  10: { icon: "🌾", en: "Harvest Tip", ta: "அறுவடை குறிப்பு", msgEn: "Plan labour and transport ahead of harvest.", msgTa: "அறுவடைக்கு முன் தொழிலாளர் மற்றும் போக்குவரத்தை திட்டமிடவும்." },
-  11: { icon: "🌤️", en: "Winter Tip", ta: "குளிர்கால குறிப்பு", msgEn: "Review this year's finances and plan next season's budget.", msgTa: "இந்த ஆண்டு நிதியை மதிப்பாய்வு செய்து அடுத்த பருவ பட்ஜெட்டை திட்டமிடவும்." },
+const getUserLanguage = (): "ta" | "en" => {
+  if (typeof window !== "undefined") {
+    return window.localStorage.getItem("marutham_lang") === "ta" ? "ta" : "en";
+  }
+  return "en";
+};
+
+// Season buckets by month index (0 = Jan): Dec–Feb winter, Mar–May summer,
+// Jun–Nov monsoon (rainy season through harvest — kept as one bucket per
+// the simplified 3-season model).
+const SEASON_TIPS: Record<"winter" | "summer" | "monsoon", { icon: string; en: string; ta: string; msgEn: string; msgTa: string }> = {
+  monsoon: {
+    icon: "🌧️",
+    en: "Monsoon Season Tip",
+    ta: "மழைக்கால குறிப்பு",
+    msgEn: "Monsoon season - avoid spraying pesticides",
+    msgTa: "மழைக்காலம் - பூச்சிக்கொல்லி தெளிக்க சரியான நேரம் அல்ல",
+  },
+  summer: {
+    icon: "☀️",
+    en: "Summer Season Tip",
+    ta: "கோடைகால குறிப்பு",
+    msgEn: "Water in morning or evening only",
+    msgTa: "காலை அல்லது மாலை நேரத்தில் பாசனம் செய்யவும்",
+  },
+  winter: {
+    icon: "🌿",
+    en: "Winter Season Tip",
+    ta: "குளிர்கால குறிப்பு",
+    msgEn: "Great time to plant coconut and turmeric!",
+    msgTa: "தேங்காய், மஞ்சள் பயிர் செய்ய சிறந்த நேரம்!",
+  },
+};
+
+const seasonForMonth = (month: number): "winter" | "summer" | "monsoon" => {
+  if (month === 11 || month === 0 || month === 1) return "winter";
+  if (month >= 2 && month <= 4) return "summer";
+  return "monsoon";
 };
 
 export default function NotificationBell({ language = "en" }: { language?: "ta" | "en" }) {
@@ -60,22 +85,28 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       ]);
 
       const detected: NotificationItem[] = [];
+      const lang = getUserLanguage();
 
-      // Tractor oil change due
+      // Tractor oil change — two tiers: urgent (very low) vs warning (soon)
       const totalHours = (usage ?? []).reduce((s, u) => s + Number(u.duration_hours), 0);
       const interval = settings ? Number(settings.oil_change_interval_hours) : 300;
       const lastServiceHours = oilRecords?.[0] ? Number(oilRecords[0].hours_at_service) : 0;
-      const hoursRemaining = interval - (totalHours - lastServiceHours);
-      if (hoursRemaining < 20) {
+      const hoursRemaining = Math.max(interval - (totalHours - lastServiceHours), 0);
+      if (hoursRemaining <= 5) {
         detected.push({
           id: "tractor-oil",
           severity: "danger",
-          icon: "🚜",
-          title: L("Tractor Oil Change Due!", "டிராக்டர் ஆயில் மாற்றம் தேவை!"),
-          message: L(
-            `Only ${Math.max(hoursRemaining, 0).toFixed(1)} hours remaining`,
-            `${Math.max(hoursRemaining, 0).toFixed(1)} மணி நேரம் மட்டுமே உள்ளது`
-          ),
+          icon: "🚨",
+          title: lang === "ta" ? "🚨 டிராக்டர் ஆயில் மாற்றம் அவசியம்!" : "🚨 Tractor Oil Change Urgent!",
+          message: lang === "ta" ? `வெறும் ${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!` : `Only ${hoursRemaining.toFixed(1)} hours remaining!`,
+        });
+      } else if (hoursRemaining <= 20) {
+        detected.push({
+          id: "tractor-oil",
+          severity: "warning",
+          icon: "⚠️",
+          title: lang === "ta" ? "⚠️ டிராக்டர் ஆயில் விரைவில் மாற்றவும்" : "⚠️ Tractor Oil Change Soon",
+          message: lang === "ta" ? `${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது` : `${hoursRemaining.toFixed(1)} hours remaining`,
         });
       }
 
@@ -85,8 +116,8 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
           id: "milk-payment",
           severity: "info",
           icon: "💰",
-          title: L("Milk Payment Pending", "பால் பணம் நிலுவையில்"),
-          message: L(`${pendingPayments.length} payment(s) pending`, `${pendingPayments.length} பணம் நிலுவையில் உள்ளது`),
+          title: lang === "ta" ? "💰 பால் பணம் நிலுவை உள்ளது" : "💰 Milk Payment Pending",
+          message: lang === "ta" ? `${pendingPayments.length} நிலுவை பணம் உள்ளது` : `${pendingPayments.length} payment(s) pending`,
         });
       }
 
@@ -95,12 +126,41 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       (activeCrops ?? []).forEach((crop) => {
         if (!crop.start_date) return;
         const days = daysSince(crop.start_date);
+        const label = `${crop.crop_type}${farmName(crop.farm_id) ? ` — ${farmName(crop.farm_id)}` : ""}`;
+
+        // Turmeric gets its own staged tips instead of the generic milestones.
+        if (crop.crop_type === "turmeric") {
+          if (days >= 40 && days <= 50) {
+            detected.push({
+              id: `crop-turmeric-fertilizer-${crop.id}`,
+              severity: "warning",
+              icon: "🌱",
+              title: lang === "ta" ? "🌱 மஞ்சள் உர குறிப்பு" : "🌱 Turmeric Fertilizer Tip",
+              message:
+                lang === "ta"
+                  ? `${label} — மஞ்சள் ${days} நாட்கள். பொட்டாசியம் உரம் இட நேரம்!`
+                  : `${label} — Turmeric is ${days} days. Time to apply potassium!`,
+            });
+          } else if (days >= 240) {
+            detected.push({
+              id: `crop-turmeric-harvest-${crop.id}`,
+              severity: "info",
+              icon: "🌾",
+              title: lang === "ta" ? "🌾 மஞ்சள் அறுவடை நேரம்" : "🌾 Turmeric Harvest Time",
+              message:
+                lang === "ta"
+                  ? `${label} — மஞ்சள் ${days} நாட்கள். அறுவடைக்கு தயாராகுங்கள்!`
+                  : `${label} — Turmeric ${days} days old. Prepare for harvest!`,
+            });
+          }
+          return;
+        }
+
         let milestone: "first" | "second" | null = null;
         if (days >= 60) milestone = "second";
         else if (days >= 30) milestone = "first";
         if (!milestone) return;
 
-        const label = `${crop.crop_type}${farmName(crop.farm_id) ? ` — ${farmName(crop.farm_id)}` : ""}`;
         detected.push({
           id: `crop-fertilizer-${crop.id}`,
           severity: "warning",
@@ -132,11 +192,11 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
             id: `motor-ending-${motor.id}`,
             severity: "danger",
             icon: "⏰",
-            title: L("Motor Turn Ending Soon!", "மோட்டார் முறை முடியும்!"),
-            message: L(
-              `${farm} - ends in ${Math.round(hoursUntilEnd)} hour(s)`,
-              `${farm} - ${Math.round(hoursUntilEnd)} மணி நேரத்தில் முடியும்`
-            ),
+            title: lang === "ta" ? "⏰ மோட்டார் முறை முடியும்!" : "⏰ Motor Turn Ending Soon!",
+            message:
+              lang === "ta"
+                ? `${farm} - ${Math.round(hoursUntilEnd)} மணி நேரத்தில் முடியும்`
+                : `${farm} - Ends in ${Math.round(hoursUntilEnd)} hour(s)`,
           });
         }
 
@@ -147,27 +207,25 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
               id: `motor-my-turn-${motor.id}`,
               severity: "warning",
               icon: "🚰",
-              title: L("Your Motor Turn Starting Soon!", "உங்கள் மோட்டார் முறை தொடங்கும்!"),
-              message: L(
-                `${farm} - starts in ${Math.round(hoursUntilMyTurn)} hour(s)`,
-                `${farm} - ${Math.round(hoursUntilMyTurn)} மணி நேரத்தில் தொடங்கும்`
-              ),
+              title: lang === "ta" ? "🚰 உங்கள் மோட்டார் முறை தொடங்கும்!" : "🚰 Your Motor Turn Starting Soon!",
+              message:
+                lang === "ta"
+                  ? `${farm} - ${Math.round(hoursUntilMyTurn)} மணி நேரத்தில் தொடங்கும்`
+                  : `${farm} - Starts in ${Math.round(hoursUntilMyTurn)} hour(s)`,
             });
           }
         }
       });
 
       // Seasonal tip based on current month
-      const monthTip = SEASONAL_TIPS[new Date().getMonth()];
-      if (monthTip) {
-        detected.push({
-          id: "seasonal-tip",
-          severity: "info",
-          icon: monthTip.icon,
-          title: L(monthTip.en, monthTip.ta),
-          message: L(monthTip.msgEn, monthTip.msgTa),
-        });
-      }
+      const seasonTip = SEASON_TIPS[seasonForMonth(new Date().getMonth())];
+      detected.push({
+        id: "seasonal-tip",
+        severity: "info",
+        icon: seasonTip.icon,
+        title: lang === "ta" ? seasonTip.ta : seasonTip.en,
+        message: lang === "ta" ? seasonTip.msgTa : seasonTip.msgEn,
+      });
 
       setItems(detected);
       setLoading(false);
