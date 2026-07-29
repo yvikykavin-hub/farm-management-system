@@ -20,6 +20,8 @@ import hotToast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
+import ExportButton from "../../components/ExportButton";
+import PullToRefresh from "../../components/PullToRefresh";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 
@@ -243,6 +245,7 @@ export default function FinancePage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PullToRefresh onRefresh={() => fetchAll(true)} language={lang}>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -270,6 +273,9 @@ export default function FinancePage() {
 
           {/* Filters */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2">
+            <div className="flex justify-end">
+              <ExportButton data={chartData} filename="Finance-Report" sheetName="Finance" language={lang} />
+            </div>
             <div>
               <p className="text-xs font-semibold text-gray-500 mb-1">{L("Year", "ஆண்டு")}</p>
               <div className="flex flex-wrap gap-2">
@@ -451,6 +457,7 @@ export default function FinancePage() {
             </>
           )}
         </div>
+        </PullToRefresh>
       </main>
     </div>
   );

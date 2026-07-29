@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../../components/Sidebar";
+import ExportButton from "../../../../components/ExportButton";
 import { supabase } from "../../../../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../../../../lib/geminiOCR";
 import { t } from "../../../../lib/labels";
@@ -964,11 +965,14 @@ export default function CowDetailPage() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                   <h2 className="text-sm font-semibold text-gray-800">{t(lang, "income")}</h2>
-                  <button onClick={openAddPayment} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
-                    + {t(lang, "addPayment")}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <ExportButton data={payments} filename={`${cow?.name ?? "Cow"}-Milk-Payments`} sheetName="Milk Payments" language={lang} />
+                    <button onClick={openAddPayment} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                      + {t(lang, "addPayment")}
+                    </button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">

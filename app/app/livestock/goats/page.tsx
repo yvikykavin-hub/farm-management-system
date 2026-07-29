@@ -6,6 +6,7 @@ import { SkeletonCard } from "../../../components/Skeleton";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
+import PullToRefresh from "../../../components/PullToRefresh";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
@@ -161,6 +162,7 @@ export default function GoatsListPage() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 overflow-y-auto p-4">
+        <PullToRefresh onRefresh={fetchAll} language={lang}>
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
 
           <Link href="/livestock" className="text-primary hover:text-primary text-sm font-semibold">
@@ -264,6 +266,7 @@ export default function GoatsListPage() {
             </div>
           )}
         </div>
+        </PullToRefresh>
       </main>
 
       {modalOpen && (

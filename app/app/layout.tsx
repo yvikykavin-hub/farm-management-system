@@ -5,6 +5,8 @@ import { Toaster } from "react-hot-toast";
 import InactivityTimer from "../components/InactivityTimer";
 import ErrorBoundary from "../components/ErrorBoundary";
 import PageWrapper from "../components/PageWrapper";
+import QuickActions from "../components/QuickActions";
+import OfflineMessage from "../components/OfflineMessage";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -36,11 +38,13 @@ export default function RootLayout({
   return (
     <html lang="ta" suppressHydrationWarning>
       <body className={`${geist.className} min-h-screen bg-green-50`}>
+        <OfflineMessage />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="marutham-theme">
           <InactivityTimer />
           <ErrorBoundary>
             <PageWrapper>{children}</PageWrapper>
           </ErrorBoundary>
+          <QuickActions />
           <Toaster
             position="top-right"
             toastOptions={{

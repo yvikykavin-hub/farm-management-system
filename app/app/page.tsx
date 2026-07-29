@@ -9,6 +9,7 @@ import { SkeletonDashboard } from "../components/Skeleton";
 import DarkModeToggle from "../components/DarkModeToggle";
 import ChatWidget from "../components/ChatWidget";
 import WeatherWidget from "../components/WeatherWidget";
+import PullToRefresh from "../components/PullToRefresh";
 import { supabase } from "../lib/supabase";
 import { useLang } from "../lib/useLang";
 
@@ -134,6 +135,12 @@ export default function Dashboard() {
       <Sidebar lang={lang} setLang={setLang} />
 
       <main className="flex-1 p-3 overflow-y-auto overflow-x-hidden flex flex-col pb-20">
+        <PullToRefresh
+          onRefresh={async () => {
+            await Promise.all([fetchFarms(), fetchActiveCropsCount()]);
+          }}
+          language={lang}
+        >
         <div className="max-w-6xl mx-auto w-full flex flex-col gap-3">
 
           {/* Header */}
@@ -292,6 +299,7 @@ export default function Dashboard() {
           )}
 
         </div>
+        </PullToRefresh>
       </main>
       <ChatWidget language={lang} />
     </div>

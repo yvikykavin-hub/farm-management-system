@@ -5,6 +5,7 @@ import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AnimatedCard from "../../components/AnimatedCard";
 import { SkeletonCard } from "../../components/Skeleton";
+import ExportButton from "../../components/ExportButton";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 
@@ -529,6 +530,7 @@ export default function ReportsPage() {
                     <button onClick={downloadPDF} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                       ⬇️ {L("Download PDF", "PDF பதிவிறக்கு")}
                     </button>
+                    <ExportButton data={report.rows} filename="Marutham-Report" sheetName="Report" language={lang} />
                   </div>
 
                   <div id="report-content" ref={reportRef} className="bg-white rounded-2xl shadow-sm p-6 flex flex-col gap-4 overflow-x-auto">
