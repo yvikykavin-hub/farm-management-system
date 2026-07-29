@@ -13,6 +13,7 @@ import { useLang } from "../../../lib/useLang";
 type Farm = {
   id: string;
   name: string | null;
+  name_tamil: string | null;
   owner_name: string | null;
   area: number | null;
   total_area: number | null;
@@ -24,11 +25,14 @@ type Farm = {
   motor: boolean | null;
   has_motor: boolean | null;
   motor_details: string | null;
+  motor_hp: string | null;
   water_source: string | null;
   irrigation_type: string | null;
   soil_type: string | null;
   google_maps_link: string | null;
 };
+
+const MOTOR_HP_OPTIONS = ["0.5", "1", "1.5", "2", "3", "5", "7.5", "10"];
 
 type FarmDrawing = {
   id: string;
@@ -164,6 +168,7 @@ export default function LandDetailPage() {
 
   // Section 1 - Basic Info
   const [name, setName] = useState("");
+  const [nameTamil, setNameTamil] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [area, setArea] = useState("");
   const [surveyNumbers, setSurveyNumbers] = useState("");
@@ -175,6 +180,8 @@ export default function LandDetailPage() {
   const [wellDepth, setWellDepth] = useState("");
   const [motor, setMotor] = useState(false);
   const [motorDetails, setMotorDetails] = useState("");
+  const [motorHp, setMotorHp] = useState("");
+  const [motorHpOther, setMotorHpOther] = useState("");
   const [waterSource, setWaterSource] = useState("borewell");
   const [irrigationType, setIrrigationType] = useState("drip");
   const [savingWater, setSavingWater] = useState(false);
@@ -224,6 +231,7 @@ export default function LandDetailPage() {
       const f = data as Farm;
       setFarm(f);
       setName(f.name ?? "");
+      setNameTamil(f.name_tamil ?? "");
       setOwnerName(f.owner_name ?? "");
       const effectiveArea = f.area ?? f.total_area;
       setArea(effectiveArea != null ? String(effectiveArea) : "");
@@ -233,6 +241,13 @@ export default function LandDetailPage() {
       setWellDepth(f.well_depth ?? "");
       setMotor(f.motor ?? f.has_motor ?? false);
       setMotorDetails(f.motor_details ?? "");
+      if (f.motor_hp && !MOTOR_HP_OPTIONS.includes(f.motor_hp)) {
+        setMotorHp("other");
+        setMotorHpOther(f.motor_hp);
+      } else {
+        setMotorHp(f.motor_hp ?? "");
+        setMotorHpOther("");
+      }
       setWaterSource(f.water_source ?? "borewell");
       setIrrigationType(f.irrigation_type ?? "drip");
       setSoilType(f.soil_type ?? "red");
@@ -262,6 +277,7 @@ export default function LandDetailPage() {
         .from("farms")
         .update({
           name: name.trim() || null,
+          name_tamil: nameTamil.trim() || null,
           owner_name: ownerName.trim() || null,
           total_area: parseFloat(area) || 0,
           survey_numbers: surveyNumbers.trim() || null,
@@ -292,6 +308,7 @@ export default function LandDetailPage() {
           well_depth: well ? wellDepth.trim() || null : null,
           has_motor: motor,
           motor_details: motor ? motorDetails.trim() || null : null,
+          motor_hp: motor ? (motorHp === "other" ? motorHpOther.trim() || null : motorHp || null) : null,
           water_source: waterSource || null,
           irrigation_type: irrigationType || null,
         })
@@ -515,8 +532,21 @@ export default function LandDetailPage() {
                 <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Basic Info", "அடிப்படை தகவல்")}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                   <div>
-                    <label className={labelCls}>{L("Farm Name", "பண்ணை பெயர்")}</label>
+                    <label className={labelCls}>{L("Farm Name (English)", "பண்ணை பெயர் (English)")}</label>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Farm Name (Tamil) - Optional", "பண்ணை பெயர் (தமிழ்) - விருப்பமானது")}</label>
+                    <input
+                      type="text"
+                      value={nameTamil}
+                      onChange={(e) => setNameTamil(e.target.value)}
+                      placeholder={L("e.g. வ. கருக்கம்பாளையம் பண்ணை", "தமிழில் பண்ணை பெயர்")}
+                      className={inputCls}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      {L("Used in Tamil notifications and Tamil mode", "தமிழ் அறிவிப்புகளில் இந்த பெயர் பயன்படுத்தப்படும்")}
+                    </p>
                   </div>
                   <div>
                     <label className={labelCls}>{L("Owner Name", "உரிமையாளர் பெயர்")}</label>
@@ -568,10 +598,33 @@ export default function LandDetailPage() {
                     <TogglePill value={motor} onChange={setMotor} yesLabel={L("Yes", "உண்டு")} noLabel={L("No", "இல்லை")} />
                   </div>
                   {motor && (
-                    <div>
-                      <label className={labelCls}>{L("Motor Service Number", "மோட்டார் சேவை எண்")}</label>
-                      <input type="text" value={motorDetails} onChange={(e) => setMotorDetails(e.target.value)} className={inputCls} />
-                    </div>
+                    <>
+                      <div>
+                        <label className={labelCls}>{L("Motor Service Number", "மோட்டார் சேவை எண்")}</label>
+                        <input type="text" value={motorDetails} onChange={(e) => setMotorDetails(e.target.value)} className={inputCls} />
+                      </div>
+
+                      <div>
+                        <label className={labelCls}>{L("Motor HP (Horse Power)", "மோட்டார் HP (ஹார்ஸ் பவர்)")}</label>
+                        <select value={motorHp} onChange={(e) => setMotorHp(e.target.value)} className={inputCls}>
+                          <option value="">{L("Select HP", "HP தேர்வு செய்க")}</option>
+                          {MOTOR_HP_OPTIONS.map((hp) => (
+                            <option className="text-gray-900" key={hp} value={hp}>{hp} HP</option>
+                          ))}
+                          <option value="other">{L("Other", "மற்றவை")}</option>
+                        </select>
+
+                        {motorHp === "other" && (
+                          <input
+                            type="text"
+                            value={motorHpOther}
+                            onChange={(e) => setMotorHpOther(e.target.value)}
+                            placeholder={L("Enter HP value", "HP மதிப்பை உள்ளிடவும்")}
+                            className={`${inputCls} mt-2`}
+                          />
+                        )}
+                      </div>
+                    </>
                   )}
                   <div>
                     <label className={labelCls}>{L("Water Source", "நீர் ஆதாரம்")}</label>

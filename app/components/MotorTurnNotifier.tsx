@@ -10,6 +10,16 @@ const getUserLanguage = (): string => {
   return "en";
 };
 
+type FarmRef = { name: string | null; name_tamil: string | null } | null;
+
+const getFarmName = (farm: FarmRef): string => {
+  const lang = getUserLanguage();
+  if (lang === "ta" && farm?.name_tamil) {
+    return farm.name_tamil;
+  }
+  return farm?.name || (lang === "ta" ? "உங்கள் பண்ணை" : "Your Farm");
+};
+
 export default function MotorTurnNotifier() {
   useEffect(() => {
     const registerServiceWorker = async () => {
@@ -79,14 +89,12 @@ export default function MotorTurnNotifier() {
     };
 
     const checkMotorTurns = async () => {
-      const [{ data: motorData }, { data: farms }] = await Promise.all([
-        supabase.from("motor_sharing").select("*").eq("is_shared", true),
-        supabase.from("farms").select("id, name"),
-      ]);
+      const { data: motorData } = await supabase
+        .from("motor_sharing")
+        .select("*, motor_sharing_neighbors(*), farms(name, name_tamil)")
+        .eq("is_shared", true);
 
       if (!motorData) return;
-
-      const farmName = (farmId: string) => farms?.find((f) => f.id === farmId)?.name ?? "Farm";
 
       const now = new Date();
       const currentHour = now.getHours();
@@ -101,7 +109,7 @@ export default function MotorTurnNotifier() {
         turnEnd.setDate(turnEnd.getDate() + motor.current_turn_days);
         turnEnd.setHours(18, 0, 0, 0);
 
-        const farm = farmName(motor.farm_id);
+        const farmDisplayName = getFarmName(motor.farms as FarmRef);
         const isMyTurn = motor.current_turn_owner === "me";
 
         // Check if my turn just started (6 PM)
@@ -111,8 +119,10 @@ export default function MotorTurnNotifier() {
 
           if (lastNotified !== today) {
             sendNotification(
-              lang === "ta" ? "🚰 உங்கள் மோட்டார் முறை தொடங்கியது!" : "🚰 Your motor turn has started!",
-              farm,
+              lang === "ta"
+                ? `🚰 ${farmDisplayName} - உங்கள் மோட்டார் முறை தொடங்கியது!`
+                : `🚰 ${farmDisplayName} - Your motor turn has started!`,
+              lang === "ta" ? "இப்போதே தண்ணீர் பாசனம் செய்யலாம்" : "You can start watering now",
               true
             );
             localStorage.setItem(`motor_notified_start_${motor.id}`, today);
@@ -127,9 +137,10 @@ export default function MotorTurnNotifier() {
           if (lastNotified !== today) {
             sendNotification(
               lang === "ta"
-                ? "☀️ காலை வணக்கம்! இன்று உங்கள் மோட்டார் முறை நாள்."
-                : "☀️ Good morning! Today is your motor turn day.",
-              farm
+                ? `☀️ காலை வணக்கம்! ${farmDisplayName} - இன்று உங்கள் மோட்டார் முறை நாள்.`
+                : `☀️ Good morning! ${farmDisplayName} - Today is your motor turn day.`,
+              "",
+              false
             );
             localStorage.setItem(`motor_notified_morning_${motor.id}`, today);
           }
@@ -146,9 +157,9 @@ export default function MotorTurnNotifier() {
             if (lastNotified !== today) {
               sendNotification(
                 lang === "ta"
-                  ? "⏰ உங்கள் மோட்டார் முறை 1 மணி நேரத்தில் முடியும்!"
-                  : "⏰ Your motor turn ends in 1 hour! Finish your watering soon.",
-                farm,
+                  ? `⏰ ${farmDisplayName} - உங்கள் மோட்டார் முறை 1 மணி நேரத்தில் முடியும்!`
+                  : `⏰ ${farmDisplayName} - Your motor turn ends in 1 hour!`,
+                lang === "ta" ? "தண்ணீர் பாசனத்தை முடிக்கவும்" : "Finish your watering soon",
                 true
               );
               localStorage.setItem(`motor_notified_end_${motor.id}`, today);

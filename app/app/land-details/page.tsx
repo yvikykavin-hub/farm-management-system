@@ -22,6 +22,7 @@ type Farm = {
   motor: boolean | null;
   has_motor: boolean | null;
   motor_details: string | null;
+  motor_hp: string | null;
   soil_type: string | null;
   water_source: string | null;
 };
@@ -156,7 +157,9 @@ export default function LandDetailsPage() {
                         </p>
                         <p className="text-xs text-gray-700">
                           {motor
-                            ? `🟢 ${L("Motor", "மோட்டார்")}: ${L("Yes", "உண்டு")}${f.motor_details ? ` • ${f.motor_details}` : ""}`
+                            ? `🟢 ${L("Motor", "மோட்டார்")}: ${L("Yes", "உண்டு")}${f.motor_details ? ` • ${f.motor_details}` : ""}${
+                                f.motor_hp ? ` • ${f.motor_hp} HP` : ""
+                              }`
                             : `⭕ ${L("Motor", "மோட்டார்")}: ${L("No", "இல்லை")}`}
                         </p>
                         <div className="flex justify-end mt-1">
