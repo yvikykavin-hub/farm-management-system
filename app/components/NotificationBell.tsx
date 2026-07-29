@@ -65,6 +65,17 @@ const seasonForMonth = (month: number): "winter" | "summer" | "monsoon" => {
   return "monsoon";
 };
 
+const DISMISSED_KEY = "marutham_dismissed_notifications";
+
+const getDismissedIds = (): string[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+
 export default function NotificationBell({ language = "en" }: { language?: "ta" | "en" }) {
   const L = (en: string, ta: string) => (language === "ta" ? ta : en);
 
@@ -74,7 +85,21 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    fetchNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchNotifications = async () => {
       setLoading(true);
       const [
         { data: usage },
@@ -102,9 +127,13 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       const interval = settings ? Number(settings.oil_change_interval_hours) : 300;
       const lastServiceHours = oilRecords?.[0] ? Number(oilRecords[0].hours_at_service) : 0;
       const hoursRemaining = Math.max(interval - (totalHours - lastServiceHours), 0);
+      // Bucket the hours into the id so dismissing a "20h left" warning
+      // doesn't also silence the later "5h left" urgent alert — a genuinely
+      // new range gets a new id, an oil change (hours jump back up) does too.
+      const tractorBucket = Math.floor(hoursRemaining / 10);
       if (hoursRemaining <= 5) {
         detected.push({
-          id: "tractor-oil",
+          id: `tractor-oil-${tractorBucket}`,
           severity: "danger",
           icon: "🚨",
           title: lang === "ta" ? "🚨 டிராக்டர் ஆயில் மாற்றம் அவசியம்!" : "🚨 Tractor Oil Change Urgent!",
@@ -112,7 +141,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         });
       } else if (hoursRemaining <= 20) {
         detected.push({
-          id: "tractor-oil",
+          id: `tractor-oil-${tractorBucket}`,
           severity: "warning",
           icon: "⚠️",
           title: lang === "ta" ? "⚠️ டிராக்டர் ஆயில் விரைவில் மாற்றவும்" : "⚠️ Tractor Oil Change Soon",
@@ -172,7 +201,9 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         if (!milestone) return;
 
         detected.push({
-          id: `crop-fertilizer-${crop.id}`,
+          // Milestone included so dismissing "First" doesn't also silence
+          // the later, genuinely different "Second" fertilizer notice.
+          id: `crop-fertilizer-${crop.id}-${milestone}`,
           severity: "warning",
           icon: "🌱",
           title:
@@ -199,7 +230,10 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
 
         if (isMyTurn && hoursUntilEnd > 0 && hoursUntilEnd <= 2) {
           detected.push({
-            id: `motor-ending-${motor.id}`,
+            // current_turn_start included so dismissing "ending soon" for
+            // this turn doesn't also silence the same alert on the next
+            // turn cycle (the row is reused/updated in place per rotation).
+            id: `motor-ending-${motor.id}-${motor.current_turn_start}`,
             severity: "danger",
             icon: "⏰",
             title: lang === "ta" ? `⏰ ${motorFarmName} - மோட்டார் முறை முடியும்!` : `⏰ ${motorFarmName} - Motor Turn Ending Soon!`,
@@ -212,7 +246,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
           const hoursUntilMyTurn = (turnEnd.getTime() - now.getTime()) / (1000 * 60 * 60);
           if (hoursUntilMyTurn > 0 && hoursUntilMyTurn <= 2) {
             detected.push({
-              id: `motor-my-turn-${motor.id}`,
+              id: `motor-my-turn-${motor.id}-${motor.current_turn_start}`,
               severity: "warning",
               icon: "🚰",
               title:
@@ -229,35 +263,33 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       });
 
       // Seasonal tip based on current month
-      const seasonTip = SEASON_TIPS[seasonForMonth(new Date().getMonth())];
+      const season = seasonForMonth(new Date().getMonth());
+      const seasonTip = SEASON_TIPS[season];
       detected.push({
-        id: "seasonal-tip",
+        id: `seasonal-${season}`,
         severity: "info",
         icon: seasonTip.icon,
         title: lang === "ta" ? seasonTip.ta : seasonTip.en,
         message: lang === "ta" ? seasonTip.msgTa : seasonTip.msgEn,
       });
 
-      setItems(detected);
+      const dismissedIds = getDismissedIds();
+      setItems(detected.filter((n) => !dismissedIds.includes(n.id)));
       setLoading(false);
-    };
-
-    fetchNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  };
 
   const dismiss = (id: string) => {
+    const dismissedIds = getDismissedIds();
+    if (!dismissedIds.includes(id)) {
+      dismissedIds.push(id);
+      localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissedIds));
+    }
     setItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const clearAllDismissed = () => {
+    localStorage.removeItem(DISMISSED_KEY);
+    fetchNotifications();
   };
 
   const severityCls: Record<Severity, string> = {
@@ -290,7 +322,12 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         >
           <div className="p-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">🔔 {L("Notifications", "அறிவிப்புகள்")}</h3>
-            {items.length > 0 && <span className="text-xs text-gray-400">{items.length}</span>}
+            <div className="flex items-center gap-2">
+              {items.length > 0 && <span className="text-xs text-gray-400">{items.length}</span>}
+              <button onClick={clearAllDismissed} className="text-xs text-red-400 hover:text-red-600">
+                {L("Clear all", "அனைத்தும் அழி")}
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -313,7 +350,10 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
                     <p className="text-xs opacity-70 mt-0.5">{item.message}</p>
                   </div>
                   <button
-                    onClick={() => dismiss(item.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismiss(item.id);
+                    }}
                     className="min-h-[24px] min-w-[24px] flex items-center justify-center text-current opacity-60 hover:opacity-100 shrink-0"
                   >
                     ×
