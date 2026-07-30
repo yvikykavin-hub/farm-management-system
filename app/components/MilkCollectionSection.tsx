@@ -2,10 +2,39 @@
 
 import toast from "react-hot-toast";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../lib/geminiOCR";
 import { t } from "../lib/labels";
 import { milkRateWarning } from "../lib/validators";
+
+const OCR_BATCH_SIZE = 10;
+
+// Mobile camera photos are commonly 3-5MB; sending that as base64 JSON risks
+// timing out the Gemini call and can exceed serverless request body limits.
+// Downscale to a max width and re-encode as JPEG before it ever reaches the OCR API.
+const compressImage = (file: File, maxWidth = 1024): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(img.src);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => reject(new Error("Could not load image"));
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 type MilkRate = { id: string; rate_per_litre: number; effective_from: string; notes: string | null };
 type MilkCollection = {
@@ -48,6 +77,7 @@ const inputCls =
 const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
 export default function MilkCollectionSection({ animalType, lang }: { animalType: "cow" | "buffalo"; lang: "ta" | "en" }) {
+  const router = useRouter();
   const rateTable = animalType === "buffalo" ? "buffalo_milk_rates" : "milk_rates";
 
   const [rates, setRates] = useState<MilkRate[]>([]);
@@ -205,21 +235,17 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
+    setOcrLoading(true);
+    try {
+      const dataUrl = await compressImage(file);
       setOcrImage(dataUrl);
       const base64 = dataUrl.split(",")[1];
-      setOcrLoading(true);
-      try {
-        const rows = await extractMilkCardData(base64);
-        setOcrRows(rows);
-      } catch (err) {
-        toast.error("OCR error: " + (err instanceof Error ? err.message : String(err)));
-      }
-      setOcrLoading(false);
-    };
-    reader.readAsDataURL(file);
+      const rows = await extractMilkCardData(base64);
+      setOcrRows(rows);
+    } catch (err) {
+      toast.error("OCR error: " + (err instanceof Error ? err.message : String(err)));
+    }
+    setOcrLoading(false);
   };
 
   const updateOcrRow = (idx: number, field: keyof MilkCardRow, value: string) => {
@@ -232,6 +258,14 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     if (ocrRows.length === 0) return;
     setSavingOcr(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error(lang === "ta" ? "மீண்டும் உள்நுழையவும்" : "Please login again");
+        router.push("/login");
+        setSavingOcr(false);
+        return;
+      }
+
       const parsedRows = ocrRows.map((row) => ({
         ...row,
         isoDate: row.date.includes("/") || row.date.includes("-") ? parseOCRDate(row.date) : row.date,
@@ -256,17 +290,27 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         month_year: row.isoDate.slice(0, 7),
       }));
       console.log("Saving OCR milk collections:", payload);
-      const { error } = await supabase.from("milk_collections").insert(payload);
-      if (error) {
-        console.error("Error saving rows: ", error);
-        toast.error(t(lang, "saveFailedMessage"));
-      } else {
-        setOcrRows([]);
-        setOcrImage(null);
-        setSelectedFileName(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        fetchCollections();
+
+      // Save in small batches — more resilient than one large insert on unstable mobile networks.
+      let savedCount = 0;
+      for (let i = 0; i < payload.length; i += OCR_BATCH_SIZE) {
+        const batch = payload.slice(i, i + OCR_BATCH_SIZE);
+        const { error } = await supabase.from("milk_collections").insert(batch);
+        if (error) {
+          console.error("Batch save error: ", error);
+          toast.error(t(lang, "saveFailedMessage"));
+          setSavingOcr(false);
+          return;
+        }
+        savedCount += batch.length;
       }
+
+      toast.success(lang === "ta" ? `✅ ${savedCount} நாட்கள் சேமிக்கப்பட்டது!` : `✅ ${savedCount} days saved!`);
+      setOcrRows([]);
+      setOcrImage(null);
+      setSelectedFileName(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      fetchCollections();
     } catch (err) {
       console.error("Unexpected error:", err);
       toast.error(t(lang, "saveFailedMessage"));
