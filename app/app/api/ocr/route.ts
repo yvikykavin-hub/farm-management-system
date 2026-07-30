@@ -30,11 +30,20 @@ export async function POST(req: NextRequest) {
                 },
               },
               {
-                text: `This is a milk collection table.
-Extract each row with date, morning litres, evening litres.
-Return ONLY valid JSON array like this example:
-[{"date":"01/06/2026","morning":4.5,"evening":3.0}]
-No explanation. No markdown. Just the JSON array.`,
+                text: `This is a printed milk collection table.
+Extract each row with these fields:
+- date: just the day number (1, 2, 3... or 01, 02...)
+- morning: morning milk in litres (decimal number)
+- evening: evening milk in litres (decimal number)
+
+Return ONLY valid JSON array like:
+[{"date":"1","morning":4.5,"evening":3.0},{"date":"2","morning":4.0,"evening":3.5}]
+
+Important:
+- Extract ONLY the day number, not the full date
+- Use 0 if morning or evening is empty/blank
+- Skip rows with no milk data
+- No explanation, no markdown, just JSON`,
               },
             ],
           },

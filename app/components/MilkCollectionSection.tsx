@@ -57,16 +57,33 @@ const formatDMY = (iso: string | null | undefined) => {
   return y && m && d ? `${d}/${m}/${y}` : iso;
 };
 
-const parseOCRDate = (raw: string): string => {
-  const trimmed = raw.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  const parts = trimmed.split(/[\/\-.]/);
-  if (parts.length === 3) {
-    const [d, m, yRaw] = parts;
-    const y = yRaw.length === 2 ? (Number(yRaw) > 50 ? "19" : "20") + yRaw : yRaw;
-    if (d && m && y.length === 4) return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+// OCR frequently misreads the month/year printed on a milk card (or the card only
+// prints day numbers at all). The day number is far more reliable than the month/year
+// it guessed, so we only trust the day and always combine it with the month the user
+// explicitly selected before uploading.
+const dayNumberFromRow = (raw: string): number | null => {
+  const trimmed = String(raw).trim();
+  let day: number;
+  if (trimmed.includes("/") || trimmed.includes(".")) {
+    day = parseInt(trimmed.split(/[\/.]/)[0], 10);
+  } else if (trimmed.includes("-")) {
+    const parts = trimmed.split("-");
+    day = parseInt(parts[parts.length - 1], 10);
+  } else {
+    day = parseInt(trimmed, 10);
   }
-  return "Invalid Date";
+  if (Number.isNaN(day) || day < 1 || day > 31) return null;
+  return day;
+};
+
+const buildDateForSelectedMonth = (dayNumber: number, monthYear: string): string | null => {
+  const [yearStr, monthStr] = monthYear.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  if (!year || !month) return null;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (dayNumber > daysInMonth) return null;
+  return `${yearStr}-${monthStr.padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
 };
 
 const currentMonthYear = () => {
@@ -110,6 +127,10 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     const applicable = rates.filter((r) => r.effective_from <= date).sort((a, b) => b.effective_from.localeCompare(a.effective_from));
     return applicable.length ? Number(applicable[0].rate_per_litre) : 0;
   };
+
+  // Shared between the OCR upload (dates are always built from this + the extracted
+  // day number) and the monthly summary view below.
+  const [selectedMonthYear, setSelectedMonthYear] = useState(currentMonthYear());
 
   // ---------------- Rate: add + edit ----------------
   const [rateModalOpen, setRateModalOpen] = useState(false);
@@ -271,6 +292,10 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!selectedMonthYear) {
+      toast.error(lang === "ta" ? "முதலில் மாதம் தேர்வு செய்யுங்கள்" : "Please select month first");
+      return;
+    }
     setSelectedFileName(file.name);
     setOcrLoading(true);
     try {
@@ -278,7 +303,16 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
       setOcrImage(dataUrl);
       const base64 = dataUrl.split(",")[1];
       const rows = await extractMilkCardData(base64);
-      setOcrRows(rows);
+      // Rebuild every date from the selected month/year + the extracted day number —
+      // never trust whatever month/year the OCR itself guessed.
+      const corrected = rows
+        .map((row) => {
+          const day = dayNumberFromRow(row.date);
+          const isoDate = day != null ? buildDateForSelectedMonth(day, selectedMonthYear) : null;
+          return isoDate ? { ...row, date: isoDate } : null;
+        })
+        .filter((row): row is MilkCardRow => row !== null);
+      setOcrRows(corrected);
     } catch (err) {
       toast.error("OCR error: " + (err instanceof Error ? err.message : String(err)));
     }
@@ -293,6 +327,10 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
 
   const saveOcrRows = async () => {
     if (ocrRows.length === 0) return;
+    if (!selectedMonthYear) {
+      toast.error(lang === "ta" ? "முதலில் மாதம் தேர்வு செய்யுங்கள்" : "Please select month first");
+      return;
+    }
     setSavingOcr(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -303,13 +341,18 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         return;
       }
 
-      const parsedRows = ocrRows.map((row) => ({
-        ...row,
-        isoDate: row.date.includes("/") || row.date.includes("-") ? parseOCRDate(row.date) : row.date,
-      }));
-      const validRows = parsedRows.filter(
-        (r) => r.isoDate !== "Invalid Date" && (r.morning > 0 || r.evening > 0)
-      );
+      // Re-derive every date from the day number + selected month/year one more time
+      // (rather than trusting whatever text is currently in the row, in case it was
+      // hand-edited afterward) and drop rows with no milk data.
+      const validRows = ocrRows
+        .map((row) => {
+          const day = dayNumberFromRow(row.date);
+          const isoDate = day != null ? buildDateForSelectedMonth(day, selectedMonthYear) : null;
+          if (!isoDate || !(row.morning > 0 || row.evening > 0)) return null;
+          return { isoDate, morning: row.morning, evening: row.evening };
+        })
+        .filter((row): row is { isoDate: string; morning: number; evening: number } => row !== null);
+
       if (validRows.length === 0) {
         toast.error(t(lang, "saveFailedMessage"));
         setSavingOcr(false);
@@ -324,14 +367,53 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         evening_litres: row.evening,
         rate_per_litre: rateForDate(row.isoDate),
         animal_type: animalType,
-        month_year: row.isoDate.slice(0, 7),
+        month_year: selectedMonthYear,
       }));
-      console.log("Saving OCR milk collections:", payload);
+
+      // Check for entries already saved this month before inserting, so re-uploading
+      // the same card (or a card with overlapping dates) doesn't create duplicates.
+      const existingQuery = supabase.from("milk_collections").select("id, collection_date").eq("month_year", selectedMonthYear);
+      const { data: existing } =
+        animalType === "cow"
+          ? await existingQuery.or("animal_type.eq.cow,animal_type.is.null")
+          : await existingQuery.eq("animal_type", "buffalo");
+
+      let rowsToInsert = payload;
+
+      if (existing && existing.length > 0) {
+        const shouldReplace = window.confirm(
+          lang === "ta"
+            ? `இந்த மாதத்தில் ${existing.length} உள்ளீடுகள் உள்ளன. மாற்றவா?`
+            : `${existing.length} entries exist for this month. Replace them?`
+        );
+
+        if (shouldReplace) {
+          const deleteQuery = supabase.from("milk_collections").delete().eq("month_year", selectedMonthYear);
+          const { error: deleteError } =
+            animalType === "cow"
+              ? await deleteQuery.or("animal_type.eq.cow,animal_type.is.null")
+              : await deleteQuery.eq("animal_type", "buffalo");
+          if (deleteError) {
+            console.error("Error clearing existing month: ", deleteError);
+            toast.error(t(lang, "saveFailedMessage"));
+            setSavingOcr(false);
+            return;
+          }
+        } else {
+          const existingDates = new Set(existing.map((e) => e.collection_date));
+          rowsToInsert = payload.filter((r) => !existingDates.has(r.collection_date));
+          if (rowsToInsert.length === 0) {
+            toast.error(lang === "ta" ? "அனைத்து தேதிகளும் ஏற்கனவே உள்ளன" : "All dates already exist");
+            setSavingOcr(false);
+            return;
+          }
+        }
+      }
 
       // Save in small batches — more resilient than one large insert on unstable mobile networks.
       let savedCount = 0;
-      for (let i = 0; i < payload.length; i += OCR_BATCH_SIZE) {
-        const batch = payload.slice(i, i + OCR_BATCH_SIZE);
+      for (let i = 0; i < rowsToInsert.length; i += OCR_BATCH_SIZE) {
+        const batch = rowsToInsert.slice(i, i + OCR_BATCH_SIZE);
         const { error } = await supabase.from("milk_collections").insert(batch);
         if (error) {
           console.error("Batch save error: ", error);
@@ -396,8 +478,6 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
   };
 
   // ---------------- Monthly view + weekly breakdown ----------------
-  const [selectedMonthYear, setSelectedMonthYear] = useState(currentMonthYear());
-
   const monthCollections = collections.filter((c) => c.collection_date.startsWith(selectedMonthYear));
   const sortedMonthCollections = [...monthCollections].sort((a, b) => a.collection_date.localeCompare(b.collection_date));
   const monthTotalLitres = monthCollections.reduce((s, c) => s + Number(c.morning_litres) + Number(c.evening_litres), 0);
@@ -502,7 +582,18 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <h2 className="text-sm font-semibold text-gray-800 mb-2">📷 {t(lang, "uploadMilkCard")}</h2>
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <h2 className="text-sm font-semibold text-gray-800">📷 {t(lang, "uploadMilkCard")}</h2>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">{t(lang, "month")}</label>
+              <input
+                type="month"
+                value={selectedMonthYear}
+                onChange={(e) => setSelectedMonthYear(e.target.value)}
+                className="border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900"
+              />
+            </div>
+          </div>
           <div className="relative mb-2">
             <input
               ref={fileInputRef}
