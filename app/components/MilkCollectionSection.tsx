@@ -44,6 +44,8 @@ type MilkCollection = {
   evening_litres: number;
   daily_income: number | null;
   animal_type: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type Week = { weekNum: number; start: string; end: string; litres: number; income: number; isPaymentWeek: boolean };
@@ -194,27 +196,62 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     }
     setSavingManual(true);
     try {
+      const rate = rateForDate(manualDate);
+      const morning = parseFloat(manualMorning) || 0;
+      const evening = parseFloat(manualEvening) || 0;
+
+      // Look up an existing entry for this date first so re-entering the same day
+      // (e.g. correcting an OCR row) updates it instead of creating a duplicate.
+      const existingQuery = supabase.from("milk_collections").select("id").eq("collection_date", manualDate);
+      const { data: existingRows } =
+        animalType === "cow"
+          ? await existingQuery.or("animal_type.eq.cow,animal_type.is.null").limit(1)
+          : await existingQuery.eq("animal_type", "buffalo").limit(1);
+      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+
       // total_litres and daily_income are DB-generated columns (total_litres = morning + evening,
       // daily_income = total_litres * rate_per_litre) — sending them explicitly errors with 428C9.
-      const payload = {
-        farm_location: "Home",
-        collection_date: manualDate,
-        morning_litres: parseFloat(manualMorning) || 0,
-        evening_litres: parseFloat(manualEvening) || 0,
-        rate_per_litre: rateForDate(manualDate),
-        animal_type: animalType,
-        month_year: manualDate.slice(0, 7),
-      };
-      console.log("Saving manual milk collection:", payload);
-      const { error } = await supabase.from("milk_collections").insert(payload);
-      if (error) {
-        console.error("Error saving collection: ", error);
-        toast.error(t(lang, "saveFailedMessage"));
+      if (existing) {
+        const { error } = await supabase
+          .from("milk_collections")
+          .update({
+            morning_litres: morning,
+            evening_litres: evening,
+            rate_per_litre: rate,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        if (error) {
+          console.error("Error updating collection: ", error);
+          toast.error(t(lang, "saveFailedMessage"));
+        } else {
+          toast.success(lang === "ta" ? "✅ புதுப்பிக்கப்பட்டது!" : "✅ Updated!");
+          setManualDate("");
+          setManualMorning("");
+          setManualEvening("");
+          fetchCollections();
+        }
       } else {
-        setManualDate("");
-        setManualMorning("");
-        setManualEvening("");
-        fetchCollections();
+        const payload = {
+          farm_location: "Home",
+          collection_date: manualDate,
+          morning_litres: morning,
+          evening_litres: evening,
+          rate_per_litre: rate,
+          animal_type: animalType,
+          month_year: manualDate.slice(0, 7),
+        };
+        const { error } = await supabase.from("milk_collections").insert(payload);
+        if (error) {
+          console.error("Error saving collection: ", error);
+          toast.error(t(lang, "saveFailedMessage"));
+        } else {
+          toast.success(lang === "ta" ? "✅ சேமிக்கப்பட்டது!" : "✅ Saved!");
+          setManualDate("");
+          setManualMorning("");
+          setManualEvening("");
+          fetchCollections();
+        }
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -325,6 +362,37 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
       console.error("Error: ", error);
       toast.error(t(lang, "saveFailedMessage"));
     } else fetchCollections();
+  };
+
+  // ---------------- Bulk select + delete ----------------
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const toggleSelectAll = () => {
+    setSelectedIds(selectedIds.length === collections.length ? [] : collections.map((c) => c.id));
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+  };
+
+  const bulkDeleteCollections = async () => {
+    if (
+      !window.confirm(
+        lang === "ta" ? `${selectedIds.length} உள்ளீடுகளை நீக்கவா?` : `Delete ${selectedIds.length} entries?`
+      )
+    )
+      return;
+    const { error } = await supabase.from("milk_collections").delete().in("id", selectedIds);
+    if (error) {
+      console.error("Bulk delete error: ", error);
+      toast.error(t(lang, "saveFailedMessage"));
+    } else {
+      toast.success(lang === "ta" ? `✅ ${selectedIds.length} நீக்கப்பட்டது!` : `✅ ${selectedIds.length} deleted!`);
+      setSelectedIds([]);
+      setSelectMode(false);
+      fetchCollections();
+    }
   };
 
   // ---------------- Monthly view + weekly breakdown ----------------
@@ -557,11 +625,42 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
 
       {/* Collection history */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">{t(lang, "collectionHistory")}</h2>
+        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "collectionHistory")}</h2>
+          <div className="flex items-center gap-2">
+            {selectMode && selectedIds.length > 0 && (
+              <button
+                onClick={bulkDeleteCollections}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-medium transition"
+              >
+                🗑️ {lang === "ta" ? `${selectedIds.length} நீக்கு` : `Delete ${selectedIds.length}`}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setSelectMode(!selectMode);
+                setSelectedIds([]);
+              }}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              {selectMode ? t(lang, "cancel") : t(lang, "select")}
+            </button>
+          </div>
+        </div>
         <div className="overflow-x-auto max-h-72 overflow-y-auto">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide">
+                {selectMode && (
+                  <th className="py-1 px-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === collections.length && collections.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 accent-green-600"
+                    />
+                  </th>
+                )}
                 <th className="py-1 px-1">{t(lang, "date")}</th>
                 <th className="py-1 px-1">{t(lang, "morning")}</th>
                 <th className="py-1 px-1">{t(lang, "evening")}</th>
@@ -572,19 +671,39 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
             </thead>
             <tbody>
               {collections.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-6 text-gray-500">🐄 {t(lang, "noRecordsYet")}</td></tr>
+                <tr><td colSpan={selectMode ? 7 : 6} className="text-center py-6 text-gray-500">🐄 {t(lang, "noRecordsYet")}</td></tr>
               ) : (
                 collections.map((c) => {
                   const total = Number(c.morning_litres) + Number(c.evening_litres);
+                  const wasEdited = c.updated_at && c.created_at && c.updated_at !== c.created_at;
                   return (
                     <tr key={c.id} className="border-b border-gray-50 text-gray-900">
-                      <td className="py-1 px-1 text-gray-700">{formatDMY(c.collection_date)}</td>
+                      {selectMode && (
+                        <td className="py-1 px-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(c.id)}
+                            onChange={() => toggleSelect(c.id)}
+                            className="w-4 h-4 accent-green-600"
+                          />
+                        </td>
+                      )}
+                      <td className="py-1 px-1 text-gray-700">
+                        {formatDMY(c.collection_date)}
+                        {wasEdited && (
+                          <span className="text-xs text-amber-500 ml-1" title={lang === "ta" ? "கைமுறையாக திருத்தப்பட்டது" : "Manually edited"}>
+                            ✏️
+                          </span>
+                        )}
+                      </td>
                       <td className="py-1 px-1 font-medium">{c.morning_litres}</td>
                       <td className="py-1 px-1 font-medium">{c.evening_litres}</td>
                       <td className="py-1 px-1 font-medium">{total.toFixed(1)}</td>
                       <td className="py-1 px-1 font-medium text-green-600">{inr(Number(c.daily_income ?? 0))}</td>
                       <td className="py-1 px-1">
-                        <button onClick={() => deleteCollection(c.id)} className="hover:text-danger">🗑️</button>
+                        {!selectMode && (
+                          <button onClick={() => deleteCollection(c.id)} className="hover:text-danger">🗑️</button>
+                        )}
                       </td>
                     </tr>
                   );
