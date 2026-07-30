@@ -79,18 +79,6 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     return applicable.length ? Number(applicable[0].rate_per_litre) : 0;
   };
 
-  const calculateDailyIncome = async (totalLitres: number, collectionDate: string): Promise<number> => {
-    const { data } = await supabase
-      .from(rateTable)
-      .select("rate_per_litre, effective_from")
-      .lte("effective_from", collectionDate)
-      .order("effective_from", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const rate = data ? Number(data.rate_per_litre) : 0;
-    return totalLitres * rate;
-  };
-
   // ---------------- Rate: add + edit ----------------
   const [rateModalOpen, setRateModalOpen] = useState(false);
   const [newRate, setNewRate] = useState("");
@@ -176,17 +164,19 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     }
     setSavingManual(true);
     try {
-      const total = (parseFloat(manualMorning) || 0) + (parseFloat(manualEvening) || 0);
-      const income = await calculateDailyIncome(total, manualDate);
-      const { error } = await supabase.from("milk_collections").insert({
+      // total_litres and daily_income are DB-generated columns (total_litres = morning + evening,
+      // daily_income = total_litres * rate_per_litre) — sending them explicitly errors with 428C9.
+      const payload = {
         farm_location: "Home",
         collection_date: manualDate,
         morning_litres: parseFloat(manualMorning) || 0,
         evening_litres: parseFloat(manualEvening) || 0,
-        daily_income: income,
+        rate_per_litre: rateForDate(manualDate),
         animal_type: animalType,
         month_year: manualDate.slice(0, 7),
-      });
+      };
+      console.log("Saving manual milk collection:", payload);
+      const { error } = await supabase.from("milk_collections").insert(payload);
       if (error) {
         console.error("Error saving collection: ", error);
         toast.error(t(lang, "saveFailedMessage"));
@@ -254,21 +244,18 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         setSavingOcr(false);
         return;
       }
-      const payload = await Promise.all(
-        validRows.map(async (row) => {
-          const total = (row.morning || 0) + (row.evening || 0);
-          const income = await calculateDailyIncome(total, row.isoDate);
-          return {
-            farm_location: "Home",
-            collection_date: row.isoDate,
-            morning_litres: row.morning,
-            evening_litres: row.evening,
-            daily_income: income,
-            animal_type: animalType,
-            month_year: row.isoDate.slice(0, 7),
-          };
-        })
-      );
+      // total_litres and daily_income are DB-generated columns (total_litres = morning + evening,
+      // daily_income = total_litres * rate_per_litre) — sending them explicitly errors with 428C9.
+      const payload = validRows.map((row) => ({
+        farm_location: "Home",
+        collection_date: row.isoDate,
+        morning_litres: row.morning,
+        evening_litres: row.evening,
+        rate_per_litre: rateForDate(row.isoDate),
+        animal_type: animalType,
+        month_year: row.isoDate.slice(0, 7),
+      }));
+      console.log("Saving OCR milk collections:", payload);
       const { error } = await supabase.from("milk_collections").insert(payload);
       if (error) {
         console.error("Error saving rows: ", error);
