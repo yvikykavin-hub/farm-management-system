@@ -166,7 +166,7 @@ export default function TractorDetailPage() {
     <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar lang={lang} setLang={setLang} />
 
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div className="max-w-5xl mx-auto flex flex-col gap-3">
           <Link href="/machinery/tractor" className="text-primary hover:text-primary text-sm font-semibold">
             ← {L("Back to Tractors", "டிராக்டர்களுக்கு திரும்பு")}
@@ -183,7 +183,7 @@ export default function TractorDetailPage() {
           </div>
 
           {insuranceDaysLeft !== null && insuranceDaysLeft < 30 && (
-            <div className={`rounded-xl border-2 p-3 text-sm font-semibold ${insuranceDaysLeft < 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+            <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded-xl border-2 p-3 text-sm font-semibold ${insuranceDaysLeft < 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
               ⚠️{" "}
               {insuranceDaysLeft < 0
                 ? L("Insurance has expired!", "காப்பீடு காலாவதியானது!")
@@ -191,7 +191,7 @@ export default function TractorDetailPage() {
             </div>
           )}
 
-          <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 w-fit overflow-x-auto">
+          <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 max-w-full overflow-x-auto">
             {([
               ["overview", L("Overview", "மேலோட்டம்")],
               ["diesel", L("Diesel", "டீசல்")],
@@ -203,7 +203,7 @@ export default function TractorDetailPage() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
                   activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
@@ -213,7 +213,15 @@ export default function TractorDetailPage() {
           </div>
 
           {activeTab === "overview" && tractor && (
-            <OverviewTab L={L} tractor={tractor} refetch={fetchTractor} router={router} />
+            <OverviewTab
+              L={L}
+              tractor={tractor}
+              refetch={fetchTractor}
+              router={router}
+              totalHours={totalHours}
+              hoursRemaining={hoursRemaining}
+              oilStatus={oilStatus}
+            />
           )}
 
           {activeTab === "diesel" && <DieselTab L={L} tractorId={tractorId} />}
@@ -260,11 +268,17 @@ function OverviewTab({
   tractor,
   refetch,
   router,
+  totalHours,
+  hoursRemaining,
+  oilStatus,
 }: {
   L: (en: string, ta: string) => string;
   tractor: Tractor;
   refetch: () => void;
   router: ReturnType<typeof useRouter>;
+  totalHours: number;
+  hoursRemaining: number;
+  oilStatus: "safe" | "warning" | "danger";
 }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -337,7 +351,24 @@ function OverviewTab({
     }
   };
 
+  const oilBannerBg =
+    oilStatus === "danger"
+      ? "bg-red-50 dark:bg-red-900/20 border border-red-200"
+      : oilStatus === "warning"
+      ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200"
+      : "bg-green-50 dark:bg-green-900/20 border border-green-200";
+
   return (
+    <div className="flex flex-col gap-3">
+      <div className={`rounded-xl p-4 ${oilBannerBg}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">{oilStatus === "danger" ? "🚨" : oilStatus === "warning" ? "⚠️" : "✅"}</span>
+          <p className="text-sm font-semibold">{L("Engine Oil Status", "இயந்திர எண்ணெய் நிலை")}</p>
+        </div>
+        <p className="text-sm">{L("Total Hours", "மொத்த மணி நேரம்")}: {totalHours.toFixed(1)} {L("hrs", "மணி")}</p>
+        <p className="text-sm">{L("Hours Remaining", "மீதமுள்ள மணி நேரம்")}: {Math.max(hoursRemaining, 0).toFixed(1)} {L("hrs", "மணி")}</p>
+      </div>
+
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-800">{L("Details", "விவரங்கள்")}</h2>
@@ -423,15 +454,16 @@ function OverviewTab({
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputCls} rows={2} />
           </div>
           <div className="sm:col-span-2 flex gap-2">
-            <button onClick={save} disabled={saving} className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">
+            <button onClick={save} disabled={saving} className="w-full sm:w-auto bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">
               {saving ? "..." : L("Save", "சேமி")}
             </button>
-            <button onClick={() => setEditing(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 text-sm font-semibold transition">
+            <button onClick={() => setEditing(false)} className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 text-sm font-semibold transition">
               {L("Cancel", "ரத்து")}
             </button>
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

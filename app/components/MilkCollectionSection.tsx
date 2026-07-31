@@ -95,7 +95,15 @@ const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
 const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
-export default function MilkCollectionSection({ animalType, lang }: { animalType: "cow" | "buffalo"; lang: "ta" | "en" }) {
+export default function MilkCollectionSection({
+  animalType,
+  lang,
+  onChanged,
+}: {
+  animalType: "cow" | "buffalo";
+  lang: "ta" | "en";
+  onChanged?: () => void;
+}) {
   const router = useRouter();
   const rateTable = animalType === "buffalo" ? "buffalo_milk_rates" : "milk_rates";
 
@@ -281,6 +289,7 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
           setManualMorning("");
           setManualEvening("");
           fetchCollections();
+          onChanged?.();
         }
       } else {
         const payload = {
@@ -302,6 +311,7 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
           setManualMorning("");
           setManualEvening("");
           fetchCollections();
+          onChanged?.();
         }
       }
     } catch (err) {
@@ -475,6 +485,7 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
       setSelectedFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       fetchCollections();
+      onChanged?.();
     } catch (err) {
       console.error("Unexpected error:", err);
       toast.error(t(lang, "saveFailedMessage"));
@@ -488,7 +499,10 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     if (error) {
       console.error("Error: ", error);
       toast.error(t(lang, "saveFailedMessage"));
-    } else fetchCollections();
+    } else {
+      fetchCollections();
+      onChanged?.();
+    }
   };
 
   // ---------------- Bulk select + delete ----------------
@@ -519,6 +533,7 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
       setSelectedIds([]);
       setSelectMode(false);
       fetchCollections();
+      onChanged?.();
     }
   };
 

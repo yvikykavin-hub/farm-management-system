@@ -32,8 +32,23 @@ type Cow = {
   animal_type: AnimalType | null;
 };
 
-type MilkCollectionRow = { collection_date: string; daily_income: number | null };
+type MilkCollectionRow = {
+  collection_date: string;
+  daily_income: number | null;
+  animal_type: AnimalType | null;
+  morning_litres: number | null;
+  evening_litres: number | null;
+  rate_per_litre: number | null;
+};
 type CowExpenseRow = { expense_date: string; amount: number };
+
+// daily_income is a DB-generated column (total_litres * rate_per_litre), so a
+// genuine 0 means the rate really was 0 — this just guards against a null value.
+const rowIncome = (m: MilkCollectionRow) => {
+  if (m.daily_income && m.daily_income > 0) return Number(m.daily_income);
+  const litres = (Number(m.morning_litres) || 0) + (Number(m.evening_litres) || 0);
+  return litres * (Number(m.rate_per_litre) || 0);
+};
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -78,17 +93,29 @@ export default function CowsListPage() {
 
   useEffect(() => {
     fetchAll();
+    // The Milk Collection tab manages its own data independently, so re-check the
+    // month income figure whenever the user comes back to this tab/window in case
+    // it was edited elsewhere (another device, another browser tab).
+    window.addEventListener("focus", fetchMilk);
+    return () => window.removeEventListener("focus", fetchMilk);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchMilk = async () => {
+    const { data: milk } = await supabase
+      .from("milk_collections")
+      .select("collection_date, daily_income, animal_type, morning_litres, evening_litres, rate_per_litre");
+    if (milk) setMilkRows(milk);
+  };
 
   const fetchAll = async () => {
     setLoading(true);
     const { data: cowData, error } = await supabase.from("cows").select("*").order("created_at", { ascending: false });
     if (!error && cowData) setCows(cowData);
-    const [{ data: milk }, { data: exp }] = await Promise.all([
-      supabase.from("milk_collections").select("collection_date, daily_income"),
+    const [, { data: exp }] = await Promise.all([
+      fetchMilk(),
       supabase.from("cow_expenses").select("expense_date, amount"),
     ]);
-    if (milk) setMilkRows(milk);
     if (exp) setExpenseRows(exp);
     setLoading(false);
   };
@@ -105,9 +132,14 @@ export default function CowsListPage() {
   const now = new Date();
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const thisMonthIncome = milkRows
-    .filter((m) => m.collection_date.startsWith(monthPrefix))
-    .reduce((sum, m) => sum + Number(m.daily_income ?? 0), 0);
+  const monthMilkRows = milkRows.filter((m) => m.collection_date.startsWith(monthPrefix));
+  const cowMonthIncome = monthMilkRows
+    .filter((m) => m.animal_type !== "buffalo")
+    .reduce((sum, m) => sum + rowIncome(m), 0);
+  const buffaloMonthIncome = monthMilkRows
+    .filter((m) => m.animal_type === "buffalo")
+    .reduce((sum, m) => sum + rowIncome(m), 0);
+  const thisMonthIncome = cowMonthIncome + buffaloMonthIncome;
 
   const thisMonthExpenses = expenseRows
     .filter((e) => e.expense_date.startsWith(monthPrefix))
@@ -245,6 +277,10 @@ export default function CowsListPage() {
             <div className="bg-white rounded-xl shadow-sm p-3">
               <p className="text-xs font-medium text-gray-500">{t(lang, "monthMilkIncome")}</p>
               <p className="text-xl font-bold text-success">{inr(thisMonthIncome)}</p>
+              <div className="flex gap-2 mt-1">
+                <span className="text-[11px] text-gray-400">🐄 {inr(cowMonthIncome)}</span>
+                {buffaloMonthIncome > 0 && <span className="text-[11px] text-gray-400">🐃 {inr(buffaloMonthIncome)}</span>}
+              </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">
               <p className="text-xs font-medium text-gray-500">{t(lang, "monthExpenses")}</p>
@@ -353,7 +389,7 @@ export default function CowsListPage() {
                   </button>
                 </div>
               ) : (
-                <MilkCollectionSection animalType={milkType} lang={lang} />
+                <MilkCollectionSection animalType={milkType} lang={lang} onChanged={fetchMilk} />
               )}
             </div>
           )}

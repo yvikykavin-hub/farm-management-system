@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { getTractorOilStatus } from "../lib/tractorOilStatus";
 
 const getUserLanguage = (): string => {
   if (typeof window !== "undefined") {
@@ -52,38 +53,33 @@ export default function MotorTurnNotifier() {
     };
 
     const checkTractorOil = async () => {
-      const [{ data: usage }, { data: settings }, { data: oilRecords }] = await Promise.all([
-        supabase.from("tractor_usage").select("duration_hours"),
-        supabase.from("tractor_settings").select("oil_change_interval_hours").limit(1).maybeSingle(),
-        supabase.from("tractor_engine_oil").select("hours_at_service").order("service_date", { ascending: false }).limit(1),
-      ]);
+      const { data: tractors } = await supabase.from("tractors").select("id, name").eq("is_active", true);
+      if (!tractors) return;
 
-      const totalHours = (usage ?? []).reduce((s, u) => s + Number(u.duration_hours), 0);
-      const interval = settings ? Number(settings.oil_change_interval_hours) : 300;
-      const lastServiceHours = oilRecords?.[0] ? Number(oilRecords[0].hours_at_service) : 0;
-      const hoursRemaining = interval - (totalHours - lastServiceHours);
-
-      const today = new Date().toDateString();
       const lang = getUserLanguage();
+      const today = new Date().toDateString();
 
-      if (hoursRemaining <= 5) {
-        const lastNotified = localStorage.getItem("tractor_notified_urgent");
-        if (lastNotified !== today) {
+      for (const tractor of tractors) {
+        const status = await getTractorOilStatus(tractor.id);
+        const hoursLeft = Math.max(status.hoursRemaining, 0);
+        // Bucketed by 10-hr band + day, so a tractor doesn't spam a notification every
+        // hour while still re-alerting once it crosses into a more urgent band.
+        const notifKey = `tractor_notified_${tractor.id}_${Math.floor(hoursLeft / 10)}_${today}`;
+        if (localStorage.getItem(notifKey)) continue;
+
+        if (status.isUrgent) {
           sendNotification(
-            lang === "ta" ? "🚨 டிராக்டர் ஆயில் மாற்றம் அவசியம்!" : "🚨 Tractor Oil Change Urgent!",
-            lang === "ta" ? `வெறும் ${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!` : `Only ${hoursRemaining.toFixed(1)} hours remaining!`,
+            lang === "ta" ? `🚨 ${tractor.name} - எண்ணெய் மாற்றம் அவசியம்!` : `🚨 ${tractor.name} - Oil Change Urgent!`,
+            lang === "ta" ? `வெறும் ${hoursLeft.toFixed(1)} மணி மட்டுமே உள்ளது!` : `Only ${hoursLeft.toFixed(1)} hours remaining!`,
             true
           );
-          localStorage.setItem("tractor_notified_urgent", today);
-        }
-      } else if (hoursRemaining <= 20) {
-        const lastNotified = localStorage.getItem("tractor_notified_warning");
-        if (lastNotified !== today) {
+          localStorage.setItem(notifKey, "1");
+        } else if (status.isWarning) {
           sendNotification(
-            lang === "ta" ? "⚠️ டிராக்டர் ஆயில் விரைவில் மாற்றவும்" : "⚠️ Tractor Oil Change Soon",
-            lang === "ta" ? `${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது` : `${hoursRemaining.toFixed(1)} hours remaining`
+            lang === "ta" ? `⚠️ ${tractor.name} - எண்ணெய் விரைவில் மாற்றவும்` : `⚠️ ${tractor.name} - Oil Change Soon`,
+            lang === "ta" ? `${hoursLeft.toFixed(1)} மணி மட்டுமே உள்ளது` : `${hoursLeft.toFixed(1)} hours remaining`
           );
-          localStorage.setItem("tractor_notified_warning", today);
+          localStorage.setItem(notifKey, "1");
         }
       }
     };

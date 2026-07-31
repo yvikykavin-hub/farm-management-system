@@ -9,6 +9,7 @@ import AnimatedCard from "../../../components/AnimatedCard";
 import { SkeletonCard } from "../../../components/Skeleton";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
+import { getTractorOilStatus, type TractorOilStatus } from "../../../lib/tractorOilStatus";
 
 type Tractor = {
   id: string;
@@ -46,6 +47,7 @@ export default function TractorListPage() {
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [tractors, setTractors] = useState<Tractor[]>([]);
+  const [oilStatuses, setOilStatuses] = useState<Record<string, TractorOilStatus>>({});
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -58,7 +60,11 @@ export default function TractorListPage() {
   const fetchTractors = async () => {
     setLoading(true);
     const { data } = await supabase.from("tractors").select("*").eq("is_active", true).order("created_at", { ascending: false });
-    if (data) setTractors(data);
+    if (data) {
+      setTractors(data);
+      const entries = await Promise.all(data.map(async (t) => [t.id, await getTractorOilStatus(t.id)] as const));
+      setOilStatuses(Object.fromEntries(entries));
+    }
     setLoading(false);
   };
 
@@ -103,7 +109,7 @@ export default function TractorListPage() {
     <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar lang={lang} setLang={setLang} />
 
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div className="max-w-3xl mx-auto flex flex-col gap-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <Link href="/machinery" className="text-primary hover:text-primary text-sm font-semibold">
@@ -117,11 +123,11 @@ export default function TractorListPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h1 className="text-xl font-bold text-primary dark:text-gray-100">🚜 {L("Tractors", "டிராக்டர்கள்")}</h1>
             <button
               onClick={() => setShowAddForm(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition"
             >
               + {L("Add Tractor", "டிராக்டர் சேர்")}
             </button>
@@ -135,35 +141,59 @@ export default function TractorListPage() {
             </div>
           ) : (
             <>
-              {tractors.map((tractor, i) => (
-                <AnimatedCard key={tractor.id} delay={Math.min(i, 8) * 0.05}>
-                  <div
-                    onClick={() => router.push(`/machinery/tractor/${tractor.id}`)}
-                    className="bg-white dark:bg-slate-800 rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-md hover:border-green-400 transition-all duration-200"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {tractor.photo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={tractor.photo} alt={tractor.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-3xl">🚜</span>
-                        )}
+              {tractors.map((tractor, i) => {
+                const oilStatus = oilStatuses[tractor.id];
+                return (
+                  <AnimatedCard key={tractor.id} delay={Math.min(i, 8) * 0.05}>
+                    <div
+                      onClick={() => router.push(`/machinery/tractor/${tractor.id}`)}
+                      className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-md hover:border-green-400 transition-all duration-200"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {tractor.photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={tractor.photo} alt={tractor.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-3xl">🚜</span>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">{tractor.name}</h3>
+                          <p className="text-sm text-gray-500">{[tractor.brand, tractor.model].filter(Boolean).join(" ") || "—"}</p>
+                          {tractor.registration_number && (
+                            <p className="text-xs text-gray-400 mt-1">🔢 {tractor.registration_number}</p>
+                          )}
+                        </div>
+
+                        <span className="text-gray-400">→</span>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{tractor.name}</h3>
-                        <p className="text-sm text-gray-500">{[tractor.brand, tractor.model].filter(Boolean).join(" ") || "—"}</p>
-                        {tractor.registration_number && (
-                          <p className="text-xs text-gray-400 mt-1">🔢 {tractor.registration_number}</p>
-                        )}
-                      </div>
-
-                      <span className="text-gray-400">→</span>
+                      {oilStatus && (
+                        <div
+                          className={`mt-2 px-3 py-1.5 rounded-lg text-xs font-medium flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 ${
+                            oilStatus.isUrgent
+                              ? "bg-red-50 text-red-600 dark:bg-red-900/20"
+                              : oilStatus.isWarning
+                              ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20"
+                              : "bg-green-50 text-green-600 dark:bg-green-900/20"
+                          }`}
+                        >
+                          <span>{oilStatus.isUrgent ? "🚨" : oilStatus.isWarning ? "⚠️" : "✅"}</span>
+                          <span>
+                            {oilStatus.isUrgent
+                              ? L(`Oil change urgent! Only ${oilStatus.hoursRemaining.toFixed(1)} hrs left!`, `எண்ணெய் உடனே மாற்றவும்! ${oilStatus.hoursRemaining.toFixed(1)} மணி மட்டுமே!`)
+                              : oilStatus.isWarning
+                              ? L(`Oil change soon - ${oilStatus.hoursRemaining.toFixed(1)} hrs left`, `எண்ணெய் விரைவில் மாற்றவும் - ${oilStatus.hoursRemaining.toFixed(1)} மணி மட்டுமே`)
+                              : L(`Oil OK - ${oilStatus.hoursRemaining.toFixed(1)} hrs remaining`, `எண்ணெய் நிலை சரி - ${oilStatus.hoursRemaining.toFixed(1)} மணி உள்ளது`)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </AnimatedCard>
-              ))}
+                  </AnimatedCard>
+                );
+              })}
 
               {tractors.length === 0 && !showAddForm && (
                 <div className="text-center py-16">
@@ -180,8 +210,8 @@ export default function TractorListPage() {
       </main>
 
       {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🚜 {L("Add New Tractor", "புதிய டிராக்டர் சேர்")}</h3>
 
             <div className="space-y-3">

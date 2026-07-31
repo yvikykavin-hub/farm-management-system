@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
+import { getTractorOilStatus } from "../lib/tractorOilStatus";
 
 type Severity = "danger" | "warning" | "info";
 
@@ -103,17 +104,13 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
   const fetchNotifications = async () => {
       setLoading(true);
       const [
-        { data: usage },
-        { data: settings },
-        { data: oilRecords },
+        { data: tractors },
         { data: pendingPayments },
         { data: activeCrops },
         { data: farms },
         { data: motorData },
       ] = await Promise.all([
-        supabase.from("tractor_usage").select("duration_hours"),
-        supabase.from("tractor_settings").select("oil_change_interval_hours").limit(1).maybeSingle(),
-        supabase.from("tractor_engine_oil").select("hours_at_service").order("service_date", { ascending: false }).limit(1),
+        supabase.from("tractors").select("id, name").eq("is_active", true),
         supabase.from("milk_payments").select("id").eq("payment_status", "pending"),
         supabase.from("cultivations").select("id, farm_id, crop_type, start_date").is("end_date", null),
         supabase.from("farms").select("id, name"),
@@ -123,31 +120,31 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       const detected: NotificationItem[] = [];
       const lang = getUserLanguage();
 
-      // Tractor oil change — two tiers: urgent (very low) vs warning (soon)
-      const totalHours = (usage ?? []).reduce((s, u) => s + Number(u.duration_hours), 0);
-      const interval = settings ? Number(settings.oil_change_interval_hours) : 300;
-      const lastServiceHours = oilRecords?.[0] ? Number(oilRecords[0].hours_at_service) : 0;
-      const hoursRemaining = Math.max(interval - (totalHours - lastServiceHours), 0);
-      // Bucket the hours into the id so dismissing a "20h left" warning
-      // doesn't also silence the later "5h left" urgent alert — a genuinely
-      // new range gets a new id, an oil change (hours jump back up) does too.
-      const tractorBucket = Math.floor(hoursRemaining / 10);
-      if (hoursRemaining <= 5) {
-        detected.push({
-          id: `tractor-oil-${tractorBucket}`,
-          severity: "danger",
-          icon: "🚨",
-          title: lang === "ta" ? "🚨 டிராக்டர் ஆயில் மாற்றம் அவசியம்!" : "🚨 Tractor Oil Change Urgent!",
-          message: lang === "ta" ? `வெறும் ${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!` : `Only ${hoursRemaining.toFixed(1)} hours remaining!`,
-        });
-      } else if (hoursRemaining <= 20) {
-        detected.push({
-          id: `tractor-oil-${tractorBucket}`,
-          severity: "warning",
-          icon: "⚠️",
-          title: lang === "ta" ? "⚠️ டிராக்டர் ஆயில் விரைவில் மாற்றவும்" : "⚠️ Tractor Oil Change Soon",
-          message: lang === "ta" ? `${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது` : `${hoursRemaining.toFixed(1)} hours remaining`,
-        });
+      // Tractor oil change — two tiers per tractor: urgent (very low) vs warning (soon)
+      for (const tractor of tractors ?? []) {
+        const status = await getTractorOilStatus(tractor.id);
+        const hoursRemaining = Math.max(status.hoursRemaining, 0);
+        // Bucket the hours into the id so dismissing a "20h left" warning
+        // doesn't also silence the later "5h left" urgent alert — a genuinely
+        // new range gets a new id, an oil change (hours jump back up) does too.
+        const tractorBucket = Math.floor(hoursRemaining / 10);
+        if (status.isUrgent) {
+          detected.push({
+            id: `tractor-oil-${tractor.id}-${tractorBucket}`,
+            severity: "danger",
+            icon: "🚨",
+            title: lang === "ta" ? `🚨 ${tractor.name} - ஆயில் மாற்றம் அவசியம்!` : `🚨 ${tractor.name} - Oil Change Urgent!`,
+            message: lang === "ta" ? `வெறும் ${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!` : `Only ${hoursRemaining.toFixed(1)} hours remaining!`,
+          });
+        } else if (status.isWarning) {
+          detected.push({
+            id: `tractor-oil-${tractor.id}-${tractorBucket}`,
+            severity: "warning",
+            icon: "⚠️",
+            title: lang === "ta" ? `⚠️ ${tractor.name} - ஆயில் விரைவில் மாற்றவும்` : `⚠️ ${tractor.name} - Oil Change Soon`,
+            message: lang === "ta" ? `${hoursRemaining.toFixed(1)} மணி நேரம் மட்டுமே உள்ளது` : `${hoursRemaining.toFixed(1)} hours remaining`,
+          });
+        }
       }
 
       // Milk payment pending
