@@ -35,10 +35,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Soft-locked (inactivity timeout with biometric enabled): the Supabase
-  // session is still valid, but every protected page must bounce to /login
-  // until the user re-verifies with fingerprint or password — otherwise a
-  // locked device would still be fully browsable via direct URL/back button.
+  // Soft-locked: the Supabase session is still valid, but every protected page
+  // must bounce to /login until the user re-verifies — otherwise a locked
+  // device would still be fully browsable via direct URL/back button.
   if (user && isLocked && !isPublicPath) {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);

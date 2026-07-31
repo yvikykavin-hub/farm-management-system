@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
-import { isBiometricSupported, hasBiometricRegistered, registerBiometric, removeBiometric } from "../../lib/webauthn";
 import { clearLockedCookie } from "../../lib/lockCookie";
 
 export default function SettingsPage() {
@@ -15,37 +14,6 @@ export default function SettingsPage() {
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const [biometricSupported, setBiometricSupported] = useState(false);
-  const [biometricRegistered, setBiometricRegistered] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [registeringBiometric, setRegisteringBiometric] = useState(false);
-
-  useEffect(() => {
-    setBiometricSupported(isBiometricSupported());
-    setBiometricRegistered(hasBiometricRegistered());
-    supabase.auth.getUser().then(({ data: { user } }) => setUserEmail(user?.email ?? null));
-  }, []);
-
-  const handleEnableBiometric = async () => {
-    if (!userEmail) return;
-    setRegisteringBiometric(true);
-    const result = await registerBiometric(userEmail);
-    if (result.success) {
-      setBiometricRegistered(true);
-      toast.success(L("✅ Fingerprint login enabled!", "✅ கைரேகை உள்நுழைவு இயக்கப்பட்டது!"));
-    } else {
-      toast.error(L(`Could not enable fingerprint: ${result.error}`, `கைரேகை பதிவு தோல்வி: ${result.error}`));
-    }
-    setRegisteringBiometric(false);
-  };
-
-  const handleRemoveBiometric = () => {
-    removeBiometric();
-    clearLockedCookie();
-    setBiometricRegistered(false);
-    toast.success(L("Fingerprint login removed", "கைரேகை உள்நுழைவு நீக்கப்பட்டது"));
-  };
 
   const handleLogout = async () => {
     const confirmed = window.confirm(
@@ -139,42 +107,20 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          {biometricSupported && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-6 max-w-md border border-gray-100 dark:border-slate-700 mt-4">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                👆 {L("Fingerprint Login", "கைரேகை உள்நுழைவு")}
-              </h2>
-
-              {biometricRegistered ? (
-                <div>
-                  <p className="text-sm text-green-600 dark:text-green-400 mb-4">
-                    ✅ {L("Fingerprint login is enabled", "கைரேகை உள்நுழைவு இயக்கப்பட்டுள்ளது")}
-                  </p>
-                  <button
-                    onClick={handleRemoveBiometric}
-                    className="w-full px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl text-sm transition-colors"
-                  >
-                    {L("Remove Fingerprint Login", "கைரேகை உள்நுழைவு நீக்கு")}
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    {L("Fingerprint login is not enabled", "கைரேகை உள்நுழைவு இயக்கப்படவில்லை")}
-                  </p>
-                  <button
-                    onClick={handleEnableBiometric}
-                    disabled={registeringBiometric || !userEmail}
-                    className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-medium rounded-xl text-sm transition-colors"
-                  >
-                    {registeringBiometric
-                      ? L("Enabling...", "இயக்குகிறது...")
-                      : L("Enable Fingerprint Login", "கைரேகை உள்நுழைவை இயக்கு")}
-                  </button>
-                </div>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-5 border border-gray-100 dark:border-slate-700 mt-4 max-w-md">
+            <h2 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">
+              🔐 {L("Login Info", "உள்நுழைவு தகவல்")}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              {L("Fingerprint login not available yet", "கைரேகை உள்நுழைவு தற்போது இல்லை")}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {L(
+                "Fingerprint login will be added in the Android app",
+                "Android app வரும்போது கைரேகை உள்நுழைவு சேர்க்கப்படும்"
               )}
-            </div>
-          )}
+            </p>
+          </div>
 
         </div>
       </main>

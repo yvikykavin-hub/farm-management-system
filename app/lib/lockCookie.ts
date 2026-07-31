@@ -1,9 +1,9 @@
 // Shared between client components (InactivityTimer, login page) and the
 // edge middleware (proxy.ts). A "locked" session keeps the underlying
-// Supabase session/cookies valid but requires re-verification (fingerprint
-// or password) before any protected page is served again — enforced in
-// proxy.ts, not just by a client-side redirect, so it can't be bypassed by
-// direct URL navigation or the back button.
+// Supabase session/cookies valid but requires re-verification before any
+// protected page is served again — enforced in proxy.ts, not just by a
+// client-side redirect, so it can't be bypassed by direct URL navigation
+// or the back button.
 export const LOCK_COOKIE_NAME = "marutham_locked";
 
 export const setLockedCookie = () => {

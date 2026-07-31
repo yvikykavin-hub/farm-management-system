@@ -7,6 +7,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import PageWrapper from "../components/PageWrapper";
 import OfflineMessage from "../components/OfflineMessage";
 import MotorTurnNotifier from "../components/MotorTurnNotifier";
+import ClearLegacyStorage from "../components/ClearLegacyStorage";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -39,6 +40,7 @@ export default function RootLayout({
     <html lang="ta" suppressHydrationWarning>
       <body className={`${geist.className} min-h-screen bg-green-50`}>
         <OfflineMessage />
+        <ClearLegacyStorage />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="marutham-theme">
           <InactivityTimer />
           <ErrorBoundary>
