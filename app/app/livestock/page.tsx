@@ -37,9 +37,6 @@ const rowIncome = (m: MilkRow) => {
 };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-// Compact K-suffixed amount for the dense table view — full-precision inr() is still
-// used everywhere else (banners, tooltips) where there's room to show it.
-const fmtAmt = (n: number) => (n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : inr(n));
 
 const currentYear = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -188,11 +185,11 @@ export default function LivestockLandingPage() {
                 <div className="overflow-x-auto mb-4">
                   <table className="w-full min-w-[300px]">
                     <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left text-xs font-medium text-gray-500 py-2 pr-3">{t(lang, "livestockShort")}</th>
-                        <th className="text-right text-xs font-medium text-green-600 py-2 px-2">{t(lang, "income")}</th>
-                        <th className="text-right text-xs font-medium text-red-500 py-2 px-2">{t(lang, "expense")}</th>
-                        <th className="text-right text-xs font-medium text-blue-600 py-2 pl-2">{t(lang, "profit")}</th>
+                      <tr className="border-b border-gray-100 dark:border-slate-700/50">
+                        <th className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 py-2 pr-3">{t(lang, "livestockShort")}</th>
+                        <th className="text-right text-xs font-medium text-green-600 dark:text-green-400 py-2 px-2">{t(lang, "income")}</th>
+                        <th className="text-right text-xs font-medium text-red-500 dark:text-red-400 py-2 px-2">{t(lang, "expense")}</th>
+                        <th className="text-right text-xs font-medium text-blue-600 dark:text-blue-400 py-2 pl-2">{t(lang, "profit")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -201,41 +198,41 @@ export default function LivestockLandingPage() {
                         { icon: "🐐", label: t(lang, "goats"), income: goatIncome, expense: goatExpense, profit: goatProfit },
                         { icon: "🐔", label: t(lang, "hens"), income: henIncome, expense: henExpense, profit: henProfit },
                       ].map((row) => (
-                        <tr key={row.label} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                        <tr key={row.label} className="border-b border-gray-50 dark:border-slate-700/50 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors">
                           <td className="py-2.5 pr-3">
                             <div className="flex items-center gap-1.5">
                               <span className="text-base">{row.icon}</span>
-                              <span className="text-xs font-medium text-gray-800">{row.label}</span>
+                              <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{row.label}</span>
                             </div>
                           </td>
                           <td className="text-right py-2.5 px-2">
-                            <span className="text-xs font-semibold text-green-600">{fmtAmt(row.income)}</span>
+                            <span className="text-xs font-semibold text-green-600 dark:text-green-400">{inr(row.income)}</span>
                           </td>
                           <td className="text-right py-2.5 px-2">
-                            <span className="text-xs font-semibold text-red-500">{fmtAmt(row.expense)}</span>
+                            <span className="text-xs font-semibold text-red-500 dark:text-red-400">{inr(row.expense)}</span>
                           </td>
                           <td className="text-right py-2.5 pl-2">
-                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-lg ${row.profit >= 0 ? "text-green-700 bg-green-50" : "text-orange-700 bg-orange-50"}`}>
-                              {row.profit >= 0 ? "+" : "-"}{fmtAmt(Math.abs(row.profit))}
+                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-lg ${row.profit >= 0 ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20" : "text-orange-700 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20"}`}>
+                              {row.profit >= 0 ? "+" : "-"}{inr(Math.abs(row.profit))}
                             </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-gray-200">
+                      <tr className="border-t-2 border-gray-200 dark:border-slate-600">
                         <td className="py-2.5 pr-3">
-                          <span className="text-xs font-bold text-gray-900">{t(lang, "total")}</span>
+                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{t(lang, "total")}</span>
                         </td>
                         <td className="text-right py-2.5 px-2">
-                          <span className="text-xs font-bold text-green-600">{fmtAmt(cattleIncome + goatIncome + henIncome)}</span>
+                          <span className="text-xs font-bold text-green-600 dark:text-green-400">{inr(cattleIncome + goatIncome + henIncome)}</span>
                         </td>
                         <td className="text-right py-2.5 px-2">
-                          <span className="text-xs font-bold text-red-500">{fmtAmt(cattleExpense + goatExpense + henExpense)}</span>
+                          <span className="text-xs font-bold text-red-500 dark:text-red-400">{inr(cattleExpense + goatExpense + henExpense)}</span>
                         </td>
                         <td className="text-right py-2.5 pl-2">
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${totalNetProfit >= 0 ? "text-green-700 bg-green-100" : "text-orange-700 bg-orange-100"}`}>
-                            {totalNetProfit >= 0 ? "+" : "-"}{fmtAmt(Math.abs(totalNetProfit))}
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${totalNetProfit >= 0 ? "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30" : "text-orange-700 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30"}`}>
+                            {totalNetProfit >= 0 ? "+" : "-"}{inr(Math.abs(totalNetProfit))}
                           </span>
                         </td>
                       </tr>
@@ -243,21 +240,24 @@ export default function LivestockLandingPage() {
                   </table>
                 </div>
 
-                {/* Chart */}
-                <div className="overflow-x-auto">
-                  <div style={{ minWidth: 300 }}>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : `₹${v}`)} />
-                        <Tooltip formatter={(value) => inr(Number(value))} />
-                        <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="profit" name={t(lang, "profit")} fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                {/* Spacing between table and chart */}
+                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-700">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">📊 {t(lang, "chartOverview")}</p>
+                  <div className="overflow-x-auto">
+                    <div style={{ minWidth: 300 }}>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${Number(v).toLocaleString("en-IN")}`} />
+                          <Tooltip formatter={(value, name) => [`₹${Number(value).toLocaleString("en-IN")}`, name]} />
+                          <Legend wrapperStyle={{ fontSize: "11px" }} />
+                          <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="profit" name={t(lang, "profit")} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
               </div>

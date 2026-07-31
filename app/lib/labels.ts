@@ -270,6 +270,8 @@ export const labels = {
     // Income tab month navigation
     currentMonth: "Current Month",
     tapToChange: "tap to change",
+
+    chartOverview: "Chart Overview",
   },
   ta: {
     livestock: "கால்நடை மேலாண்மை",
@@ -522,6 +524,8 @@ export const labels = {
 
     currentMonth: "இந்த மாதம்",
     tapToChange: "தேர்வு செய்க",
+
+    chartOverview: "வரைபட கண்ணோட்டம்",
   },
 } as const;
 

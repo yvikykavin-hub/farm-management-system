@@ -120,19 +120,19 @@ function CollapsibleSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden w-full">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors min-h-[44px]"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
       >
         <div className="flex items-center gap-2 flex-wrap">
           <span>{icon}</span>
-          <span className="text-sm font-semibold text-gray-800">{label}</span>
-          {badge && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{badge}</span>}
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{label}</span>
+          {badge && <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">{badge}</span>}
         </div>
         <span className="text-gray-400 text-xs">{isOpen ? "▲" : "▼"}</span>
       </button>
-      {isOpen && <div className="px-4 pb-4 border-t border-gray-100">{children}</div>}
+      {isOpen && <div className="px-4 pb-4 border-t border-gray-100 dark:border-slate-700">{children}</div>}
     </div>
   );
 }
