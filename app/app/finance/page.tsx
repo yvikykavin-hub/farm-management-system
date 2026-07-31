@@ -19,6 +19,8 @@ import {
 import hotToast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import AnimatedCard from "../../components/AnimatedCard";
+import { FadeIn } from "../../components/AnimatedContainer";
+import EmptyState from "../../components/EmptyState";
 import { SkeletonCard } from "../../components/Skeleton";
 import ExportButton from "../../components/ExportButton";
 import PullToRefresh from "../../components/PullToRefresh";
@@ -316,12 +318,11 @@ export default function FinancePage() {
               <div className="h-80 bg-gray-200 rounded-2xl animate-pulse" />
             </div>
           ) : chartData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="text-5xl mb-4 opacity-60">📊</div>
-              <h3 className="text-base font-semibold text-gray-700 mb-1">
-                {L("No data found for selected filters", "தேர்ந்தெடுக்கப்பட்ட வடிகட்டிகளுக்கு தரவு இல்லை")}
-              </h3>
-            </div>
+            <EmptyState
+              type="finance"
+              title={L("No data found for selected filters", "தேர்ந்தெடுக்கப்பட்ட வடிகட்டிகளுக்கு தரவு இல்லை")}
+              subtitle={L("Try adjusting the year, crop, or farm filters above", "மேலே உள்ள ஆண்டு, பயிர் அல்லது நிலம் வடிகட்டிகளை மாற்றி முயற்சிக்கவும்")}
+            />
           ) : (
             <>
               {/* Summary cards */}
@@ -367,7 +368,7 @@ export default function FinancePage() {
               </div>
 
               {/* Chart card */}
-              <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-6">
+              <FadeIn className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-6">
                 <h2 className="text-sm font-semibold text-gray-800 mb-3">
                   {L("Crop-wise Financial Overview", "பயிர் வாரியான நிதி கண்ணோட்டம்")}
                 </h2>
@@ -411,7 +412,7 @@ export default function FinancePage() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-              </div>
+              </FadeIn>
 
               {/* Yearly Comparison chart */}
               {yearlyData.length > 0 && (

@@ -7,6 +7,8 @@ import { supabase } from "../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../lib/geminiOCR";
 import { t } from "../lib/labels";
 import { milkRateWarning } from "../lib/validators";
+import EmptyState from "./EmptyState";
+import { SuccessCheckmark } from "./SuccessAnimation";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -151,6 +153,7 @@ export default function MilkCollectionSection({
 
   const [rates, setRates] = useState<MilkRate[]>([]);
   const [collections, setCollections] = useState<MilkCollection[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchRates();
@@ -427,6 +430,8 @@ export default function MilkCollectionSection({
           setManualDate("");
           setManualMorning("");
           setManualEvening("");
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 2000);
           fetchCollections();
           onChanged?.();
         }
@@ -1024,7 +1029,7 @@ export default function MilkCollectionSection({
       >
         <div className="mt-3">
           {weeks.length === 0 ? (
-            <p className="text-xs text-gray-500 py-3 text-center">{t(lang, "noRecordsYet")}</p>
+            <EmptyState type="milk" title={t(lang, "noRecordsYet")} className="py-4" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -1170,7 +1175,7 @@ export default function MilkCollectionSection({
           </div>
         </div>
         {collections.length === 0 ? (
-          <p className="text-center py-6 text-gray-500 text-xs">🐄 {t(lang, "noRecordsYet")}</p>
+          <EmptyState type="history" title={t(lang, "noRecordsYet")} />
         ) : (
           <div className="flex flex-col">
             {monthGroups.map(([monthKey, rows]) => {
@@ -1381,6 +1386,8 @@ export default function MilkCollectionSection({
           </div>
         </div>
       )}
+
+      <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
     </div>
   );
 }

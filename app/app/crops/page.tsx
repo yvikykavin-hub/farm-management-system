@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import PullToRefresh from "../../components/PullToRefresh";
+import { StaggerContainer, StaggerItem } from "../../components/AnimatedContainer";
+import EmptyState from "../../components/EmptyState";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 
@@ -194,38 +196,39 @@ export default function CropsPage() {
                 </div>
 
                 {filteredActive.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">
-                    {L("No active crops", "செயலில் பயிர்கள் இல்லை")} 🌱
-                  </p>
+                  <EmptyState
+                    type="crops"
+                    title={L("No active crops", "செயலில் பயிர்கள் இல்லை")}
+                    subtitle={L("Crops you start growing will show up here", "நீங்கள் பயிரிடும் பயிர்கள் இங்கே தோன்றும்")}
+                  />
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <StaggerContainer className="flex flex-col gap-2">
                     {filteredActive.map((c) => {
                       const day = c.start_date ? daysBetween(c.start_date, new Date().toISOString().slice(0, 10)) : null;
                       return (
-                        <div
-                          key={c.id}
-                          className="bg-white rounded-xl shadow-sm p-3 mb-2 border-l-4 border-green-500 hover:shadow-md hover:border-green-300 transition-all"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {cropEmoji(c.crop_type)} {cropLabel(c.crop_type, lang)}
+                        <StaggerItem key={c.id}>
+                          <div className="bg-white rounded-xl shadow-sm p-3 mb-2 border-l-4 border-green-500 hover:shadow-md hover:border-green-300 transition-all">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {cropEmoji(c.crop_type)} {cropLabel(c.crop_type, lang)}
+                              </p>
+                              {day != null && (
+                                <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                  {L(`Day ${day}`, `நாள் ${day}`)} 🟢
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              📍 {farmName(c.farm_id)} &nbsp;•&nbsp; 📐 {c.area} {L("Acres", "ஏக்கர்")}
                             </p>
-                            {day != null && (
-                              <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                                {L(`Day ${day}`, `நாள் ${day}`)} 🟢
-                              </span>
-                            )}
+                            <p className="text-xs text-gray-500">
+                              📅 {L("Started", "தொடக்கம்")}: {formatDMY(c.start_date)}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            📍 {farmName(c.farm_id)} &nbsp;•&nbsp; 📐 {c.area} {L("Acres", "ஏக்கர்")}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            📅 {L("Started", "தொடக்கம்")}: {formatDMY(c.start_date)}
-                          </p>
-                        </div>
+                        </StaggerItem>
                       );
                     })}
-                  </div>
+                  </StaggerContainer>
                 )}
               </div>
 
@@ -243,37 +246,36 @@ export default function CropsPage() {
                     {L("No completed crops", "முடிந்த பயிர்கள் இல்லை")} ✅
                   </p>
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <StaggerContainer className="flex flex-col gap-2">
                     {filteredCompleted.map((c) => {
                       const duration = c.start_date && c.end_date ? daysBetween(c.start_date, c.end_date) : null;
                       return (
-                        <div
-                          key={c.id}
-                          className="bg-white rounded-xl shadow-sm p-3 mb-2 border-l-4 border-blue-400 hover:shadow-md hover:border-green-300 transition-all"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {cropEmoji(c.crop_type)} {cropLabel(c.crop_type, lang)}
+                        <StaggerItem key={c.id}>
+                          <div className="bg-white rounded-xl shadow-sm p-3 mb-2 border-l-4 border-blue-400 hover:shadow-md hover:border-green-300 transition-all">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {cropEmoji(c.crop_type)} {cropLabel(c.crop_type, lang)}
+                              </p>
+                              <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                ✅ {L("Done", "முடிந்தது")}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              📍 {farmName(c.farm_id)} &nbsp;•&nbsp; 📐 {c.area} {L("Acres", "ஏக்கர்")}
                             </p>
-                            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              ✅ {L("Done", "முடிந்தது")}
-                            </span>
+                            <p className="text-xs text-gray-500">
+                              📅 {formatDMY(c.start_date)} → {formatDMY(c.end_date)}
+                            </p>
+                            {duration != null && (
+                              <p className="text-xs text-blue-600">
+                                🗓️ {L("Duration", "கால அளவு")}: {duration} {L("days", "நாட்கள்")}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            📍 {farmName(c.farm_id)} &nbsp;•&nbsp; 📐 {c.area} {L("Acres", "ஏக்கர்")}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            📅 {formatDMY(c.start_date)} → {formatDMY(c.end_date)}
-                          </p>
-                          {duration != null && (
-                            <p className="text-xs text-blue-600">
-                              🗓️ {L("Duration", "கால அளவு")}: {duration} {L("days", "நாட்கள்")}
-                            </p>
-                          )}
-                        </div>
+                        </StaggerItem>
                       );
                     })}
-                  </div>
+                  </StaggerContainer>
                 )}
               </div>
             </div>

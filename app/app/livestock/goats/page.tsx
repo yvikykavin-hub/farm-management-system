@@ -7,6 +7,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import PullToRefresh from "../../../components/PullToRefresh";
+import EmptyState from "../../../components/EmptyState";
+import { SuccessCheckmark } from "../../../components/SuccessAnimation";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
@@ -94,6 +96,7 @@ export default function GoatsListPage() {
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -172,6 +175,8 @@ export default function GoatsListPage() {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         setModalOpen(false);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
         fetchAll();
       }
     } catch (err) {
@@ -405,10 +410,12 @@ export default function GoatsListPage() {
                   {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
                 </div>
               ) : goats.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="text-5xl mb-4 opacity-60">🐐</div>
-                  <h3 className="text-base font-semibold text-gray-700 mb-1">{t(lang, "noGoatsYet")}</h3>
-                </div>
+                <EmptyState
+                  type="goats"
+                  title={t(lang, "noGoatsYet")}
+                  subtitle={lang === "ta" ? "உங்கள் முதல் ஆட்டை சேர்க்கவும்" : "Add your first goat to get started"}
+                  action={{ label: `+ ${t(lang, "addGoat")}`, onClick: openAddModal }}
+                />
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {goats.map((goat, i) => (
@@ -749,6 +756,8 @@ export default function GoatsListPage() {
           </div>
         </div>
       )}
+
+      <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
     </div>
   );
 }

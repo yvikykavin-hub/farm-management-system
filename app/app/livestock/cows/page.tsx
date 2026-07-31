@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import PullToRefresh from "../../../components/PullToRefresh";
+import { SuccessCheckmark } from "../../../components/SuccessAnimation";
 import MilkCollectionSection from "../../../components/MilkCollectionSection";
 import MilkIncomeSection from "../../../components/MilkIncomeSection";
 import CattleExpensesSection from "../../../components/CattleExpensesSection";
@@ -95,6 +96,7 @@ export default function CowsListPage() {
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -208,6 +210,8 @@ export default function CowsListPage() {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         setModalOpen(false);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
         fetchAll();
       }
     } catch (err) {
@@ -555,6 +559,8 @@ export default function CowsListPage() {
           </div>
         </div>
       )}
+
+      <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
     </div>
   );
 }

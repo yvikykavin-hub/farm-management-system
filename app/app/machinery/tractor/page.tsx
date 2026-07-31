@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
 import AnimatedCard from "../../../components/AnimatedCard";
+import EmptyState from "../../../components/EmptyState";
+import { SuccessCheckmark } from "../../../components/SuccessAnimation";
 import { SkeletonCard } from "../../../components/Skeleton";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
@@ -52,6 +54,7 @@ export default function TractorListPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchTractors();
@@ -96,6 +99,8 @@ export default function TractorListPage() {
         toast.success(L("Tractor added!", "டிராக்டர் சேர்க்கப்பட்டது!"));
         setShowAddForm(false);
         resetForm();
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
         fetchTractors();
       }
     } catch (err) {
@@ -196,13 +201,12 @@ export default function TractorListPage() {
               })}
 
               {tractors.length === 0 && !showAddForm && (
-                <div className="text-center py-16">
-                  <div className="text-6xl mb-4">🚜</div>
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                    {L("No tractors added yet", "டிராக்டர் எதுவும் சேர்க்கப்படவில்லை")}
-                  </h3>
-                  <p className="text-sm text-gray-400 mt-1">{L("Add your first tractor", "உங்கள் முதல் டிராக்டரை சேர்க்கவும்")}</p>
-                </div>
+                <EmptyState
+                  type="machinery"
+                  title={L("No tractors added yet", "டிராக்டர் எதுவும் சேர்க்கப்படவில்லை")}
+                  subtitle={L("Add your first tractor", "உங்கள் முதல் டிராக்டரை சேர்க்கவும்")}
+                  action={{ label: `+ ${L("Add Tractor", "டிராக்டர் சேர்")}`, onClick: () => setShowAddForm(true) }}
+                />
               )}
             </>
           )}
@@ -316,6 +320,8 @@ export default function TractorListPage() {
           </div>
         </div>
       )}
+
+      <SuccessCheckmark show={showSuccess} message={L("Tractor added!", "டிராக்டர் சேர்க்கப்பட்டது!")} />
     </div>
   );
 }

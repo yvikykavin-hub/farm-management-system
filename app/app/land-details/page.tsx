@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sidebar from "../../components/Sidebar";
 import AnimatedCard from "../../components/AnimatedCard";
+import EmptyState from "../../components/EmptyState";
 import { SkeletonCard } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
@@ -54,6 +56,7 @@ const WATER_SOURCE_LABELS: Record<string, { en: string; ta: string }> = {
 };
 
 export default function LandDetailsPage() {
+  const router = useRouter();
   const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
@@ -115,13 +118,12 @@ export default function LandDetailsPage() {
               ))}
             </div>
           ) : farms.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="text-5xl mb-4 opacity-60">🌾</div>
-              <h3 className="text-base font-semibold text-gray-700 mb-1">
-                {L("No farms added yet", "நிலங்கள் சேர்க்கப்படவில்லை")}
-              </h3>
-              <p className="text-sm text-gray-400 max-w-xs">{L("No farms found.", "நிலங்கள் இல்லை.")}</p>
-            </div>
+            <EmptyState
+              type="land"
+              title={L("No farms added yet", "நிலங்கள் சேர்க்கப்படவில்லை")}
+              subtitle={L("Add a farm from the Dashboard to see its land details here", "இங்கே நில விவரங்களைக் காண முகப்புத் திரையில் இருந்து நிலம் சேர்க்கவும்")}
+              action={{ label: L("Go to Dashboard", "முகப்புக்கு செல்"), onClick: () => router.push("/") }}
+            />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {farms.map((f, i) => {

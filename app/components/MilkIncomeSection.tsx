@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import ExportButton from "./ExportButton";
+import EmptyState from "./EmptyState";
+import { SuccessCheckmark } from "./SuccessAnimation";
 import { t } from "../lib/labels";
 
 type MilkPayment = {
@@ -58,6 +60,7 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
 
   const [payments, setPayments] = useState<MilkPayment[]>([]);
   const [collections, setCollections] = useState<MilkCollectionRow[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchPayments();
@@ -226,6 +229,8 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
       } else {
         toast.success(lang === "ta" ? "✅ பணம் சேமிக்கப்பட்டது!" : "✅ Payment saved!");
         closePaymentModal();
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
         fetchPayments();
       }
     } catch (err) {
@@ -314,13 +319,11 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
 
         <div className="p-3">
           {payments.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-3xl mb-2">💳</p>
-              <p className="text-sm text-gray-500">{t(lang, "noPaymentsYet")}</p>
-              <button onClick={openAddPayment} className="mt-3 text-primary text-sm hover:underline">
-                + {t(lang, "addFirstPayment")}
-              </button>
-            </div>
+            <EmptyState
+              type="payments"
+              title={t(lang, "noPaymentsYet")}
+              action={{ label: `+ ${t(lang, "addFirstPayment")}`, onClick: openAddPayment }}
+            />
           ) : (
             <div className="space-y-2">
               {!showAllPayments && monthPayments.length === 0 && (
@@ -589,6 +592,8 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
           </div>
         </div>
       )}
+
+      <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "பணம் சேமிக்கப்பட்டது!" : "Payment saved!"} />
     </div>
   );
 }

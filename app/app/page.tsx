@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Sidebar from "../components/Sidebar";
-import AnimatedCard from "../components/AnimatedCard";
+import { StaggerContainer, StaggerItem } from "../components/AnimatedContainer";
+import { SuccessCheckmark } from "../components/SuccessAnimation";
+import EmptyState from "../components/EmptyState";
 import { SkeletonDashboard } from "../components/Skeleton";
 import DarkModeToggle from "../components/DarkModeToggle";
 import NotificationBell from "../components/NotificationBell";
@@ -13,6 +15,17 @@ import WeatherWidget from "../components/WeatherWidget";
 import PullToRefresh from "../components/PullToRefresh";
 import { supabase } from "../lib/supabase";
 import { useLang } from "../lib/useLang";
+
+const farmGradients = [
+  "from-green-50 to-emerald-50 border-green-100 dark:from-green-900/20 dark:to-emerald-900/20 dark:border-green-800/40",
+  "from-amber-50 to-yellow-50 border-amber-100 dark:from-amber-900/20 dark:to-yellow-900/20 dark:border-amber-800/40",
+  "from-blue-50 to-sky-50 border-blue-100 dark:from-blue-900/20 dark:to-sky-900/20 dark:border-blue-800/40",
+  "from-orange-50 to-red-50 border-orange-100 dark:from-orange-900/20 dark:to-red-900/20 dark:border-orange-800/40",
+  "from-teal-50 to-cyan-50 border-teal-100 dark:from-teal-900/20 dark:to-cyan-900/20 dark:border-teal-800/40",
+  "from-purple-50 to-fuchsia-50 border-purple-100 dark:from-purple-900/20 dark:to-fuchsia-900/20 dark:border-purple-800/40",
+];
+
+const farmAccentColors = ["bg-green-500", "bg-amber-500", "bg-blue-500", "bg-orange-500", "bg-teal-500", "bg-purple-500"];
 
 type Farm = {
   id: string;
@@ -34,6 +47,7 @@ export default function Dashboard() {
   const [hasWell, setHasWell] = useState(true);
   const [hasMotor, setHasMotor] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchFarms();
@@ -82,6 +96,8 @@ export default function Dashboard() {
         setArea("");
         setHasWell(true);
         setHasMotor(true);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
         fetchFarms();
       }
     } catch (err) {
@@ -179,13 +195,13 @@ export default function Dashboard() {
           ) : (
           <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 shrink-0">
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 shrink-0">
             {[
               { label: t.totalFarms, value: farms.length, color: "text-primary", bg: "bg-green-50", icon: "🌳" },
               { label: t.totalArea, value: `${totalArea.toFixed(2)} ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
               { label: t.activeCrops, value: activeCropsCount, color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
-            ].map((card, i) => (
-              <AnimatedCard key={card.label} delay={i * 0.1}>
+            ].map((card) => (
+              <StaggerItem key={card.label}>
                 <div className={`${card.bg} rounded-2xl p-5 border border-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}>
                   <div className="absolute top-0 right-0 w-20 h-20 bg-white/40 rounded-full -mr-8 -mt-8" />
                   <div className="flex justify-between items-start mb-1">
@@ -194,9 +210,9 @@ export default function Dashboard() {
                   </div>
                   <p className={`text-lg sm:text-2xl font-bold ${card.color}`}>{card.value}</p>
                 </div>
-              </AnimatedCard>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
 
           {/* Add Farm */}
           <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-3 shrink-0">
@@ -254,47 +270,48 @@ export default function Dashboard() {
             </h2>
 
             {farms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="text-5xl mb-4 opacity-60">🌳</div>
-                <h3 className="text-base font-semibold text-gray-700 mb-1">
-                  {lang === "ta" ? "நிலங்கள் இல்லை" : "No farms added yet"}
-                </h3>
-                <p className="text-sm text-gray-400 max-w-xs">{t.noFarms}</p>
-              </div>
+              <EmptyState
+                type="land"
+                title={lang === "ta" ? "நிலங்கள் இல்லை" : "No farms added yet"}
+                subtitle={t.noFarms}
+              />
             ) : (
-              <div className="space-y-2">
-                {farms.map((farm) => (
-                  <Link key={farm.id} href={`/farms/${farm.id}`}>
-                    <div className="flex flex-wrap justify-between items-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-primary/40 hover:bg-green-50/30 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] group">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center text-lg group-hover:bg-green-200 transition shrink-0">
-                          🌳
+              <StaggerContainer className="space-y-2">
+                {farms.map((farm, i) => (
+                  <StaggerItem key={farm.id}>
+                    <Link href={`/farms/${farm.id}`}>
+                      <div className={`relative overflow-hidden flex flex-wrap justify-between items-center gap-2 p-3 rounded-xl border bg-gradient-to-br ${farmGradients[i % farmGradients.length]} hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] group`}>
+                        <span className={`absolute left-0 top-0 bottom-0 w-1 ${farmAccentColors[i % farmAccentColors.length]}`} />
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 bg-white/70 dark:bg-slate-800/60 rounded-xl flex items-center justify-center text-lg transition shrink-0">
+                            🌳
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm text-primary truncate">{farm.name}</h3>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mt-0.5">
+                              {t.well}: {farm.has_well ? t.yes : t.no} &nbsp;|&nbsp;
+                              {t.motor}: {farm.has_motor ? t.yes : t.no}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-sm text-primary truncate">{farm.name}</h3>
-                          <p className="text-xs text-gray-600 font-medium mt-0.5">
-                            {t.well}: {farm.has_well ? t.yes : t.no} &nbsp;|&nbsp;
-                            {t.motor}: {farm.has_motor ? t.yes : t.no}
-                          </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <span className="text-primary font-bold text-sm">{farm.total_area}</span>
+                            <span className="text-primary text-xs font-medium ml-1">{t.acres}</span>
+                          </div>
+                          <button
+                            onClick={(e) => deleteFarm(e, farm)}
+                            title={lang === "ta" ? "நீக்கு" : "Delete"}
+                            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400 hover:text-red-600 text-sm shrink-0 transition-colors"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="text-right">
-                          <span className="text-primary font-bold text-sm">{farm.total_area}</span>
-                          <span className="text-primary text-xs font-medium ml-1">{t.acres}</span>
-                        </div>
-                        <button
-                          onClick={(e) => deleteFarm(e, farm)}
-                          title={lang === "ta" ? "நீக்கு" : "Delete"}
-                          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400 hover:text-red-600 text-sm shrink-0 transition-colors"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             )}
           </div>
           </>
@@ -304,6 +321,7 @@ export default function Dashboard() {
         </PullToRefresh>
       </main>
       <ChatWidget language={lang} />
+      <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
     </div>
   );
 }
