@@ -7,8 +7,17 @@ import { supabase } from "../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../lib/geminiOCR";
 import { t } from "../lib/labels";
 import { milkRateWarning } from "../lib/validators";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const OCR_BATCH_SIZE = 10;
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1).padStart(2, "0"),
+  label: new Date(2000, i, 1).toLocaleString("en", { month: "short" }),
+}));
 
 // Mobile camera photos are commonly 3-5MB; sending that as base64 JSON risks
 // timing out the Gemini call and can exceed serverless request body limits.
@@ -200,12 +209,47 @@ export default function MilkCollectionSection({
   const [editRateValue, setEditRateValue] = useState("");
   const [editRateDate, setEditRateDate] = useState("");
   const [savingRateEdit, setSavingRateEdit] = useState(false);
+  const [affectedCount, setAffectedCount] = useState<number | null>(null);
 
   const openEditRate = (r: MilkRate) => {
     setEditingRate(r);
     setEditRateValue(String(r.rate_per_litre));
     setEditRateDate(r.effective_from);
   };
+
+  // The rows attributed to a given rate are every collection between its
+  // effective_from and the effective_from of the next rate above it (or open-ended
+  // if it's the most recent rate) — mirrors how rateForDate() picks a rate for a date.
+  const affectedDateRange = (fromDate: string) => {
+    const nextEffectiveFrom = rates
+      .filter((r) => r.id !== editingRate?.id && r.effective_from > fromDate)
+      .map((r) => r.effective_from)
+      .sort()[0];
+    return { from: fromDate, to: nextEffectiveFrom ?? null };
+  };
+
+  // Resolves to null (no preview to show) rather than setting state directly, so the
+  // effect below only ever calls setState from inside a .then() — never synchronously.
+  const calculateAffected = async (): Promise<number | null> => {
+    if (!editingRate || !editRateDate) return null;
+    const { from, to } = affectedDateRange(editRateDate);
+    let query = supabase.from("milk_collections").select("id", { count: "exact", head: true }).gte("collection_date", from);
+    query = animalType === "cow" ? query.or("animal_type.eq.cow,animal_type.is.null") : query.eq("animal_type", "buffalo");
+    if (to) query = query.lt("collection_date", to);
+    const { count } = await query;
+    return count ?? 0;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    calculateAffected().then((count) => {
+      if (!cancelled) setAffectedCount(count);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingRate, editRateDate]);
 
   const saveEditRate = async () => {
     if (!editingRate || !editRateValue || !editRateDate) return;
@@ -219,8 +263,28 @@ export default function MilkCollectionSection({
         console.error("Error updating rate: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        // Only rate_per_litre is sent — total_litres/daily_income are DB-generated
+        // columns and recompute automatically once the new rate is applied.
+        if (affectedCount && affectedCount > 0) {
+          const { from, to } = affectedDateRange(editRateDate);
+          let recalcQuery = supabase
+            .from("milk_collections")
+            .update({ rate_per_litre: parseFloat(editRateValue) })
+            .gte("collection_date", from);
+          recalcQuery =
+            animalType === "cow" ? recalcQuery.or("animal_type.eq.cow,animal_type.is.null") : recalcQuery.eq("animal_type", "buffalo");
+          if (to) recalcQuery = recalcQuery.lt("collection_date", to);
+          const { error: recalcError } = await recalcQuery;
+          if (recalcError) {
+            console.error("Error recalculating collections: ", recalcError);
+            toast.error(t(lang, "saveFailedMessage"));
+          }
+        }
         setEditingRate(null);
+        setAffectedCount(null);
         fetchRates();
+        fetchCollections();
+        onChanged?.();
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -509,10 +573,6 @@ export default function MilkCollectionSection({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const toggleSelectAll = () => {
-    setSelectedIds(selectedIds.length === collections.length ? [] : collections.map((c) => c.id));
-  };
-
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
@@ -544,15 +604,17 @@ export default function MilkCollectionSection({
   const monthTotalIncome = monthCollections.reduce((s, c) => s + Number(c.daily_income ?? 0), 0);
   const daysRecorded = monthCollections.length;
 
-  const getWeeklyBreakdown = (): Week[] => {
+  // Buckets a chronologically-sorted set of rows into weeks ending on Wednesday
+  // (the milkman's payment day) — shared between the monthly view and the export sheet.
+  const weeklyBreakdownFor = (rows: MilkCollection[]): Week[] => {
     const weeks: Week[] = [];
     let bucket: MilkCollection[] = [];
     let weekNum = 1;
-    sortedMonthCollections.forEach((c, idx) => {
+    rows.forEach((c, idx) => {
       bucket.push(c);
       const day = new Date(c.collection_date).getDay();
       const isPaymentDay = day === 3; // Wednesday
-      const isLast = idx === sortedMonthCollections.length - 1;
+      const isLast = idx === rows.length - 1;
       if (isPaymentDay || isLast) {
         const litres = bucket.reduce((s, r) => s + Number(r.morning_litres) + Number(r.evening_litres), 0);
         const income = bucket.reduce((s, r) => s + Number(r.daily_income ?? 0), 0);
@@ -571,7 +633,138 @@ export default function MilkCollectionSection({
     return weeks;
   };
 
-  const weeks = getWeeklyBreakdown();
+  const weeks = weeklyBreakdownFor(sortedMonthCollections);
+
+  // ---------------- Yearly summary + monthly charts ----------------
+  const [chartYear, setChartYear] = useState(CURRENT_YEAR);
+
+  const yearCollections = collections.filter((c) => c.collection_date.startsWith(String(chartYear)));
+  const yearTotalLitres = yearCollections.reduce((s, c) => s + Number(c.morning_litres) + Number(c.evening_litres), 0);
+  const yearTotalIncome = yearCollections.reduce((s, c) => s + Number(c.daily_income ?? 0), 0);
+
+  const getMonthlyChartData = () =>
+    MONTH_OPTIONS.map(({ value, label }) => {
+      const prefix = `${chartYear}-${value}`;
+      const rows = collections.filter((c) => c.collection_date.startsWith(prefix));
+      return {
+        month: label,
+        litres: Number(rows.reduce((s, c) => s + Number(c.morning_litres) + Number(c.evening_litres), 0).toFixed(1)),
+        income: Number(rows.reduce((s, c) => s + Number(c.daily_income ?? 0), 0).toFixed(2)),
+      };
+    });
+
+  const monthlyChartData = getMonthlyChartData();
+
+  // ---------------- Collection history: grouped by month ----------------
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const toggleMonth = (key: string) => {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const groupByMonth = (): [string, MilkCollection[]][] => {
+    const map = new Map<string, MilkCollection[]>();
+    collections.forEach((c) => {
+      const key = c.collection_date.slice(0, 7);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  };
+
+  const monthGroups = groupByMonth();
+
+  const toggleSelectAllInRows = (rows: MilkCollection[]) => {
+    const ids = rows.map((r) => r.id);
+    const allSelected = ids.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) => (allSelected ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
+  };
+
+  // ---------------- Export ----------------
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportYear, setExportYear] = useState(CURRENT_YEAR);
+  const [exportMonth, setExportMonth] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const monthPrefix = exportMonth ? `${exportYear}-${exportMonth}` : String(exportYear);
+      const filtered = collections.filter((c) => c.collection_date.startsWith(monthPrefix));
+
+      const monthsToShow = exportMonth ? [exportMonth] : MONTH_OPTIONS.map((m) => m.value);
+      const monthlySummaryRows = monthsToShow.map((m) => {
+        const prefix = `${exportYear}-${m}`;
+        const rows = collections.filter((c) => c.collection_date.startsWith(prefix));
+        return {
+          Month: prefix,
+          "Total Litres": Number(rows.reduce((s, c) => s + Number(c.morning_litres) + Number(c.evening_litres), 0).toFixed(1)),
+          "Total Income (₹)": Number(rows.reduce((s, c) => s + Number(c.daily_income ?? 0), 0).toFixed(2)),
+          "Days Recorded": rows.length,
+        };
+      });
+
+      const sortedFiltered = [...filtered].sort((a, b) => a.collection_date.localeCompare(b.collection_date));
+      const dailyRows = sortedFiltered.map((c) => ({
+        Date: formatDMY(c.collection_date),
+        Morning: Number(c.morning_litres),
+        Evening: Number(c.evening_litres),
+        "Total Litres": Number(c.morning_litres) + Number(c.evening_litres),
+        "Income (₹)": Number(c.daily_income ?? 0),
+      }));
+
+      const weeklyRows = weeklyBreakdownFor(sortedFiltered).map((w) => ({
+        Week: w.weekNum,
+        Start: formatDMY(w.start),
+        End: formatDMY(w.end),
+        "Total Litres": Number(w.litres.toFixed(1)),
+        "Income (₹)": Number(w.income.toFixed(2)),
+      }));
+
+      // Real month lengths (not a literal "-31") — Postgres rejects an out-of-range
+      // date literal like 2026-02-31 outright, so the upper bound must be computed.
+      const fromDate = exportMonth ? `${exportYear}-${exportMonth}-01` : `${exportYear}-01-01`;
+      const toDate = exportMonth
+        ? `${exportYear}-${exportMonth}-${String(new Date(exportYear, parseInt(exportMonth, 10), 0).getDate()).padStart(2, "0")}`
+        : `${exportYear}-12-31`;
+
+      // cow_expenses has no `category` column — only `expense_type` — and isn't split
+      // by animal_type, so the same shared cattle expenses are included for both tabs.
+      const { data: expData } = await supabase
+        .from("cow_expenses")
+        .select("expense_date, expense_type, amount, vendor_name, description")
+        .gte("expense_date", fromDate)
+        .lte("expense_date", toDate);
+      const expenseRows = (expData ?? []).map((e) => ({
+        Date: formatDMY(e.expense_date),
+        Type: e.expense_type,
+        "Amount (₹)": Number(e.amount),
+        Vendor: e.vendor_name ?? "—",
+        Description: e.description ?? "—",
+      }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(monthlySummaryRows), "Monthly Summary");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailyRows), "Daily Collection");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(weeklyRows), "Weekly Breakdown");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows), "Expenses");
+
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/octet-stream" });
+      saveAs(blob, `${animalType}_milk_${exportYear}${exportMonth ? "-" + exportMonth : ""}.xlsx`);
+
+      toast.success(t(lang, "exportSuccess"));
+      setExportModalOpen(false);
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error(t(lang, "saveFailedMessage"));
+    }
+    setExporting(false);
+  };
 
   // Preview-only figures shown above the Save button — computed from the same
   // cached rate history the row table already renders, so what's shown before
@@ -790,15 +983,84 @@ export default function MilkCollectionSection({
         )}
       </div>
 
+      {/* Yearly summary + monthly charts */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "yearlySummary")}</h2>
+          <div className="flex items-center gap-2">
+            <select
+              value={chartYear}
+              onChange={(e) => setChartYear(parseInt(e.target.value, 10))}
+              className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0"
+            >
+              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <button
+              onClick={fetchCollections}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-xs sm:text-sm font-medium hover:bg-green-50 transition min-h-[44px] sm:min-h-0"
+            >
+              🔄 {t(lang, "refresh")}
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-500">{t(lang, "totalLitres")}</p>
+            <p className="text-lg font-bold text-gray-800">{yearTotalLitres.toFixed(1)} L</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-500">{t(lang, "expectedIncome")}</p>
+            <p className="text-lg font-bold text-success">{inr(yearTotalIncome)}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">{t(lang, "monthlyIncomeChart")}</h3>
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: 320, height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip formatter={(value) => inr(Number(value))} />
+                    <Legend />
+                    <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">{t(lang, "monthlyLitresChart")}</h3>
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: 320, height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip formatter={(value) => `${value} L`} />
+                    <Legend />
+                    <Bar dataKey="litres" name={t(lang, "totalLitres")} fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Collection history */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
         <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
           <h2 className="text-sm font-semibold text-gray-800">{t(lang, "collectionHistory")}</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {selectMode && selectedIds.length > 0 && (
               <button
                 onClick={bulkDeleteCollections}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-medium transition"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-medium transition min-h-[44px] sm:min-h-0"
               >
                 🗑️ {lang === "ta" ? `${selectedIds.length} நீக்கு` : `Delete ${selectedIds.length}`}
               </button>
@@ -812,73 +1074,101 @@ export default function MilkCollectionSection({
             >
               {selectMode ? t(lang, "cancel") : t(lang, "select")}
             </button>
+            <button
+              onClick={() => setExportModalOpen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-green-50 transition min-h-[44px] sm:min-h-0"
+            >
+              📤 {t(lang, "export")}
+            </button>
           </div>
         </div>
-        <div className="overflow-x-auto max-h-72 overflow-y-auto">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-gray-50">
-              <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide">
-                {selectMode && (
-                  <th className="py-1 px-1">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length === collections.length && collections.length > 0}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 accent-green-600"
-                    />
-                  </th>
-                )}
-                <th className="py-1 px-1">{t(lang, "date")}</th>
-                <th className="py-1 px-1">{t(lang, "morning")}</th>
-                <th className="py-1 px-1">{t(lang, "evening")}</th>
-                <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
-                <th className="py-1 px-1">{t(lang, "income")}</th>
-                <th className="py-1 px-1"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {collections.length === 0 ? (
-                <tr><td colSpan={selectMode ? 7 : 6} className="text-center py-6 text-gray-500">🐄 {t(lang, "noRecordsYet")}</td></tr>
-              ) : (
-                collections.map((c) => {
-                  const total = Number(c.morning_litres) + Number(c.evening_litres);
-                  const wasEdited = c.updated_at && c.created_at && c.updated_at !== c.created_at;
-                  return (
-                    <tr key={c.id} className="border-b border-gray-50 text-gray-900">
-                      {selectMode && (
-                        <td className="py-1 px-1">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(c.id)}
-                            onChange={() => toggleSelect(c.id)}
-                            className="w-4 h-4 accent-green-600"
-                          />
-                        </td>
-                      )}
-                      <td className="py-1 px-1 text-gray-700">
-                        {formatDMY(c.collection_date)}
-                        {wasEdited && (
-                          <span className="text-xs text-amber-500 ml-1" title={lang === "ta" ? "கைமுறையாக திருத்தப்பட்டது" : "Manually edited"}>
-                            ✏️
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-1 px-1 font-medium">{c.morning_litres}</td>
-                      <td className="py-1 px-1 font-medium">{c.evening_litres}</td>
-                      <td className="py-1 px-1 font-medium">{total.toFixed(1)}</td>
-                      <td className="py-1 px-1 font-medium text-green-600">{inr(Number(c.daily_income ?? 0))}</td>
-                      <td className="py-1 px-1">
-                        {!selectMode && (
-                          <button onClick={() => deleteCollection(c.id)} className="hover:text-danger">🗑️</button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        {collections.length === 0 ? (
+          <p className="text-center py-6 text-gray-500 text-xs">🐄 {t(lang, "noRecordsYet")}</p>
+        ) : (
+          <div className="flex flex-col">
+            {monthGroups.map(([monthKey, rows]) => {
+              const isExpanded = expandedMonths.has(monthKey);
+              const monthLitres = rows.reduce((s, c) => s + Number(c.morning_litres) + Number(c.evening_litres), 0);
+              const monthIncome = rows.reduce((s, c) => s + Number(c.daily_income ?? 0), 0);
+              return (
+                <div key={monthKey} className="border-b border-gray-100">
+                  <button
+                    onClick={() => toggleMonth(monthKey)}
+                    className="w-full flex items-center justify-between py-2 px-1 text-left hover:bg-gray-50 transition min-h-[44px] sm:min-h-0"
+                  >
+                    <span className="text-xs font-semibold text-gray-800">{isExpanded ? "▼" : "▶"} {monthKey}</span>
+                    <span className="text-xs text-gray-500">
+                      {monthLitres.toFixed(1)} L · <span className="text-green-600 font-medium">{inr(monthIncome)}</span>
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                      <table className="w-full text-xs" style={{ minWidth: 480 }}>
+                        <thead className="sticky top-0 bg-gray-50">
+                          <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide">
+                            {selectMode && (
+                              <th className="py-1 px-1">
+                                <input
+                                  type="checkbox"
+                                  checked={rows.every((r) => selectedIds.includes(r.id))}
+                                  onChange={() => toggleSelectAllInRows(rows)}
+                                  className="w-4 h-4 accent-green-600"
+                                />
+                              </th>
+                            )}
+                            <th className="py-1 px-1">{t(lang, "date")}</th>
+                            <th className="py-1 px-1">{t(lang, "morning")}</th>
+                            <th className="py-1 px-1">{t(lang, "evening")}</th>
+                            <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
+                            <th className="py-1 px-1">{t(lang, "income")}</th>
+                            <th className="py-1 px-1"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((c) => {
+                            const total = Number(c.morning_litres) + Number(c.evening_litres);
+                            const wasEdited = c.updated_at && c.created_at && c.updated_at !== c.created_at;
+                            return (
+                              <tr key={c.id} className="border-b border-gray-50 text-gray-900">
+                                {selectMode && (
+                                  <td className="py-1 px-1">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedIds.includes(c.id)}
+                                      onChange={() => toggleSelect(c.id)}
+                                      className="w-4 h-4 accent-green-600"
+                                    />
+                                  </td>
+                                )}
+                                <td className="py-1 px-1 text-gray-700">
+                                  {formatDMY(c.collection_date)}
+                                  {wasEdited && (
+                                    <span className="text-xs text-amber-500 ml-1" title={lang === "ta" ? "கைமுறையாக திருத்தப்பட்டது" : "Manually edited"}>
+                                      ✏️
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-1 px-1 font-medium">{c.morning_litres}</td>
+                                <td className="py-1 px-1 font-medium">{c.evening_litres}</td>
+                                <td className="py-1 px-1 font-medium">{total.toFixed(1)}</td>
+                                <td className="py-1 px-1 font-medium text-green-600">{inr(Number(c.daily_income ?? 0))}</td>
+                                <td className="py-1 px-1">
+                                  {!selectMode && (
+                                    <button onClick={() => deleteCollection(c.id)} className="hover:text-danger">🗑️</button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Add rate modal */}
@@ -933,11 +1223,70 @@ export default function MilkCollectionSection({
                 <label className={labelCls}>{t(lang, "effectiveFromDate")}</label>
                 <input type="date" value={editRateDate} onChange={(e) => setEditRateDate(e.target.value)} className={inputCls} />
               </div>
+              {affectedCount !== null && (
+                <div
+                  className={`rounded-lg p-3 text-xs ${
+                    affectedCount > 0 ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
+                >
+                  {affectedCount > 0 ? (
+                    <>
+                      ⚠️ {affectedCount} {t(lang, "affectedRecords")}
+                      <br />
+                      {t(lang, "recalculateWarning")}
+                    </>
+                  ) : (
+                    <>ℹ️ {lang === "ta" ? "பாதிக்கப்படும் பதிவுகள் இல்லை" : "No existing records will be affected"}</>
+                  )}
+                </div>
+              )}
               <div className="flex gap-2">
                 <button onClick={saveEditRate} disabled={savingRateEdit} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
-                  {savingRateEdit ? "..." : t(lang, "save")}
+                  {savingRateEdit ? "..." : affectedCount && affectedCount > 0 ? t(lang, "saveAndRecalculate") : t(lang, "save")}
                 </button>
-                <button onClick={() => setEditingRate(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => { setEditingRate(null); setAffectedCount(null); }} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                  {t(lang, "cancel")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export modal */}
+      {exportModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 sm:p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-primary">{t(lang, "exportData")}</h2>
+              <button onClick={() => setExportModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>{t(lang, "selectYear")}</label>
+                <select value={exportYear} onChange={(e) => setExportYear(parseInt(e.target.value, 10))} className={inputCls}>
+                  {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>{t(lang, "selectMonthOptional")}</label>
+                <select value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={inputCls}>
+                  <option value="">{t(lang, "all")}</option>
+                  {MONTH_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition min-h-[44px] sm:min-h-0"
+                >
+                  {exporting ? "..." : `⬇ ${t(lang, "downloadExcel")}`}
+                </button>
+                <button
+                  onClick={() => setExportModalOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition min-h-[44px] sm:min-h-0"
+                >
                   {t(lang, "cancel")}
                 </button>
               </div>
