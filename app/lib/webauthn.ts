@@ -3,16 +3,22 @@
 const BIOMETRIC_ID_KEY = "marutham_biometric_id";
 const BIOMETRIC_EMAIL_KEY = "marutham_biometric_email";
 
+type BiometricResult = { success: boolean; error?: string };
+type BiometricAuthResult = { success: boolean; email?: string; error?: string };
+
 // Check if biometric is supported
 export const isBiometricSupported = (): boolean => {
   if (typeof window === "undefined") return false;
   return !!(window.PublicKeyCredential && navigator.credentials && typeof navigator.credentials.create === "function");
 };
 
-// Check if user has registered biometric
+// Check if user has registered biometric. Requires BOTH the credential id and the
+// email to be present — a mobile crash mid-registration can leave only one of the
+// two localStorage writes committed, and a half-written state must count as "not
+// registered" rather than showing a button that can only ever fail.
 export const hasBiometricRegistered = (): boolean => {
   if (typeof window === "undefined") return false;
-  return !!localStorage.getItem(BIOMETRIC_ID_KEY);
+  return !!localStorage.getItem(BIOMETRIC_ID_KEY) && !!localStorage.getItem(BIOMETRIC_EMAIL_KEY);
 };
 
 export const getRegisteredBiometricEmail = (): string | null => {
@@ -20,12 +26,29 @@ export const getRegisteredBiometricEmail = (): string | null => {
   return localStorage.getItem(BIOMETRIC_EMAIL_KEY);
 };
 
+const errorMessage = (error: unknown): string => {
+  const err = error as { name?: string; message?: string };
+  if (err?.name === "NotAllowedError") return "Permission denied or timed out";
+  if (err?.name === "SecurityError") return "Security error - try again";
+  return err?.message || "Something went wrong";
+};
+
 // Register biometric after login. Only the credential's public rawId and the
 // account email are stored — the private key never leaves the device's
-// secure enclave/TPM, so nothing secret is written to localStorage here.
-export const registerBiometric = async (userEmail: string): Promise<boolean> => {
+// secure enclave/TPM, so nothing secret (and no password) is written to
+// localStorage here.
+export const registerBiometric = async (userEmail: string): Promise<BiometricResult> => {
   try {
-    if (!isBiometricSupported()) return false;
+    if (!isBiometricSupported()) {
+      return { success: false, error: "Not supported on this device" };
+    }
+
+    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function") {
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (!available) {
+        return { success: false, error: "No biometric sensor found" };
+      }
+    }
 
     const challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
@@ -51,20 +74,26 @@ export const registerBiometric = async (userEmail: string): Promise<boolean> => 
         authenticatorSelection: {
           authenticatorAttachment: "platform",
           userVerification: "required",
+          residentKey: "preferred",
         },
         timeout: 60000,
       },
     })) as PublicKeyCredential | null;
 
-    if (credential) {
-      localStorage.setItem(BIOMETRIC_ID_KEY, btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
-      localStorage.setItem(BIOMETRIC_EMAIL_KEY, userEmail);
-      return true;
+    if (!credential) {
+      return { success: false, error: "Registration cancelled" };
     }
-    return false;
+
+    localStorage.setItem(BIOMETRIC_ID_KEY, btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
+    localStorage.setItem(BIOMETRIC_EMAIL_KEY, userEmail);
+    return { success: true };
   } catch (error) {
     console.error("Biometric registration failed:", error);
-    return false;
+    const err = error as { name?: string };
+    if (err?.name === "InvalidStateError") {
+      return { success: false, error: "Already registered on this device" };
+    }
+    return { success: false, error: errorMessage(error) };
   }
 };
 
@@ -72,16 +101,26 @@ export const registerBiometric = async (userEmail: string): Promise<boolean> => 
 // only proves the enrolled person is present; it is not itself a login. The
 // caller is responsible for checking there's still a valid session for that
 // email before treating this as "signed in".
-export const authenticateWithBiometric = async (): Promise<string | null> => {
+export const authenticateWithBiometric = async (): Promise<BiometricAuthResult> => {
   try {
-    if (!isBiometricSupported()) return null;
-    if (!hasBiometricRegistered()) return null;
+    if (!isBiometricSupported()) {
+      return { success: false, error: "Not supported" };
+    }
+    if (!hasBiometricRegistered()) {
+      return { success: false, error: "Not registered" };
+    }
+
+    const storedId = localStorage.getItem(BIOMETRIC_ID_KEY);
+    const email = localStorage.getItem(BIOMETRIC_EMAIL_KEY);
+    if (!storedId || !email) {
+      // Half-written state (shouldn't happen given hasBiometricRegistered's check,
+      // but belt-and-braces) — clear it so the UI falls back to password login.
+      removeBiometric();
+      return { success: false, error: "Registration data missing" };
+    }
 
     const challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
-
-    const storedId = localStorage.getItem(BIOMETRIC_ID_KEY);
-    if (!storedId) return null;
 
     const credentialId = Uint8Array.from(atob(storedId), (c) => c.charCodeAt(0));
 
@@ -100,13 +139,22 @@ export const authenticateWithBiometric = async (): Promise<string | null> => {
       },
     });
 
-    if (assertion) {
-      return localStorage.getItem(BIOMETRIC_EMAIL_KEY);
+    if (!assertion) {
+      return { success: false, error: "Verification cancelled" };
     }
-    return null;
+
+    return { success: true, email };
   } catch (error) {
     console.error("Biometric auth failed:", error);
-    return null;
+    const err = error as { name?: string };
+    if (err?.name === "InvalidStateError") {
+      // The registered credential no longer matches this device/browser
+      // (e.g. it changed, or the platform authenticator was reset) — clear
+      // the stale registration rather than leaving a button that can only fail.
+      removeBiometric();
+      return { success: false, error: "Device changed - please re-register" };
+    }
+    return { success: false, error: errorMessage(error) };
   }
 };
 

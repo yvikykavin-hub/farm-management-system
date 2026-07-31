@@ -93,9 +93,17 @@ export default function LoginPage() {
   const handleBiometricLogin = async () => {
     setBiometricLoading(true);
     try {
-      const biometricEmail = await authenticateWithBiometric();
-      if (!biometricEmail) {
-        toast.error(L("Fingerprint not recognized", "கைரேகை சரிபார்க்கவில்லை"));
+      const result = await authenticateWithBiometric();
+      if (!result.success) {
+        // Broken/stale registration was already cleared inside authenticateWithBiometric —
+        // hide the button so the user isn't shown a control that can only fail again.
+        if (result.error === "Device changed - please re-register" || result.error === "Registration data missing") {
+          setShowBiometric(false);
+          toast.error(L("Please login with password to re-register fingerprint", "மீண்டும் கடவுச்சொல்லால் உள்நுழைந்து கைரேகை பதிவு செய்யவும்"));
+        } else {
+          toast.error(L(`Fingerprint failed: ${result.error}`, `கைரேகை தோல்வி: ${result.error}`));
+        }
+        setBiometricLoading(false);
         return;
       }
 
@@ -105,13 +113,14 @@ export default function LoginPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (user?.email && user.email === biometricEmail) {
+      if (user?.email && user.email === result.email) {
         clearLockedCookie();
         router.push("/");
         router.refresh();
         return;
       }
 
+      setShowBiometric(false);
       toast.error(L("Please login with password once", "மீண்டும் கடவுச்சொல்லால் உள்நுழையவும்"));
     } catch (err) {
       console.error("Biometric login failed:", err);
@@ -332,11 +341,11 @@ export default function LoginPage() {
               </button>
               <button
                 onClick={async () => {
-                  const success = await registerBiometric(email.trim());
-                  if (success) {
+                  const result = await registerBiometric(email.trim());
+                  if (result.success) {
                     toast.success(L("✅ Fingerprint login enabled!", "✅ கைரேகை உள்நுழைவு இயக்கப்பட்டது!"));
                   } else {
-                    toast.error(L("Could not enable fingerprint", "கைரேகை பதிவு தோல்வி"));
+                    toast.error(L(`Could not enable fingerprint: ${result.error}`, `கைரேகை பதிவு தோல்வி: ${result.error}`));
                   }
                   setShowRegisterPrompt(false);
                   router.push("/");

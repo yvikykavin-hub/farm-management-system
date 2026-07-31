@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
-import { isBiometricSupported, hasBiometricRegistered, removeBiometric } from "../../lib/webauthn";
+import { isBiometricSupported, hasBiometricRegistered, registerBiometric, removeBiometric } from "../../lib/webauthn";
 import { clearLockedCookie } from "../../lib/lockCookie";
 
 export default function SettingsPage() {
@@ -18,11 +18,27 @@ export default function SettingsPage() {
 
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricRegistered, setBiometricRegistered] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [registeringBiometric, setRegisteringBiometric] = useState(false);
 
   useEffect(() => {
     setBiometricSupported(isBiometricSupported());
     setBiometricRegistered(hasBiometricRegistered());
+    supabase.auth.getUser().then(({ data: { user } }) => setUserEmail(user?.email ?? null));
   }, []);
+
+  const handleEnableBiometric = async () => {
+    if (!userEmail) return;
+    setRegisteringBiometric(true);
+    const result = await registerBiometric(userEmail);
+    if (result.success) {
+      setBiometricRegistered(true);
+      toast.success(L("✅ Fingerprint login enabled!", "✅ கைரேகை உள்நுழைவு இயக்கப்பட்டது!"));
+    } else {
+      toast.error(L(`Could not enable fingerprint: ${result.error}`, `கைரேகை பதிவு தோல்வி: ${result.error}`));
+    }
+    setRegisteringBiometric(false);
+  };
 
   const handleRemoveBiometric = () => {
     removeBiometric();
@@ -146,9 +162,15 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     {L("Fingerprint login is not enabled", "கைரேகை உள்நுழைவு இயக்கப்படவில்லை")}
                   </p>
-                  <p className="text-xs text-gray-400 mb-4">
-                    {L("To enable: Logout and login with password again", "இயக்க: வெளியேறி மீண்டும் கடவுச்சொல்லால் உள்நுழையவும்")}
-                  </p>
+                  <button
+                    onClick={handleEnableBiometric}
+                    disabled={registeringBiometric || !userEmail}
+                    className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-medium rounded-xl text-sm transition-colors"
+                  >
+                    {registeringBiometric
+                      ? L("Enabling...", "இயக்குகிறது...")
+                      : L("Enable Fingerprint Login", "கைரேகை உள்நுழைவை இயக்கு")}
+                  </button>
                 </div>
               )}
             </div>
