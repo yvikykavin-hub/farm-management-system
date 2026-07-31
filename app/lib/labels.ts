@@ -266,6 +266,10 @@ export const labels = {
     period: "Period",
     paymentRecords: "Payment Records",
     summary: "Summary",
+
+    // Income tab month navigation
+    currentMonth: "Current Month",
+    tapToChange: "tap to change",
   },
   ta: {
     livestock: "கால்நடை மேலாண்மை",
@@ -515,6 +519,9 @@ export const labels = {
     period: "காலம்",
     paymentRecords: "பணம் பதிவுகள்",
     summary: "சுருக்கம்",
+
+    currentMonth: "இந்த மாதம்",
+    tapToChange: "தேர்வு செய்க",
   },
 } as const;
 

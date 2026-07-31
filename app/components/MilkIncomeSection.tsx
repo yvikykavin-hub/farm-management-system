@@ -79,17 +79,57 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
     if (data) setCollections(data);
   };
 
-  // ---------------- Monthly summary (auto-calculated) ----------------
-  const now = new Date();
-  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const monthName = now.toLocaleString(lang === "ta" ? "ta-IN" : "en-IN", { month: "long", year: "numeric" });
+  // ---------------- Month navigation ----------------
+  const currentDate = new Date();
+  const [incomeMonth, setIncomeMonth] = useState(currentDate.getMonth());
+  const [incomeYear, setIncomeYear] = useState(currentDate.getFullYear());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(incomeYear);
 
-  const monthCollections = collections.filter((c) => c.collection_date.startsWith(monthPrefix));
+  const isCurrentMonth = incomeMonth === currentDate.getMonth() && incomeYear === currentDate.getFullYear();
+
+  const goToPrevMonth = () => {
+    if (incomeMonth === 0) {
+      setIncomeMonth(11);
+      setIncomeYear((prev) => prev - 1);
+    } else {
+      setIncomeMonth((prev) => prev - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (isCurrentMonth) return;
+    if (incomeMonth === 11) {
+      setIncomeMonth(0);
+      setIncomeYear((prev) => prev + 1);
+    } else {
+      setIncomeMonth((prev) => prev + 1);
+    }
+  };
+
+  const getMonthName = () =>
+    new Date(incomeYear, incomeMonth, 1).toLocaleString(lang === "ta" ? "ta-IN" : "en-IN", { month: "long", year: "numeric" });
+
+  const getMonthRange = () => {
+    const start = toISODate(new Date(incomeYear, incomeMonth, 1));
+    const end = toISODate(new Date(incomeYear, incomeMonth + 1, 0));
+    return { start, end };
+  };
+
+  const openMonthPicker = () => {
+    setPickerYear(incomeYear);
+    setShowMonthPicker(true);
+  };
+
+  // ---------------- Monthly summary (auto-calculated) ----------------
+  const monthName = getMonthName();
+  const { start: monthStart, end: monthEnd } = getMonthRange();
+
+  const monthCollections = collections.filter((c) => c.collection_date >= monthStart && c.collection_date <= monthEnd);
   const monthTotalLitres = monthCollections.reduce((s, c) => s + (Number(c.morning_litres) || 0) + (Number(c.evening_litres) || 0), 0);
   const monthTotalExpected = monthCollections.reduce((s, c) => s + rowIncome(c), 0);
-  const monthTotalReceived = payments
-    .filter((p) => p.payment_date.startsWith(monthPrefix))
-    .reduce((s, p) => s + Number(p.received_amount || 0), 0);
+  const monthPayments = payments.filter((p) => p.payment_date >= monthStart && p.payment_date <= monthEnd);
+  const monthTotalReceived = monthPayments.reduce((s, p) => s + Number(p.received_amount || 0), 0);
   const monthOutstanding = monthTotalExpected - monthTotalReceived;
 
   // ---------------- Add / Edit payment ----------------
@@ -205,6 +245,33 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Month navigation */}
+      <div className="flex items-center justify-between bg-white rounded-2xl p-3 shadow-sm border border-gray-100 w-full">
+        <button
+          onClick={goToPrevMonth}
+          className="w-11 h-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors text-sm font-bold"
+        >
+          ←
+        </button>
+
+        <button onClick={openMonthPicker} className="flex flex-col items-center flex-1 mx-2">
+          <span className="text-sm font-semibold text-gray-900">{getMonthName()}</span>
+          <span className="text-xs text-gray-400 mt-0.5">
+            {isCurrentMonth ? `(${t(lang, "currentMonth")})` : t(lang, "tapToChange")}
+          </span>
+        </button>
+
+        <button
+          onClick={goToNextMonth}
+          disabled={isCurrentMonth}
+          className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors text-sm font-bold ${
+            isCurrentMonth ? "bg-gray-50 text-gray-300 cursor-not-allowed" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          →
+        </button>
+      </div>
+
       {/* Monthly summary */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
         <h2 className="text-sm font-semibold text-gray-800 mb-3">
@@ -249,14 +316,14 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
       </div>
 
       {/* Payment list */}
-      {payments.length === 0 ? (
+      {monthPayments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <p className="text-3xl mb-2">💳</p>
           <p className="text-sm text-gray-500">{t(lang, "noPaymentsYet")}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {[...payments]
+          {[...monthPayments]
             .sort((a, b) => b.payment_date.localeCompare(a.payment_date))
             .map((payment) => {
               const diff = Number(payment.expected_amount || 0) - Number(payment.received_amount || 0);
@@ -417,6 +484,72 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
                 {savingPayment ? "..." : t(lang, "save")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Month picker modal */}
+      {showMonthPicker && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xs p-5">
+            <h3 className="text-base font-bold text-gray-900 mb-4 text-center">{t(lang, "selectMonth")}</h3>
+
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => setPickerYear((p) => p - 1)}
+                className="w-9 h-9 rounded-lg bg-gray-100 text-gray-600 text-sm"
+              >
+                ←
+              </button>
+              <span className="text-sm font-semibold text-gray-900">{pickerYear}</span>
+              <button
+                onClick={() => {
+                  if (pickerYear < currentDate.getFullYear()) setPickerYear((p) => p + 1);
+                }}
+                disabled={pickerYear >= currentDate.getFullYear()}
+                className="w-9 h-9 rounded-lg bg-gray-100 text-gray-600 text-sm disabled:opacity-30"
+              >
+                →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {Array.from({ length: 12 }, (_, i) => {
+                const monthLabel = new Date(2024, i, 1).toLocaleString(lang === "ta" ? "ta-IN" : "en-IN", { month: "short" });
+                const isSelected = i === incomeMonth && pickerYear === incomeYear;
+                const isFuture = new Date(pickerYear, i) > new Date(currentDate.getFullYear(), currentDate.getMonth());
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      if (!isFuture) {
+                        setIncomeMonth(i);
+                        setIncomeYear(pickerYear);
+                        setShowMonthPicker(false);
+                      }
+                    }}
+                    disabled={isFuture}
+                    className={`py-2 rounded-xl text-xs font-medium transition-all min-h-[44px] sm:min-h-0 ${
+                      isSelected
+                        ? "bg-primary text-white"
+                        : isFuture
+                          ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                          : "bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700"
+                    }`}
+                  >
+                    {monthLabel}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setShowMonthPicker(false)}
+              className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-600 text-sm font-medium min-h-[44px] sm:min-h-0"
+            >
+              {t(lang, "cancel")}
+            </button>
           </div>
         </div>
       )}

@@ -104,6 +104,39 @@ const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
 const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
+function CollapsibleSection({
+  label,
+  icon,
+  isOpen,
+  onToggle,
+  badge,
+  children,
+}: {
+  label: string;
+  icon: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  badge?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden w-full">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors min-h-[44px]"
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span>{icon}</span>
+          <span className="text-sm font-semibold text-gray-800">{label}</span>
+          {badge && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{badge}</span>}
+        </div>
+        <span className="text-gray-400 text-xs">{isOpen ? "▲" : "▼"}</span>
+      </button>
+      {isOpen && <div className="px-4 pb-4 border-t border-gray-100">{children}</div>}
+    </div>
+  );
+}
+
 export default function MilkCollectionSection({
   animalType,
   lang,
@@ -123,6 +156,24 @@ export default function MilkCollectionSection({
     fetchRates();
     fetchCollections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animalType]);
+
+  // Sections default to collapsed and reset whenever the cow/buffalo tab changes,
+  // so switching tabs never leaves a stale expanded section from the other animal.
+  const [showMonthly, setShowMonthly] = useState(false);
+  const [showWeekly, setShowWeekly] = useState(false);
+  const [showYearly, setShowYearly] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    // Deferred via microtask rather than called synchronously in the effect body —
+    // avoids the cascading-render lint warning while still resetting before paint.
+    Promise.resolve().then(() => {
+      setShowMonthly(false);
+      setShowWeekly(false);
+      setShowYearly(false);
+      setShowHistory(false);
+    });
   }, [animalType]);
 
   const fetchRates = async () => {
@@ -920,10 +971,15 @@ export default function MilkCollectionSection({
         </div>
       </div>
 
-      {/* Monthly view */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "monthlySummary")}</h2>
+      {/* Monthly Summary (collapsible) */}
+      <CollapsibleSection
+        label={t(lang, "monthlySummary")}
+        icon="📅"
+        isOpen={showMonthly}
+        onToggle={() => setShowMonthly(!showMonthly)}
+        badge={selectedMonthYear}
+      >
+        <div className="flex justify-end mb-3 mt-3">
           <input
             type="month"
             value={selectedMonthYear}
@@ -931,7 +987,7 @@ export default function MilkCollectionSection({
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-900"
           />
         </div>
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-3 gap-2">
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">{t(lang, "totalLitres")}</p>
             <p className="text-lg font-bold text-gray-800">{monthTotalLitres.toFixed(1)} L</p>
@@ -945,48 +1001,63 @@ export default function MilkCollectionSection({
             <p className="text-lg font-bold text-gray-800">{daysRecorded}</p>
           </div>
         </div>
+      </CollapsibleSection>
 
-        <h3 className="text-xs font-semibold text-gray-700 mb-2">{t(lang, "weeklyBreakdown")}</h3>
-        {weeks.length === 0 ? (
-          <p className="text-xs text-gray-500 py-3 text-center">{t(lang, "noRecordsYet")}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
-                  <th className="py-1 px-1">{t(lang, "week")}</th>
-                  <th className="py-1 px-1">{t(lang, "date")}</th>
-                  <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
-                  <th className="py-1 px-1">{t(lang, "expectedIncome")}</th>
-                  <th className="py-1 px-1"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {weeks.map((w) => (
-                  <tr key={w.weekNum} className="border-b border-gray-50 text-gray-900">
-                    <td className="py-1 px-1 font-medium">{t(lang, "week")} {w.weekNum}</td>
-                    <td className="py-1 px-1 text-gray-700">{formatDMY(w.start)} → {formatDMY(w.end)}</td>
-                    <td className="py-1 px-1">{w.litres.toFixed(1)} L</td>
-                    <td className="py-1 px-1 text-green-600 font-medium">{inr(w.income)}</td>
-                    <td className="py-1 px-1">
-                      {w.isPaymentWeek && (
-                        <span className="bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
-                          💰 {t(lang, "paymentWeek")}
-                        </span>
-                      )}
-                    </td>
+      {/* Weekly Breakdown (collapsible) */}
+      <CollapsibleSection
+        label={t(lang, "weeklyBreakdown")}
+        icon="📊"
+        isOpen={showWeekly}
+        onToggle={() => setShowWeekly(!showWeekly)}
+        badge={selectedMonthYear}
+      >
+        <div className="mt-3">
+          {weeks.length === 0 ? (
+            <p className="text-xs text-gray-500 py-3 text-center">{t(lang, "noRecordsYet")}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                    <th className="py-1 px-1">{t(lang, "week")}</th>
+                    <th className="py-1 px-1">{t(lang, "date")}</th>
+                    <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
+                    <th className="py-1 px-1">{t(lang, "expectedIncome")}</th>
+                    <th className="py-1 px-1"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {weeks.map((w) => (
+                    <tr key={w.weekNum} className="border-b border-gray-50 text-gray-900">
+                      <td className="py-1 px-1 font-medium">{t(lang, "week")} {w.weekNum}</td>
+                      <td className="py-1 px-1 text-gray-700">{formatDMY(w.start)} → {formatDMY(w.end)}</td>
+                      <td className="py-1 px-1">{w.litres.toFixed(1)} L</td>
+                      <td className="py-1 px-1 text-green-600 font-medium">{inr(w.income)}</td>
+                      <td className="py-1 px-1">
+                        {w.isPaymentWeek && (
+                          <span className="bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
+                            💰 {t(lang, "paymentWeek")}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
 
-      {/* Yearly summary + monthly charts */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "yearlySummary")}</h2>
+      {/* Yearly Summary (collapsible) */}
+      <CollapsibleSection
+        label={t(lang, "yearlySummary")}
+        icon="📈"
+        isOpen={showYearly}
+        onToggle={() => setShowYearly(!showYearly)}
+        badge={String(chartYear)}
+      >
+        <div className="flex items-center justify-end mb-3 mt-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <select
               value={chartYear}
@@ -1050,12 +1121,17 @@ export default function MilkCollectionSection({
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* Collection history */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "collectionHistory")}</h2>
+      {/* Collection History (collapsible) */}
+      <CollapsibleSection
+        label={t(lang, "collectionHistory")}
+        icon="📋"
+        isOpen={showHistory}
+        onToggle={() => setShowHistory(!showHistory)}
+        badge={`${collections.length} ${t(lang, "recordCount")}`}
+      >
+        <div className="flex items-center justify-end mb-2 gap-2 flex-wrap mt-3">
           <div className="flex items-center gap-2 flex-wrap">
             {selectMode && selectedIds.length > 0 && (
               <button
@@ -1169,7 +1245,7 @@ export default function MilkCollectionSection({
             })}
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Add rate modal */}
       {rateModalOpen && (

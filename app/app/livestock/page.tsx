@@ -100,9 +100,9 @@ export default function LivestockLandingPage() {
   const totalNetProfit = cattleProfit + goatProfit + henProfit;
 
   const chartData = [
-    { name: `🐄🐃 ${t(lang, "cows")}`, income: cattleIncome, expense: cattleExpense, profit: cattleProfit },
-    { name: `🐐 ${t(lang, "goats")}`, income: goatIncome, expense: goatExpense, profit: goatProfit },
-    { name: `🐔 ${t(lang, "hens")}`, income: henIncome, expense: henExpense, profit: henProfit },
+    { name: `🐄🐃 ${t(lang, "cows")}`, income: cattleIncome, expense: cattleExpense, profit: Math.max(0, cattleProfit) },
+    { name: `🐐 ${t(lang, "goats")}`, income: goatIncome, expense: goatExpense, profit: Math.max(0, goatProfit) },
+    { name: `🐔 ${t(lang, "hens")}`, income: henIncome, expense: henExpense, profit: Math.max(0, henProfit) },
   ];
 
   const cards = [
@@ -246,25 +246,32 @@ export default function LivestockLandingPage() {
                 </div>
 
                 {/* Total net profit/loss banner */}
-                <div className={`rounded-xl p-3 mb-4 ${totalNetProfit >= 0 ? "bg-green-600" : "bg-red-500"}`}>
-                  <p className="text-xs text-white/80">{t(lang, "totalNetProfitLoss")} {year}</p>
-                  <p className="text-xl font-bold text-white">
+                <div
+                  className={`rounded-xl p-3 mb-4 border ${
+                    totalNetProfit >= 0
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                      : "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800"
+                  }`}
+                >
+                  <p className="text-xs text-gray-500 mb-1">{t(lang, "totalNetProfitLoss")} {year}</p>
+                  <p className={`text-xl font-bold ${totalNetProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-orange-700 dark:text-orange-400"}`}>
                     {totalNetProfit >= 0 ? "+" : "-"}{inr(Math.abs(totalNetProfit))}
                   </p>
                 </div>
 
-                {/* Horizontal bar chart */}
+                {/* Chart */}
                 <div className="overflow-x-auto">
-                  <div style={{ minWidth: 280 }}>
-                    <ResponsiveContainer width="100%" height={180}>
-                      <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
+                  <div style={{ minWidth: 300 }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : `₹${v}`)} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={55} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : `₹${v}`)} />
                         <Tooltip formatter={(value) => inr(Number(value))} />
                         <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="profit" name={t(lang, "profit")} fill="#3b82f6" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
