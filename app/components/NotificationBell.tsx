@@ -67,6 +67,16 @@ const seasonForMonth = (month: number): "winter" | "summer" | "monsoon" => {
   return "monsoon";
 };
 
+// ISO-ish week number, used to fold a "-YYYY-Www" suffix into seasonal/crop tip
+// ids so a dismissal only lasts for the current week rather than forever —
+// once the week rolls over, the id changes and the tip is eligible to show again.
+const getWeekId = (): string => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil(((now.getTime() - start.getTime()) / 86400000 + start.getDay() + 1) / 7);
+  return `${now.getFullYear()}-W${weekNumber}`;
+};
+
 const DISMISSED_KEY = "marutham_dismissed_notifications";
 
 const getDismissedIds = (): string[] => {
@@ -119,6 +129,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
 
       const detected: NotificationItem[] = [];
       const lang = getUserLanguage();
+      const weekId = getWeekId();
 
       // Tractor oil change — two tiers per tractor: urgent (very low) vs warning (soon)
       for (const tractor of tractors ?? []) {
@@ -169,7 +180,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         if (crop.crop_type === "turmeric") {
           if (days >= 40 && days <= 50) {
             detected.push({
-              id: `crop-turmeric-fertilizer-${crop.id}`,
+              id: `crop-turmeric-fertilizer-${crop.id}-${weekId}`,
               severity: "warning",
               icon: "🌱",
               title: lang === "ta" ? "🌱 மஞ்சள் உர குறிப்பு" : "🌱 Turmeric Fertilizer Tip",
@@ -180,7 +191,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
             });
           } else if (days >= 240) {
             detected.push({
-              id: `crop-turmeric-harvest-${crop.id}`,
+              id: `crop-turmeric-harvest-${crop.id}-${weekId}`,
               severity: "info",
               icon: "🌾",
               title: lang === "ta" ? "🌾 மஞ்சள் அறுவடை நேரம்" : "🌾 Turmeric Harvest Time",
@@ -200,8 +211,9 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
 
         detected.push({
           // Milestone included so dismissing "First" doesn't also silence
-          // the later, genuinely different "Second" fertilizer notice.
-          id: `crop-fertilizer-${crop.id}-${milestone}`,
+          // the later, genuinely different "Second" fertilizer notice; week
+          // included so a dismissed tip reappears next week rather than never.
+          id: `crop-fertilizer-${crop.id}-${milestone}-${weekId}`,
           severity: "warning",
           icon: "🌱",
           title:
@@ -264,7 +276,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
       const season = seasonForMonth(new Date().getMonth());
       const seasonTip = SEASON_TIPS[season];
       detected.push({
-        id: `seasonal-${season}`,
+        id: `seasonal-${season}-${weekId}`,
         severity: "info",
         icon: seasonTip.icon,
         title: lang === "ta" ? seasonTip.ta : seasonTip.en,
@@ -286,16 +298,18 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
   };
 
   const clearAllDismissed = () => {
-    // Mark every currently-visible notification as dismissed (merged with
-    // whatever was already dismissed, so this doesn't undo earlier
-    // dismissals for conditions that are still true but not shown right now).
-    const currentIds = items.map((n) => n.id);
-    const merged = Array.from(new Set([...getDismissedIds(), ...currentIds]));
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify(merged));
-
+    // Wipe dismissal history entirely (rather than adding the current items to
+    // it) — with ids now week-scoped, a stale dismissal can never suppress a
+    // tip forever anyway, so this just resets the slate and lets a fresh fetch
+    // repopulate whatever's still genuinely true.
+    localStorage.removeItem(DISMISSED_KEY);
     setItems([]);
 
-    toast.success(language === "ta" ? "அனைத்து அறிவிப்புகளும் அழிக்கப்பட்டன" : "All notifications cleared");
+    setTimeout(() => {
+      fetchNotifications();
+    }, 500);
+
+    toast.success(language === "ta" ? "அனைத்து அறிவிப்புகளும் அழிக்கப்பட்டன" : "Notifications cleared");
   };
 
   const severityCls: Record<Severity, string> = {
@@ -304,10 +318,20 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
     info: "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-800 dark:text-blue-300",
   };
 
+  const handleBellClick = () => {
+    // Refresh whenever the dropdown is opened, so anything that changed since
+    // the last fetch (or the last dismissal) shows up immediately. Computed
+    // from the current `open` value directly rather than inside the setState
+    // updater — updater functions must stay pure (React can invoke them more
+    // than once), so a side effect like a network fetch can't safely live there.
+    if (!open) fetchNotifications();
+    setOpen((o) => !o);
+  };
+
   return (
     <div className="relative" ref={containerRef}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleBellClick}
         className="relative w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-200"
         title={L("Notifications", "அறிவிப்புகள்")}
       >
@@ -330,6 +354,12 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">🔔 {L("Notifications", "அறிவிப்புகள்")}</h3>
             <div className="flex items-center gap-2">
               {items.length > 0 && <span className="text-xs text-gray-400">{items.length}</span>}
+              <button
+                onClick={() => fetchNotifications()}
+                className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg"
+              >
+                🔄 {L("Refresh", "புதுப்பி")}
+              </button>
               <button onClick={clearAllDismissed} className="text-xs text-red-400 hover:text-red-600">
                 {L("Clear all", "அனைத்தும் அழி")}
               </button>
