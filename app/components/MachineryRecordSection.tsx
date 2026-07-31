@@ -26,6 +26,10 @@ type Props = {
   hasNotes?: boolean;
   showLastDate?: boolean;
   onChanged?: () => void;
+  // Optional scoping to a parent record (e.g. a specific tractor) — when set,
+  // fetch/insert/update are all filtered to filterColumn = filterValue.
+  filterColumn?: string;
+  filterValue?: string;
 };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -50,6 +54,8 @@ export default function MachineryRecordSection({
   hasNotes = true,
   showLastDate = false,
   onChanged,
+  filterColumn,
+  filterValue,
 }: Props) {
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
@@ -66,11 +72,13 @@ export default function MachineryRecordSection({
   useEffect(() => {
     fetchRecords();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table]);
+  }, [table, filterValue]);
 
   const fetchRecords = async () => {
     setLoading(true);
-    const { data } = await supabase.from(table).select("*").order(dateField, { ascending: false });
+    let query = supabase.from(table).select("*").order(dateField, { ascending: false });
+    if (filterColumn && filterValue) query = query.eq(filterColumn, filterValue);
+    const { data } = await query;
     if (data) setRecords(data);
     setLoading(false);
   };
@@ -114,6 +122,7 @@ export default function MachineryRecordSection({
         }
       });
       if (hasNotes) payload.notes = notes.trim() || null;
+      if (filterColumn && filterValue && !editingId) payload[filterColumn] = filterValue;
 
       const { error } = editingId
         ? await supabase.from(table).update(payload).eq("id", editingId)

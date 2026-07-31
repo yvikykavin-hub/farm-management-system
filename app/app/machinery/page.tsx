@@ -15,16 +15,13 @@ const formatDMY = (iso: string | null | undefined) => {
   return y && m && d ? `${d}/${m}/${y}` : iso;
 };
 
-const DEFAULT_OIL_CHANGE_INTERVAL = 300;
-
 export default function MachineryLandingPage() {
   const [lang, setLang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
   const [loading, setLoading] = useState(true);
-  const [totalHours, setTotalHours] = useState(0);
-  const [hoursAtLastOilChange, setHoursAtLastOilChange] = useState(0);
-  const [oilChangeInterval, setOilChangeInterval] = useState(DEFAULT_OIL_CHANGE_INTERVAL);
+  const [tractorCount, setTractorCount] = useState(0);
+  const [tractorMonthExpenses, setTractorMonthExpenses] = useState(0);
   const [lastRotavatorBlade, setLastRotavatorBlade] = useState<string | null>(null);
   const [lastKalappaiBlade, setLastKalappaiBlade] = useState<string | null>(null);
   const [monthExpenses, setMonthExpenses] = useState(0);
@@ -39,9 +36,7 @@ export default function MachineryLandingPage() {
     const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
     const [
-      { data: usage },
-      { data: oilChange },
-      { data: settings },
+      { data: tractors },
       { data: rotavatorBlade },
       { data: kalappaiBlade },
       { data: diesel },
@@ -54,26 +49,21 @@ export default function MachineryLandingPage() {
       { data: rotavatorExp },
       { data: kalappaiExp },
     ] = await Promise.all([
-      supabase.from("tractor_usage").select("duration_hours"),
-      supabase.from("tractor_engine_oil").select("hours_at_service, service_date").order("service_date", { ascending: false }).limit(1),
-      supabase.from("tractor_settings").select("oil_change_interval_hours").maybeSingle(),
+      supabase.from("tractors").select("id").eq("is_active", true),
       supabase.from("rotavator_blades").select("replacement_date").order("replacement_date", { ascending: false }).limit(1),
       supabase.from("kalappai_blades").select("replacement_date").order("replacement_date", { ascending: false }).limit(1),
       supabase.from("tractor_diesel").select("date, amount"),
-      supabase.from("tractor_engine_oil").select("service_date, cost"),
-      supabase.from("tractor_gear_oil").select("service_date, cost"),
-      supabase.from("tractor_hydraulic_oil").select("service_date, cost"),
-      supabase.from("tractor_battery").select("replacement_date, cost"),
-      supabase.from("tractor_tyre").select("replacement_date, cost"),
-      supabase.from("tractor_repairs").select("date, cost"),
+      supabase.from("tractor_engine_oil").select("date, amount"),
+      supabase.from("tractor_gear_oil").select("date, amount"),
+      supabase.from("tractor_hydraulic_oil").select("date, amount"),
+      supabase.from("tractor_battery").select("date, amount"),
+      supabase.from("tractor_tyre").select("date, amount"),
+      supabase.from("tractor_repairs").select("date, amount"),
       supabase.from("rotavator_expenses").select("date, cost"),
       supabase.from("kalappai_expenses").select("date, cost"),
     ]);
 
-    const sumHours = (usage ?? []).reduce((s, r) => s + Number(r.duration_hours), 0);
-    setTotalHours(sumHours);
-    setHoursAtLastOilChange(oilChange?.[0]?.hours_at_service ? Number(oilChange[0].hours_at_service) : 0);
-    setOilChangeInterval(settings?.oil_change_interval_hours ? Number(settings.oil_change_interval_hours) : DEFAULT_OIL_CHANGE_INTERVAL);
+    setTractorCount((tractors ?? []).length);
     setLastRotavatorBlade(rotavatorBlade?.[0]?.replacement_date ?? null);
     setLastKalappaiBlade(kalappaiBlade?.[0]?.replacement_date ?? null);
 
@@ -84,22 +74,21 @@ export default function MachineryLandingPage() {
         .reduce((s, r) => s + Number((r.cost ?? r.amount ?? 0) as number), 0);
     };
 
-    const total =
+    const tractorTotal =
       monthSum(diesel, "date") +
-      monthSum(engineOil, "service_date") +
-      monthSum(gearOil, "service_date") +
-      monthSum(hydraulicOil, "service_date") +
-      monthSum(battery, "replacement_date") +
-      monthSum(tyre, "replacement_date") +
-      monthSum(repairs, "date") +
-      monthSum(rotavatorExp, "date") +
-      monthSum(kalappaiExp, "date");
+      monthSum(engineOil, "date") +
+      monthSum(gearOil, "date") +
+      monthSum(hydraulicOil, "date") +
+      monthSum(battery, "date") +
+      monthSum(tyre, "date") +
+      monthSum(repairs, "date");
+    setTractorMonthExpenses(tractorTotal);
+
+    const total = tractorTotal + monthSum(rotavatorExp, "date") + monthSum(kalappaiExp, "date");
 
     setMonthExpenses(total);
     setLoading(false);
   };
-
-  const hoursRemaining = oilChangeInterval - (totalHours - hoursAtLastOilChange);
 
   const cards = [
     {
@@ -108,13 +97,8 @@ export default function MachineryLandingPage() {
       label: L("Tractor", "டிராக்டர்"),
       stats: (
         <>
-          <p className="text-xs text-gray-600">{L("Total Hours", "மொத்த நேரம்")}: <span className="font-semibold text-gray-900">{totalHours.toFixed(1)}</span></p>
-          <p className="text-xs text-gray-600">
-            {L("Next Oil Change In", "எண்ணெய் மாற்ற")}:{" "}
-            <span className={`font-semibold ${hoursRemaining < 20 ? "text-red-600 font-bold" : hoursRemaining <= 50 ? "text-amber-500" : "text-green-600"}`}>
-              {Math.max(hoursRemaining, 0).toFixed(1)} {L("hrs", "மணி")}
-            </span>
-          </p>
+          <p className="text-xs text-gray-600">{L("Tractors", "டிராக்டர்கள்")}: <span className="font-semibold text-gray-900">{tractorCount}</span></p>
+          <p className="text-xs text-gray-600">{L("This Month", "இந்த மாதம்")}: <span className="font-semibold text-danger">{inr(tractorMonthExpenses)}</span></p>
         </>
       ),
     },
