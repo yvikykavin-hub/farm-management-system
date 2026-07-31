@@ -121,8 +121,9 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
     setShowMonthPicker(true);
   };
 
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
   // ---------------- Monthly summary (auto-calculated) ----------------
-  const monthName = getMonthName();
   const { start: monthStart, end: monthEnd } = getMonthRange();
 
   const monthCollections = collections.filter((c) => c.collection_date >= monthStart && c.collection_date <= monthEnd);
@@ -246,129 +247,164 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
   return (
     <div className="flex flex-col gap-3">
       {/* Month navigation */}
-      <div className="flex items-center justify-between bg-white rounded-2xl p-3 shadow-sm border border-gray-100 w-full">
+      <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-2 shadow-sm border border-gray-100 dark:border-slate-700 w-full">
         <button
           onClick={goToPrevMonth}
-          className="w-11 h-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors text-sm font-bold"
+          className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 text-xs flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
         >
           ←
         </button>
 
-        <button onClick={openMonthPicker} className="flex flex-col items-center flex-1 mx-2">
-          <span className="text-sm font-semibold text-gray-900">{getMonthName()}</span>
-          <span className="text-xs text-gray-400 mt-0.5">
-            {isCurrentMonth ? `(${t(lang, "currentMonth")})` : t(lang, "tapToChange")}
+        <button onClick={openMonthPicker} className="flex flex-col items-center">
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{getMonthName()}</span>
+          <span className="text-xs text-gray-400">
+            {isCurrentMonth ? t(lang, "currentMonth") : t(lang, "tapToChange")}
           </span>
         </button>
 
         <button
           onClick={goToNextMonth}
           disabled={isCurrentMonth}
-          className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors text-sm font-bold ${
-            isCurrentMonth ? "bg-gray-50 text-gray-300 cursor-not-allowed" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          className={`w-7 h-7 rounded-lg text-xs flex items-center justify-center transition-colors ${
+            isCurrentMonth ? "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 opacity-30" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600"
           }`}
         >
           →
         </button>
       </div>
 
-      {/* Monthly summary */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
-        <h2 className="text-sm font-semibold text-gray-800 mb-3">
-          📅 {monthName} · {t(lang, "summary")}
-          <span className="ml-2 text-xs font-normal text-gray-400">
-            ({animalType === "buffalo" ? t(lang, "buffalo") : t(lang, "cow")})
-          </span>
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-blue-50 rounded-xl p-3">
-            <p className="text-xs text-gray-500">🥛 {t(lang, "totalLitres")}</p>
-            <p className="text-base font-bold text-blue-600">{monthTotalLitres.toFixed(1)}L</p>
-            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "autoFromMilkCollection")}</p>
-          </div>
-          <div className="bg-green-50 rounded-xl p-3">
-            <p className="text-xs text-gray-500">💰 {t(lang, "expectedAmount")}</p>
-            <p className="text-base font-bold text-success">{inr(monthTotalExpected)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "autoCalculated")}</p>
-          </div>
-          <div className="bg-amber-50 rounded-xl p-3">
-            <p className="text-xs text-gray-500">✅ {t(lang, "receivedAmount")}</p>
-            <p className="text-base font-bold text-amber-600">{inr(monthTotalReceived)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "sumOfPayments")}</p>
-          </div>
-          <div className={`rounded-xl p-3 ${monthOutstanding > 0 ? "bg-red-50" : "bg-green-50"}`}>
-            <p className="text-xs text-gray-500">{monthOutstanding > 0 ? "⚠️" : "✅"} {t(lang, "outstanding")}</p>
-            <p className={`text-base font-bold ${monthOutstanding > 0 ? "text-danger" : "text-success"}`}>{inr(Math.abs(monthOutstanding))}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "expectedMinusReceived")}</p>
-          </div>
+      {/* Monthly summary — compact, one row */}
+      <div className="grid grid-cols-4 gap-1.5 mb-3">
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2 border border-blue-100 dark:border-blue-800/50 text-center">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">🥛 {t(lang, "litres")}</p>
+          <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{monthTotalLitres.toFixed(1)}L</p>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-2 border border-green-100 dark:border-green-800/50 text-center">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">💰 {t(lang, "expected")}</p>
+          <p className="text-sm font-bold text-green-600 dark:text-green-400">{inr(monthTotalExpected)}</p>
+        </div>
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-2 border border-amber-100 dark:border-amber-800/50 text-center">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">✅ {t(lang, "received")}</p>
+          <p className="text-sm font-bold text-amber-600 dark:text-amber-400">{inr(monthTotalReceived)}</p>
+        </div>
+        <div className={`rounded-xl p-2 border text-center ${monthOutstanding > 0 ? "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/50" : "bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800/50"}`}>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{monthOutstanding > 0 ? "⚠️" : "✅"} {t(lang, "due")}</p>
+          <p className={`text-sm font-bold ${monthOutstanding > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>{inr(Math.abs(monthOutstanding))}</p>
         </div>
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-sm font-semibold text-gray-800">💳 {t(lang, "paymentRecords")}</h2>
-        <div className="flex items-center gap-2">
-          <ExportButton data={payments} filename={`${animalType === "cow" ? t(lang, "cowMilk") : t(lang, "buffaloMilk")}-Payments`} sheetName="Milk Payments" language={lang} />
-          <button onClick={openAddPayment} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition min-h-[44px] sm:min-h-0">
-            + {t(lang, "addPayment")}
-          </button>
+      {/* Payment Records — dominant section */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex-1 min-h-[400px]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 rounded-t-2xl z-10 flex-wrap gap-2">
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+            💳 {t(lang, "paymentRecords")}
+            {payments.length > 0 && (
+              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
+                {(showAllPayments ? payments : monthPayments).length}
+              </span>
+            )}
+          </h2>
+          <div className="flex items-center gap-2">
+            <ExportButton data={payments} filename={`${animalType === "cow" ? t(lang, "cowMilk") : t(lang, "buffaloMilk")}-Payments`} sheetName="Milk Payments" language={lang} />
+            <button onClick={openAddPayment} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors min-h-[44px] sm:min-h-0">
+              + {t(lang, "addPayment")}
+            </button>
+          </div>
+        </div>
+
+        <div className="p-3">
+          {payments.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-3xl mb-2">💳</p>
+              <p className="text-sm text-gray-500">{t(lang, "noPaymentsYet")}</p>
+              <button onClick={openAddPayment} className="mt-3 text-primary text-sm hover:underline">
+                + {t(lang, "addFirstPayment")}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {!showAllPayments && monthPayments.length === 0 && (
+                <p className="text-center text-xs text-gray-400 py-4">{t(lang, "noPaymentsYet")}</p>
+              )}
+              {[...(showAllPayments ? payments : monthPayments)]
+                .sort((a, b) => b.payment_date.localeCompare(a.payment_date))
+                .map((payment) => {
+                  const diff = Number(payment.expected_amount || 0) - Number(payment.received_amount || 0);
+                  const status = PAYMENT_STATUS_BADGE[payment.payment_status] ? payment.payment_status : "Pending";
+                  return (
+                    <div key={payment.id} className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 border border-gray-100 dark:border-slate-700">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PAYMENT_STATUS_BADGE[status]}`}>
+                              {PAYMENT_STATUS_ICON[status]} {t(lang, status.toLowerCase() as "paid" | "partial" | "excess" | "pending")}
+                            </span>
+                            <span className="text-xs text-gray-400">{formatDMY(payment.payment_date)}</span>
+                          </div>
+
+                          {payment.period_from && (
+                            <p className="text-xs text-gray-500 mb-1">
+                              📅 {formatDMY(payment.period_from)} → {formatDMY(payment.period_to)}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div>
+                              <p className="text-xs text-gray-400">{t(lang, "expected")}</p>
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{inr(Number(payment.expected_amount || 0))}</p>
+                            </div>
+                            <div className="text-gray-300 dark:text-gray-600">|</div>
+                            <div>
+                              <p className="text-xs text-gray-400">{t(lang, "received")}</p>
+                              <p className="text-sm font-semibold text-success">{inr(Number(payment.received_amount || 0))}</p>
+                            </div>
+                            {diff !== 0 && (
+                              <>
+                                <div className="text-gray-300 dark:text-gray-600">|</div>
+                                <div>
+                                  <p className="text-xs text-gray-400">{diff > 0 ? t(lang, "short") : t(lang, "extra")}</p>
+                                  <p className={`text-sm font-semibold ${diff > 0 ? "text-red-500" : "text-blue-500"}`}>{inr(Math.abs(diff))}</p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {payment.remarks && <p className="text-xs text-gray-400 mt-1">💬 {payment.remarks}</p>}
+                        </div>
+
+                        <div className="flex gap-1 ml-2 shrink-0">
+                          <button
+                            onClick={() => openEditPayment(payment)}
+                            className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500 hover:text-amber-600 flex items-center justify-center text-xs"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => deletePayment(payment.id)}
+                            className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-400 hover:text-red-600 flex items-center justify-center text-xs"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {!showAllPayments && payments.some((p) => p.payment_date < monthStart) && (
+                <button onClick={() => setShowAllPayments(true)} className="w-full text-xs text-center text-blue-600 hover:underline py-2">
+                  {t(lang, "showAllPaymentHistory")}
+                </button>
+              )}
+              {showAllPayments && (
+                <button onClick={() => setShowAllPayments(false)} className="w-full text-xs text-center text-blue-600 hover:underline py-2">
+                  {t(lang, "showCurrentMonthOnly")}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Payment list */}
-      {monthPayments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="text-3xl mb-2">💳</p>
-          <p className="text-sm text-gray-500">{t(lang, "noPaymentsYet")}</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {[...monthPayments]
-            .sort((a, b) => b.payment_date.localeCompare(a.payment_date))
-            .map((payment) => {
-              const diff = Number(payment.expected_amount || 0) - Number(payment.received_amount || 0);
-              const status = PAYMENT_STATUS_BADGE[payment.payment_status] ? payment.payment_status : "Pending";
-              return (
-                <div key={payment.id} className="bg-white rounded-xl shadow-sm border border-gray-100 w-full p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PAYMENT_STATUS_BADGE[status]}`}>
-                          {PAYMENT_STATUS_ICON[status]} {t(lang, status.toLowerCase() as "paid" | "partial" | "excess" | "pending")}
-                        </span>
-                        <span className="text-xs text-gray-400">{formatDMY(payment.payment_date)}</span>
-                      </div>
-
-                      <p className="text-xs text-gray-500">
-                        📅 {t(lang, "period")}: {payment.period_from ? `${formatDMY(payment.period_from)} → ${formatDMY(payment.period_to)}` : "—"}
-                      </p>
-
-                      <div className="flex gap-3 mt-1 flex-wrap">
-                        <span className="text-xs text-gray-600">{t(lang, "expectedAmount")}: {inr(Number(payment.expected_amount || 0))}</span>
-                        <span className="text-xs text-success font-medium">{t(lang, "receivedAmount")}: {inr(Number(payment.received_amount || 0))}</span>
-                      </div>
-
-                      {diff !== 0 && (
-                        <p className={`text-xs mt-0.5 ${diff > 0 ? "text-danger" : "text-blue-500"}`}>
-                          {diff > 0
-                            ? `⚠️ ${t(lang, "shortBy")}: ${inr(diff)}`
-                            : `💰 ${t(lang, "extra")}: ${inr(Math.abs(diff))}`}
-                        </p>
-                      )}
-
-                      {payment.remarks && <p className="text-xs text-gray-400 mt-0.5">💬 {payment.remarks}</p>}
-                    </div>
-
-                    <div className="flex gap-1 ml-2 shrink-0">
-                      <button onClick={() => openEditPayment(payment)} className="text-amber-400 hover:text-amber-600 text-sm p-1">✏️</button>
-                      <button onClick={() => deletePayment(payment.id)} className="text-red-400 hover:text-red-600 text-sm p-1">🗑️</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      )}
 
       {/* Add/Edit Payment Modal */}
       {paymentModalOpen && (

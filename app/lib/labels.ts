@@ -272,6 +272,16 @@ export const labels = {
     tapToChange: "tap to change",
 
     chartOverview: "Chart Overview",
+
+    // Income tab compact summary / payment records
+    litres: "Litres",
+    expected: "Expected",
+    received: "Received",
+    due: "Due",
+    short: "Short",
+    showAllPaymentHistory: "Show all payment history",
+    showCurrentMonthOnly: "Show current month only",
+    addFirstPayment: "Add first payment",
   },
   ta: {
     livestock: "கால்நடை மேலாண்மை",
@@ -526,6 +536,15 @@ export const labels = {
     tapToChange: "தேர்வு செய்க",
 
     chartOverview: "வரைபட கண்ணோட்டம்",
+
+    litres: "லிட்டர்",
+    expected: "எதிர்பார்",
+    received: "பெற்றது",
+    due: "நிலுவை",
+    short: "குறைவு",
+    showAllPaymentHistory: "அனைத்து பணம் வரலாறு",
+    showCurrentMonthOnly: "இந்த மாதம் மட்டும்",
+    addFirstPayment: "முதல் பணம் சேர்க்கவும்",
   },
 } as const;
 
