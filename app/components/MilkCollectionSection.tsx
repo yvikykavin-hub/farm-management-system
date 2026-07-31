@@ -123,9 +123,29 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
   };
 
   const currentRate = rates.length ? Number(rates[0].rate_per_litre) : 0;
-  const rateForDate = (date: string) => {
-    const applicable = rates.filter((r) => r.effective_from <= date).sort((a, b) => b.effective_from.localeCompare(a.effective_from));
-    return applicable.length ? Number(applicable[0].rate_per_litre) : 0;
+  // ratesList is sorted effective_from desc (both the cached `rates` state and the
+  // fresh fetch below use that order), so ratesList[0] is always the most recent rate.
+  const rateForDate = (date: string, ratesList: MilkRate[] = rates): number => {
+    const applicable = ratesList.filter((r) => r.effective_from <= date).sort((a, b) => b.effective_from.localeCompare(a.effective_from));
+    if (applicable.length) return Number(applicable[0].rate_per_litre);
+    // No rate was in effect yet on this date — e.g. the rate was only added today
+    // ("effective from today onward") but the card includes earlier days in the
+    // same month, printed in descending order so the first row processed is the
+    // most recent day and every day after it predates the rate. Fall back to the
+    // most recent known rate rather than silently charging ₹0.
+    return ratesList.length ? Number(ratesList[0].rate_per_litre) : 0;
+  };
+
+  // Bypasses the cached `rates` state entirely — used right before saving so a
+  // rate added moments ago (or a stale/racy fetch) can never cause a save to use
+  // an empty or out-of-date rate list.
+  const fetchRatesFresh = async (): Promise<MilkRate[]> => {
+    const { data, error } = await supabase.from(rateTable).select("*").order("effective_from", { ascending: false });
+    if (error) {
+      console.error(`Rate fetch error for ${animalType}:`, error);
+      return rates;
+    }
+    return data ?? [];
   };
 
   // Shared between the OCR upload (dates are always built from this + the extracted
@@ -217,7 +237,17 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
     }
     setSavingManual(true);
     try {
-      const rate = rateForDate(manualDate);
+      const freshRates = await fetchRatesFresh();
+      if (freshRates.length === 0) {
+        toast.error(
+          lang === "ta"
+            ? `${animalType === "buffalo" ? "எருமை" : "பசு"} பால் விலை சேர்க்கப்படவில்லை. முதலில் விலை சேர்க்கவும்.`
+            : `No ${animalType === "buffalo" ? "buffalo" : "cow"} milk rate found. Please add rate first.`
+        );
+        setSavingManual(false);
+        return;
+      }
+      const rate = rateForDate(manualDate, freshRates);
       const morning = parseFloat(manualMorning) || 0;
       const evening = parseFloat(manualEvening) || 0;
 
@@ -358,6 +388,21 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         setSavingOcr(false);
         return;
       }
+
+      // Fetch the rate history once for the whole batch (not per row — that's both
+      // wasteful and how a slow/failed fetch on one row could silently zero it out),
+      // then apply the correct historical rate to every row from that single fetch.
+      const freshRates = await fetchRatesFresh();
+      if (freshRates.length === 0) {
+        toast.error(
+          lang === "ta"
+            ? `${animalType === "buffalo" ? "எருமை" : "பசு"} பால் விலை சேர்க்கப்படவில்லை. முதலில் விலை சேர்க்கவும்.`
+            : `No ${animalType === "buffalo" ? "buffalo" : "cow"} milk rate found. Please add rate first.`
+        );
+        setSavingOcr(false);
+        return;
+      }
+
       // total_litres and daily_income are DB-generated columns (total_litres = morning + evening,
       // daily_income = total_litres * rate_per_litre) — sending them explicitly errors with 428C9.
       const payload = validRows.map((row) => ({
@@ -365,7 +410,7 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
         collection_date: row.isoDate,
         morning_litres: row.morning,
         evening_litres: row.evening,
-        rate_per_litre: rateForDate(row.isoDate),
+        rate_per_litre: rateForDate(row.isoDate, freshRates),
         animal_type: animalType,
         month_year: selectedMonthYear,
       }));
@@ -513,6 +558,14 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
 
   const weeks = getWeeklyBreakdown();
 
+  // Preview-only figures shown above the Save button — computed from the same
+  // cached rate history the row table already renders, so what's shown before
+  // saving matches what will actually be charged.
+  const ocrTotalExpectedIncome = ocrRows.reduce((sum, row) => {
+    const total = (row.morning || 0) + (row.evening || 0);
+    return sum + total * rateForDate(row.date);
+  }, 0);
+
   return (
     <div className="flex flex-col gap-3">
       {/* Rate */}
@@ -642,6 +695,14 @@ export default function MilkCollectionSection({ animalType, lang }: { animalType
                     })}
                   </tbody>
                 </table>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-2">
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  {lang === "ta" ? `பயன்படுத்தப்படும் விலை: ${inr(currentRate)}/L` : `Rate being used: ${inr(currentRate)}/L`}
+                </p>
+                <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                  {lang === "ta" ? `மொத்த வருமானம்: ${inr(ocrTotalExpectedIncome)}` : `Total expected income: ${inr(ocrTotalExpectedIncome)}`}
+                </p>
               </div>
               <button onClick={saveOcrRows} disabled={savingOcr} className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition">
                 {savingOcr ? "..." : t(lang, "saveAllRows")}
