@@ -57,6 +57,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const fmtAmt = (n: number) => (n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : inr(n));
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
@@ -276,57 +277,59 @@ export default function CowsListPage() {
             </div>
           </div>
 
-          {/* Animal status cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "totalCows")}</p>
-              <p className="text-xl font-bold text-gray-800">{totalCows}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "active")}</p>
-              <p className="text-xl font-bold text-success">{activeCows}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "sold")}</p>
-              <p className="text-xl font-bold text-blue-600">{soldCows}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "deceased")}</p>
-              <p className="text-xl font-bold text-gray-500">{deceasedCows}</p>
-            </div>
-          </div>
+          {/* Animal status + yearly financial cards — Animals tab only */}
+          {activeTab === "animals" && (
+            <div className="mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                <div className="bg-white rounded-xl shadow-sm p-3">
+                  <p className="text-xs font-medium text-gray-500">{t(lang, "totalCows")}</p>
+                  <p className="text-xl font-bold text-gray-800">{totalCows}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-3">
+                  <p className="text-xs font-medium text-gray-500">{t(lang, "active")}</p>
+                  <p className="text-xl font-bold text-success">{activeCows}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-3">
+                  <p className="text-xs font-medium text-gray-500">{t(lang, "sold")}</p>
+                  <p className="text-xl font-bold text-blue-600">{soldCows}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-3">
+                  <p className="text-xs font-medium text-gray-500">{t(lang, "deceased")}</p>
+                  <p className="text-xl font-bold text-gray-500">{deceasedCows}</p>
+                </div>
+              </div>
 
-          {/* Yearly financial cards */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">{t(lang, "selectYear")}:</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-              className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] sm:min-h-0"
-            >
-              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-            <div className="bg-green-50 rounded-xl p-2.5 shadow-sm border border-green-100 w-full">
-              <p className="text-xs text-gray-500 mb-0.5">💰 {t(lang, "yearIncome")} {selectedYear}</p>
-              <p className="text-base font-bold text-green-600">{inr(thisYearIncome)}</p>
-              <div className="mt-0.5 space-y-0.5">
-                <p className="text-xs text-gray-400">🐄 {inr(cowYearIncome)}</p>
-                {buffaloYearIncome > 0 && <p className="text-xs text-gray-400">🐃 {inr(buffaloYearIncome)}</p>}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-500">{t(lang, "selectYear")}:</span>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                  className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] sm:min-h-0"
+                >
+                  {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-green-50 rounded-xl p-2.5 shadow-sm border border-green-100">
+                  <p className="text-xs text-gray-500">💰 {t(lang, "income")}</p>
+                  <p className="text-sm font-bold text-green-600 mt-0.5">{fmtAmt(thisYearIncome)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{selectedYear}</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-2.5 shadow-sm border border-red-100">
+                  <p className="text-xs text-gray-500">💸 {t(lang, "expense")}</p>
+                  <p className="text-sm font-bold text-red-600 mt-0.5">{fmtAmt(thisYearExpenses)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{selectedYear}</p>
+                </div>
+                <div className={`rounded-xl p-2.5 shadow-sm ${netPL >= 0 ? "bg-green-50 border border-green-200" : "bg-orange-50 border border-orange-200"}`}>
+                  <p className="text-xs text-gray-500">📊 {t(lang, "profit")}</p>
+                  <p className={`text-sm font-bold mt-0.5 ${netPL >= 0 ? "text-green-700" : "text-orange-700"}`}>
+                    {netPL >= 0 ? "+" : "-"}{fmtAmt(Math.abs(netPL))}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{selectedYear}</p>
+                </div>
               </div>
             </div>
-            <div className="bg-red-50 rounded-xl p-2.5 shadow-sm border border-red-100 w-full">
-              <p className="text-xs text-gray-500 mb-0.5">💸 {t(lang, "yearExpense")} {selectedYear}</p>
-              <p className="text-base font-bold text-red-600">{inr(thisYearExpenses)}</p>
-            </div>
-            <div className={`rounded-xl p-2.5 shadow-sm w-full ${netPL >= 0 ? "bg-green-50 border border-green-200" : "bg-orange-50 border border-orange-200"}`}>
-              <p className="text-xs text-gray-500 mb-0.5">📊 {t(lang, "netPL")} {selectedYear}</p>
-              <p className={`text-base font-bold ${netPL >= 0 ? "text-green-700" : "text-orange-700"}`}>
-                {netPL >= 0 ? "+" : "-"}{inr(Math.abs(netPL))}
-              </p>
-            </div>
-          </div>
+          )}
 
           {/* Main tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 scrollbar-hide">

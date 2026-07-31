@@ -158,9 +158,9 @@ export default function MilkCollectionSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animalType]);
 
-  // Sections default to collapsed (rate stays open) and reset whenever the cow/buffalo
-  // tab changes, so switching tabs never leaves a stale expanded section from the other animal.
-  const [showMilkRate, setShowMilkRate] = useState(true);
+  // All sections default to collapsed and reset whenever the cow/buffalo tab changes,
+  // so switching tabs never leaves a stale expanded section from the other animal.
+  const [showMilkRate, setShowMilkRate] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
   const [showWeekly, setShowWeekly] = useState(false);
   const [showYearly, setShowYearly] = useState(false);
@@ -170,7 +170,7 @@ export default function MilkCollectionSection({
     // Deferred via microtask rather than called synchronously in the effect body —
     // avoids the cascading-render lint warning while still resetting before paint.
     Promise.resolve().then(() => {
-      setShowMilkRate(true);
+      setShowMilkRate(false);
       setShowMonthly(false);
       setShowWeekly(false);
       setShowYearly(false);
@@ -833,7 +833,7 @@ export default function MilkCollectionSection({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Current Milk Rate (collapsible, default open) */}
+      {/* Current Milk Rate (collapsible, default collapsed) */}
       <CollapsibleSection
         label={t(lang, "currentMilkRate")}
         icon="💰"

@@ -37,6 +37,9 @@ const rowIncome = (m: MilkRow) => {
 };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+// Compact K-suffixed amount for the dense table view — full-precision inr() is still
+// used everywhere else (banners, tooltips) where there's room to show it.
+const fmtAmt = (n: number) => (n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : inr(n));
 
 const currentYear = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -181,82 +184,63 @@ export default function LivestockLandingPage() {
                   </button>
                 </div>
 
-                {/* Cow & Buffalo card */}
-                <div className="bg-gray-50 rounded-xl p-3 mb-2 w-full">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-                    <span className="text-sm font-medium text-gray-800">🐄🐃 {t(lang, "cows")} & {t(lang, "buffalo")}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cattleProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {cattleProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(cattleProfit))}
-                    </span>
-                  </div>
-                  <div className="flex gap-4 flex-wrap">
-                    <div>
-                      <p className="text-xs text-gray-400">{t(lang, "income")}</p>
-                      <p className="text-sm font-semibold text-success">{inr(cattleIncome)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">{t(lang, "expense")}</p>
-                      <p className="text-sm font-semibold text-danger">{inr(cattleExpense)}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <span className="text-[11px] text-gray-400">🐄 {inr(cowMilkIncome)}</span>
-                    <span className="text-[11px] text-gray-400">🐃 {inr(buffaloMilkIncome)}</span>
-                  </div>
-                </div>
-
-                {/* Goat card */}
-                <div className="bg-gray-50 rounded-xl p-3 mb-2 w-full">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-                    <span className="text-sm font-medium text-gray-800">🐐 {t(lang, "goats")}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${goatProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {goatProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(goatProfit))}
-                    </span>
-                  </div>
-                  <div className="flex gap-4 flex-wrap">
-                    <div>
-                      <p className="text-xs text-gray-400">{t(lang, "income")}</p>
-                      <p className="text-sm font-semibold text-success">{inr(goatIncome)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">{t(lang, "expense")}</p>
-                      <p className="text-sm font-semibold text-danger">{inr(goatExpense)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hen card */}
-                <div className="bg-gray-50 rounded-xl p-3 mb-3 w-full">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-                    <span className="text-sm font-medium text-gray-800">🐔 {t(lang, "hens")}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${henProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {henProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(henProfit))}
-                    </span>
-                  </div>
-                  <div className="flex gap-4 flex-wrap">
-                    <div>
-                      <p className="text-xs text-gray-400">{t(lang, "income")}</p>
-                      <p className="text-sm font-semibold text-success">{inr(henIncome)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">{t(lang, "expense")}</p>
-                      <p className="text-sm font-semibold text-danger">{inr(henExpense)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Total net profit/loss banner */}
-                <div
-                  className={`rounded-xl p-3 mb-4 border ${
-                    totalNetProfit >= 0
-                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                      : "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800"
-                  }`}
-                >
-                  <p className="text-xs text-gray-500 mb-1">{t(lang, "totalNetProfitLoss")} {year}</p>
-                  <p className={`text-xl font-bold ${totalNetProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-orange-700 dark:text-orange-400"}`}>
-                    {totalNetProfit >= 0 ? "+" : "-"}{inr(Math.abs(totalNetProfit))}
-                  </p>
+                {/* Financial table */}
+                <div className="overflow-x-auto mb-4">
+                  <table className="w-full min-w-[300px]">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left text-xs font-medium text-gray-500 py-2 pr-3">{t(lang, "livestockShort")}</th>
+                        <th className="text-right text-xs font-medium text-green-600 py-2 px-2">{t(lang, "income")}</th>
+                        <th className="text-right text-xs font-medium text-red-500 py-2 px-2">{t(lang, "expense")}</th>
+                        <th className="text-right text-xs font-medium text-blue-600 py-2 pl-2">{t(lang, "profit")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { icon: "🐄", label: `${t(lang, "cows")} & ${t(lang, "buffalo")}`, income: cattleIncome, expense: cattleExpense, profit: cattleProfit },
+                        { icon: "🐐", label: t(lang, "goats"), income: goatIncome, expense: goatExpense, profit: goatProfit },
+                        { icon: "🐔", label: t(lang, "hens"), income: henIncome, expense: henExpense, profit: henProfit },
+                      ].map((row) => (
+                        <tr key={row.label} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                          <td className="py-2.5 pr-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">{row.icon}</span>
+                              <span className="text-xs font-medium text-gray-800">{row.label}</span>
+                            </div>
+                          </td>
+                          <td className="text-right py-2.5 px-2">
+                            <span className="text-xs font-semibold text-green-600">{fmtAmt(row.income)}</span>
+                          </td>
+                          <td className="text-right py-2.5 px-2">
+                            <span className="text-xs font-semibold text-red-500">{fmtAmt(row.expense)}</span>
+                          </td>
+                          <td className="text-right py-2.5 pl-2">
+                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-lg ${row.profit >= 0 ? "text-green-700 bg-green-50" : "text-orange-700 bg-orange-50"}`}>
+                              {row.profit >= 0 ? "+" : "-"}{fmtAmt(Math.abs(row.profit))}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-200">
+                        <td className="py-2.5 pr-3">
+                          <span className="text-xs font-bold text-gray-900">{t(lang, "total")}</span>
+                        </td>
+                        <td className="text-right py-2.5 px-2">
+                          <span className="text-xs font-bold text-green-600">{fmtAmt(cattleIncome + goatIncome + henIncome)}</span>
+                        </td>
+                        <td className="text-right py-2.5 px-2">
+                          <span className="text-xs font-bold text-red-500">{fmtAmt(cattleExpense + goatExpense + henExpense)}</span>
+                        </td>
+                        <td className="text-right py-2.5 pl-2">
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${totalNetProfit >= 0 ? "text-green-700 bg-green-100" : "text-orange-700 bg-orange-100"}`}>
+                            {totalNetProfit >= 0 ? "+" : "-"}{fmtAmt(Math.abs(totalNetProfit))}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
 
                 {/* Chart */}
