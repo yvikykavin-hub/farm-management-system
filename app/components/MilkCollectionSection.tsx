@@ -158,8 +158,9 @@ export default function MilkCollectionSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animalType]);
 
-  // Sections default to collapsed and reset whenever the cow/buffalo tab changes,
-  // so switching tabs never leaves a stale expanded section from the other animal.
+  // Sections default to collapsed (rate stays open) and reset whenever the cow/buffalo
+  // tab changes, so switching tabs never leaves a stale expanded section from the other animal.
+  const [showMilkRate, setShowMilkRate] = useState(true);
   const [showMonthly, setShowMonthly] = useState(false);
   const [showWeekly, setShowWeekly] = useState(false);
   const [showYearly, setShowYearly] = useState(false);
@@ -169,6 +170,7 @@ export default function MilkCollectionSection({
     // Deferred via microtask rather than called synchronously in the effect body —
     // avoids the cascading-render lint warning while still resetting before paint.
     Promise.resolve().then(() => {
+      setShowMilkRate(true);
       setShowMonthly(false);
       setShowWeekly(false);
       setShowYearly(false);
@@ -825,20 +827,29 @@ export default function MilkCollectionSection({
     return sum + total * rateForDate(row.date);
   }, 0);
 
+  // Shown on the collapsed header so the current rate stays visible without opening
+  // the section — undefined (no badge) until a rate actually exists.
+  const currentRateDisplay = rates.length ? `₹${currentRate}/L` : undefined;
+
   return (
     <div className="flex flex-col gap-3">
-      {/* Rate */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "currentMilkRate")}</h2>
+      {/* Current Milk Rate (collapsible, default open) */}
+      <CollapsibleSection
+        label={t(lang, "currentMilkRate")}
+        icon="💰"
+        isOpen={showMilkRate}
+        onToggle={() => setShowMilkRate(!showMilkRate)}
+        badge={currentRateDisplay}
+      >
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2 mt-3">
+          <p className="text-sm font-bold text-success">
+            {t(lang, "currentRate")}: {inr(currentRate)} / {t(lang, "perLitre")}
+            {rates[0] && ` (${t(lang, "effectiveFrom")} ${formatDMY(rates[0].effective_from)})`}
+          </p>
           <button onClick={() => setRateModalOpen(true)} className="text-xs font-semibold text-primary hover:text-primary/80">
             + {t(lang, "updateRate")}
           </button>
         </div>
-        <p className="text-sm font-bold text-success mb-2">
-          {t(lang, "currentRate")}: {inr(currentRate)} / {t(lang, "perLitre")}
-          {rates[0] && ` (${t(lang, "effectiveFrom")} ${formatDMY(rates[0].effective_from)})`}
-        </p>
         {rates.length > 0 && (
           <div className="overflow-x-auto max-h-32 overflow-y-auto">
             <table className="w-full text-xs">
@@ -865,7 +876,7 @@ export default function MilkCollectionSection({
             </table>
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Manual entry + OCR */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

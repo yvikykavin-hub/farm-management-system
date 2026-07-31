@@ -307,41 +307,46 @@ export default function CowsListPage() {
               {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="bg-white rounded-xl shadow-sm p-3 w-full">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "yearIncome")} {selectedYear}</p>
-              <p className="text-xl font-bold text-success">{inr(thisYearIncome)}</p>
-              <div className="flex gap-2 mt-1">
-                <span className="text-[11px] text-gray-400">🐄 {inr(cowYearIncome)}</span>
-                {buffaloYearIncome > 0 && <span className="text-[11px] text-gray-400">🐃 {inr(buffaloYearIncome)}</span>}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+            <div className="bg-green-50 rounded-xl p-2.5 shadow-sm border border-green-100 w-full">
+              <p className="text-xs text-gray-500 mb-0.5">💰 {t(lang, "yearIncome")} {selectedYear}</p>
+              <p className="text-base font-bold text-green-600">{inr(thisYearIncome)}</p>
+              <div className="mt-0.5 space-y-0.5">
+                <p className="text-xs text-gray-400">🐄 {inr(cowYearIncome)}</p>
+                {buffaloYearIncome > 0 && <p className="text-xs text-gray-400">🐃 {inr(buffaloYearIncome)}</p>}
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-3 w-full">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "yearExpense")} {selectedYear}</p>
-              <p className="text-xl font-bold text-danger">{inr(thisYearExpenses)}</p>
+            <div className="bg-red-50 rounded-xl p-2.5 shadow-sm border border-red-100 w-full">
+              <p className="text-xs text-gray-500 mb-0.5">💸 {t(lang, "yearExpense")} {selectedYear}</p>
+              <p className="text-base font-bold text-red-600">{inr(thisYearExpenses)}</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-3 w-full">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "netPL")} {selectedYear}</p>
-              <p className={`text-xl font-bold ${netPL >= 0 ? "text-success" : "text-danger"}`}>{inr(netPL)}</p>
+            <div className={`rounded-xl p-2.5 shadow-sm w-full ${netPL >= 0 ? "bg-green-50 border border-green-200" : "bg-orange-50 border border-orange-200"}`}>
+              <p className="text-xs text-gray-500 mb-0.5">📊 {t(lang, "netPL")} {selectedYear}</p>
+              <p className={`text-base font-bold ${netPL >= 0 ? "text-green-700" : "text-orange-700"}`}>
+                {netPL >= 0 ? "+" : "-"}{inr(Math.abs(netPL))}
+              </p>
             </div>
           </div>
 
           {/* Main tabs */}
-          <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 w-fit overflow-x-auto">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 scrollbar-hide">
             {([
-              ["animals", `🐄 ${t(lang, "animalsTab")}`],
-              ["milk", `🥛 ${t(lang, "milkCollection")}`],
-              ["income", `💰 ${t(lang, "income")}`],
-              ["expenses", `💸 ${t(lang, "expenses")}`],
-            ] as const).map(([key, label]) => (
+              ["animals", "🐄", t(lang, "animalsTab")],
+              ["milk", "🥛", t(lang, "milkCollection")],
+              ["income", "💰", t(lang, "income")],
+              ["expenses", "💸", t(lang, "expenses")],
+            ] as const).map(([key, icon, label]) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
-                  activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap min-h-[44px] ${
+                  activeTab === key
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                 }`}
               >
-                {label}
+                <span className="text-base">{icon}</span>
+                <span>{label}</span>
               </button>
             ))}
           </div>

@@ -142,10 +142,10 @@ export default function LivestockLandingPage() {
           </div>
 
           {/* Collapsible financial overview */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="rounded-2xl shadow-sm border border-emerald-100 dark:border-emerald-800/30 overflow-hidden mb-4">
             <button
               onClick={() => setShowFinancial(!showFinancial)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors min-h-[44px]"
+              className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/30 dark:hover:to-teal-900/30 transition-colors rounded-2xl min-h-[44px]"
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-base">📊</span>
@@ -160,7 +160,7 @@ export default function LivestockLandingPage() {
             </button>
 
             {showFinancial && (
-              <div className="px-4 pb-4 border-t border-gray-100">
+              <div className="px-4 pb-4 bg-gradient-to-b from-emerald-50/50 to-white dark:from-emerald-900/10 dark:to-slate-800 border-t border-emerald-100 dark:border-emerald-800/30">
                 {/* Year selector + Refresh */}
                 <div className="flex items-center gap-2 py-3 flex-wrap">
                   <select
