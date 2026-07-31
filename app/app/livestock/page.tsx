@@ -45,6 +45,7 @@ export default function LivestockLandingPage() {
   const [lang, setLang] = useLang();
   const [year, setYear] = useState(currentYear);
   const [loading, setLoading] = useState(true);
+  const [showFinancial, setShowFinancial] = useState(false);
 
   const [cowMilkIncome, setCowMilkIncome] = useState(0);
   const [buffaloMilkIncome, setBuffaloMilkIncome] = useState(0);
@@ -140,92 +141,136 @@ export default function LivestockLandingPage() {
             ))}
           </div>
 
-          {/* Yearly financial overview */}
-          <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
-            <h2 className="text-lg font-bold text-gray-900">{t(lang, "yearlyOverview")}</h2>
-            <div className="flex items-center gap-2">
-              <select
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value, 10))}
-                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0"
-              >
-                {YEAR_OPTIONS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <button
-                onClick={fetchYearlyData}
-                disabled={loading}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition min-h-[44px] sm:min-h-0"
-              >
-                🔄 {t(lang, "refresh")}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
-              <h3 className="text-sm font-bold text-gray-700 mb-2">🐄🐃 {t(lang, "cows")} & {t(lang, "buffalo")}</h3>
-              <p className="text-xs text-gray-500">{t(lang, "income")}</p>
-              <p className="text-lg font-bold text-success">{inr(cattleIncome)}</p>
-              <div className="flex gap-3 mt-0.5 mb-2">
-                <span className="text-[11px] text-gray-400">🐄 {inr(cowMilkIncome)}</span>
-                <span className="text-[11px] text-gray-400">🐃 {inr(buffaloMilkIncome)}</span>
+          {/* Collapsible financial overview */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button
+              onClick={() => setShowFinancial(!showFinancial)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors min-h-[44px]"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-base">📊</span>
+                <span className="text-sm font-semibold text-gray-800">{t(lang, "financialOverview")}</span>
+                {!showFinancial && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${totalNetProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {totalNetProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(totalNetProfit))}
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-gray-500">{t(lang, "expense")}</p>
-              <p className="text-lg font-bold text-danger mb-2">{inr(cattleExpense)}</p>
-              <p className="text-xs text-gray-500">{t(lang, "netPL")}</p>
-              <p className={`text-lg font-bold ${cattleProfit >= 0 ? "text-success" : "text-danger"}`}>{inr(cattleProfit)}</p>
-            </div>
+              <span className="text-gray-400 text-sm">{showFinancial ? "▲" : "▼"}</span>
+            </button>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
-              <h3 className="text-sm font-bold text-gray-700 mb-2">🐐 {t(lang, "goats")}</h3>
-              <p className="text-xs text-gray-500">{t(lang, "income")}</p>
-              <p className="text-lg font-bold text-success mb-2">{inr(goatIncome)}</p>
-              <p className="text-xs text-gray-500">{t(lang, "expense")}</p>
-              <p className="text-lg font-bold text-danger mb-2">{inr(goatExpense)}</p>
-              <p className="text-xs text-gray-500">{t(lang, "netPL")}</p>
-              <p className={`text-lg font-bold ${goatProfit >= 0 ? "text-success" : "text-danger"}`}>{inr(goatProfit)}</p>
-            </div>
+            {showFinancial && (
+              <div className="px-4 pb-4 border-t border-gray-100">
+                {/* Year selector + Refresh */}
+                <div className="flex items-center gap-2 py-3 flex-wrap">
+                  <select
+                    value={year}
+                    onChange={(e) => setYear(parseInt(e.target.value, 10))}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0"
+                  >
+                    {YEAR_OPTIONS.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={fetchYearlyData}
+                    disabled={loading}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition min-h-[44px] sm:min-h-0"
+                  >
+                    <span className={loading ? "animate-spin" : ""}>🔄</span> {t(lang, "refresh")}
+                  </button>
+                </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
-              <h3 className="text-sm font-bold text-gray-700 mb-2">🐔 {t(lang, "hens")}</h3>
-              <p className="text-xs text-gray-500">{t(lang, "income")}</p>
-              <p className="text-lg font-bold text-success mb-2">{inr(henIncome)}</p>
-              <p className="text-xs text-gray-500">{t(lang, "expense")}</p>
-              <p className="text-lg font-bold text-danger mb-2">{inr(henExpense)}</p>
-              <p className="text-xs text-gray-500">{t(lang, "netPL")}</p>
-              <p className={`text-lg font-bold ${henProfit >= 0 ? "text-success" : "text-danger"}`}>{inr(henProfit)}</p>
-            </div>
-          </div>
+                {/* Cow & Buffalo card */}
+                <div className="bg-gray-50 rounded-xl p-3 mb-2 w-full">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                    <span className="text-sm font-medium text-gray-800">🐄🐃 {t(lang, "cows")} & {t(lang, "buffalo")}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cattleProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {cattleProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(cattleProfit))}
+                    </span>
+                  </div>
+                  <div className="flex gap-4 flex-wrap">
+                    <div>
+                      <p className="text-xs text-gray-400">{t(lang, "income")}</p>
+                      <p className="text-sm font-semibold text-success">{inr(cattleIncome)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">{t(lang, "expense")}</p>
+                      <p className="text-sm font-semibold text-danger">{inr(cattleExpense)}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <span className="text-[11px] text-gray-400">🐄 {inr(cowMilkIncome)}</span>
+                    <span className="text-[11px] text-gray-400">🐃 {inr(buffaloMilkIncome)}</span>
+                  </div>
+                </div>
 
-          {/* Total net profit/loss banner */}
-          <div className={`rounded-2xl shadow-sm border p-4 sm:p-5 flex items-center justify-between flex-wrap gap-2 ${totalNetProfit >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-            <span className="text-sm sm:text-base font-bold text-gray-800">{t(lang, "totalNetProfitLoss")} ({year})</span>
-            <span className={`text-xl sm:text-2xl font-extrabold ${totalNetProfit >= 0 ? "text-success" : "text-danger"}`}>
-              {inr(totalNetProfit)}
-            </span>
-          </div>
+                {/* Goat card */}
+                <div className="bg-gray-50 rounded-xl p-3 mb-2 w-full">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                    <span className="text-sm font-medium text-gray-800">🐐 {t(lang, "goats")}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${goatProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {goatProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(goatProfit))}
+                    </span>
+                  </div>
+                  <div className="flex gap-4 flex-wrap">
+                    <div>
+                      <p className="text-xs text-gray-400">{t(lang, "income")}</p>
+                      <p className="text-sm font-semibold text-success">{inr(goatIncome)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">{t(lang, "expense")}</p>
+                      <p className="text-sm font-semibold text-danger">{inr(goatExpense)}</p>
+                    </div>
+                  </div>
+                </div>
 
-          {/* Chart */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">{t(lang, "incomeExpenseProfit")}</h3>
-            <div className="overflow-x-auto">
-              <div style={{ minWidth: 360, height: 280 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value) => inr(Number(value))} />
-                    <Legend />
-                    <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" />
-                    <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" />
-                    <Bar dataKey="profit" name={t(lang, "profit")} fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {/* Hen card */}
+                <div className="bg-gray-50 rounded-xl p-3 mb-3 w-full">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                    <span className="text-sm font-medium text-gray-800">🐔 {t(lang, "hens")}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${henProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {henProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(henProfit))}
+                    </span>
+                  </div>
+                  <div className="flex gap-4 flex-wrap">
+                    <div>
+                      <p className="text-xs text-gray-400">{t(lang, "income")}</p>
+                      <p className="text-sm font-semibold text-success">{inr(henIncome)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400">{t(lang, "expense")}</p>
+                      <p className="text-sm font-semibold text-danger">{inr(henExpense)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total net profit/loss banner */}
+                <div className={`rounded-xl p-3 mb-4 ${totalNetProfit >= 0 ? "bg-green-600" : "bg-red-500"}`}>
+                  <p className="text-xs text-white/80">{t(lang, "totalNetProfitLoss")} {year}</p>
+                  <p className="text-xl font-bold text-white">
+                    {totalNetProfit >= 0 ? "+" : "-"}{inr(Math.abs(totalNetProfit))}
+                  </p>
+                </div>
+
+                {/* Horizontal bar chart */}
+                <div className="overflow-x-auto">
+                  <div style={{ minWidth: 280 }}>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : `₹${v}`)} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={55} />
+                        <Tooltip formatter={(value) => inr(Number(value))} />
+                        <Legend wrapperStyle={{ fontSize: "11px" }} />
+                        <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>

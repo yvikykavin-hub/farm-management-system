@@ -85,6 +85,11 @@ export default function CowsListPage() {
   const [milkType, setMilkType] = useState<AnimalType>("cow");
   const [incomeType, setIncomeType] = useState<AnimalType>("cow");
 
+  const [refreshing, setRefreshing] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [addAnimalType, setAddAnimalType] = useState<AnimalType>("cow");
   const [form, setForm] = useState(emptyForm);
@@ -120,6 +125,12 @@ export default function CowsListPage() {
     setLoading(false);
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchAll();
+    setRefreshing(false);
+  };
+
   const cowsList = cows.filter((c) => c.animal_type === "buffalo" ? false : true);
   const buffaloesList = cows.filter((c) => c.animal_type === "buffalo");
   const hasBuffaloes = buffaloesList.some((c) => c.current_status === "active");
@@ -129,23 +140,22 @@ export default function CowsListPage() {
   const soldCows = cows.filter((c) => c.current_status === "sold").length;
   const deceasedCows = cows.filter((c) => c.current_status === "deceased").length;
 
-  const now = new Date();
-  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const yearPrefix = String(selectedYear);
 
-  const monthMilkRows = milkRows.filter((m) => m.collection_date.startsWith(monthPrefix));
-  const cowMonthIncome = monthMilkRows
+  const yearMilkRows = milkRows.filter((m) => m.collection_date.startsWith(yearPrefix));
+  const cowYearIncome = yearMilkRows
     .filter((m) => m.animal_type !== "buffalo")
     .reduce((sum, m) => sum + rowIncome(m), 0);
-  const buffaloMonthIncome = monthMilkRows
+  const buffaloYearIncome = yearMilkRows
     .filter((m) => m.animal_type === "buffalo")
     .reduce((sum, m) => sum + rowIncome(m), 0);
-  const thisMonthIncome = cowMonthIncome + buffaloMonthIncome;
+  const thisYearIncome = cowYearIncome + buffaloYearIncome;
 
-  const thisMonthExpenses = expenseRows
-    .filter((e) => e.expense_date.startsWith(monthPrefix))
+  const thisYearExpenses = expenseRows
+    .filter((e) => e.expense_date.startsWith(yearPrefix))
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
-  const netPL = thisMonthIncome - thisMonthExpenses;
+  const netPL = thisYearIncome - thisYearExpenses;
 
   const openAddModal = (type: AnimalType) => {
     setAddAnimalType(type);
@@ -248,16 +258,26 @@ export default function CowsListPage() {
               <h1 className="text-2xl font-bold text-primary">🐄 {t(lang, "cows")}</h1>
               <p className="text-sm text-gray-500">{t(lang, "livestock")}</p>
             </div>
-            <button
-              onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-              className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
-            >
-              {lang === "ta" ? "English" : "தமிழ்"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gray-100 text-sm text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors min-h-[44px] sm:min-h-0"
+              >
+                <span className={refreshing ? "animate-spin" : ""}>🔄</span>
+                <span className="hidden sm:block text-xs">{t(lang, "refresh")}</span>
+              </button>
+              <button
+                onClick={() => setLang(lang === "ta" ? "en" : "ta")}
+                className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+              >
+                {lang === "ta" ? "English" : "தமிழ்"}
+              </button>
+            </div>
           </div>
 
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {/* Animal status cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="bg-white rounded-xl shadow-sm p-3">
               <p className="text-xs font-medium text-gray-500">{t(lang, "totalCows")}</p>
               <p className="text-xl font-bold text-gray-800">{totalCows}</p>
@@ -274,20 +294,34 @@ export default function CowsListPage() {
               <p className="text-xs font-medium text-gray-500">{t(lang, "deceased")}</p>
               <p className="text-xl font-bold text-gray-500">{deceasedCows}</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "monthMilkIncome")}</p>
-              <p className="text-xl font-bold text-success">{inr(thisMonthIncome)}</p>
+          </div>
+
+          {/* Yearly financial cards */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{t(lang, "selectYear")}:</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] sm:min-h-0"
+            >
+              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="bg-white rounded-xl shadow-sm p-3 w-full">
+              <p className="text-xs font-medium text-gray-500">{t(lang, "yearIncome")} {selectedYear}</p>
+              <p className="text-xl font-bold text-success">{inr(thisYearIncome)}</p>
               <div className="flex gap-2 mt-1">
-                <span className="text-[11px] text-gray-400">🐄 {inr(cowMonthIncome)}</span>
-                {buffaloMonthIncome > 0 && <span className="text-[11px] text-gray-400">🐃 {inr(buffaloMonthIncome)}</span>}
+                <span className="text-[11px] text-gray-400">🐄 {inr(cowYearIncome)}</span>
+                {buffaloYearIncome > 0 && <span className="text-[11px] text-gray-400">🐃 {inr(buffaloYearIncome)}</span>}
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "monthExpenses")}</p>
-              <p className="text-xl font-bold text-danger">{inr(thisMonthExpenses)}</p>
+            <div className="bg-white rounded-xl shadow-sm p-3 w-full">
+              <p className="text-xs font-medium text-gray-500">{t(lang, "yearExpense")} {selectedYear}</p>
+              <p className="text-xl font-bold text-danger">{inr(thisYearExpenses)}</p>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "netPL")}</p>
+            <div className="bg-white rounded-xl shadow-sm p-3 w-full">
+              <p className="text-xs font-medium text-gray-500">{t(lang, "netPL")} {selectedYear}</p>
               <p className={`text-xl font-bold ${netPL >= 0 ? "text-success" : "text-danger"}`}>{inr(netPL)}</p>
             </div>
           </div>

@@ -127,6 +127,37 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
     } else fetchExpenses();
   };
 
+  // ---------------- Bulk select + delete ----------------
+  const [expSelectMode, setExpSelectMode] = useState(false);
+  const [expSelectedIds, setExpSelectedIds] = useState<string[]>([]);
+
+  const toggleExpSelect = (id: string) => {
+    setExpSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+  };
+
+  const toggleExpSelectAll = () => {
+    setExpSelectedIds(expSelectedIds.length === expenses.length ? [] : expenses.map((e) => e.id));
+  };
+
+  const handleBulkDeleteExpense = async () => {
+    if (
+      !window.confirm(
+        lang === "ta" ? `${expSelectedIds.length} செலவுகளை நீக்கவா?` : `Delete ${expSelectedIds.length} expenses?`
+      )
+    )
+      return;
+    const { error } = await supabase.from("cow_expenses").delete().in("id", expSelectedIds);
+    if (error) {
+      console.error("Bulk delete error: ", error);
+      toast.error(t(lang, "saveFailedMessage"));
+    } else {
+      toast.success(lang === "ta" ? `✅ ${expSelectedIds.length} நீக்கப்பட்டன` : `✅ ${expSelectedIds.length} deleted`);
+      setExpSelectedIds([]);
+      setExpSelectMode(false);
+      fetchExpenses();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-between flex-wrap gap-2">
@@ -149,12 +180,43 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">{t(lang, "expenseRecords")}</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-4">
+        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "expenseRecords")}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            {expSelectMode && expSelectedIds.length > 0 && (
+              <button
+                onClick={handleBulkDeleteExpense}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-medium transition min-h-[44px] sm:min-h-0"
+              >
+                🗑️ {lang === "ta" ? `${expSelectedIds.length} நீக்கு` : `Delete ${expSelectedIds.length}`}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setExpSelectMode(!expSelectMode);
+                setExpSelectedIds([]);
+              }}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              {expSelectMode ? t(lang, "cancel") : t(lang, "select")}
+            </button>
+          </div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs" style={{ minWidth: expSelectMode ? 560 : undefined }}>
             <thead>
               <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                {expSelectMode && (
+                  <th className="py-1 px-1">
+                    <input
+                      type="checkbox"
+                      checked={expSelectedIds.length === expenses.length && expenses.length > 0}
+                      onChange={toggleExpSelectAll}
+                      className="w-4 h-4 accent-green-600"
+                    />
+                  </th>
+                )}
                 <th className="py-1 px-1">{t(lang, "date")}</th>
                 <th className="py-1 px-1">{t(lang, "type")}</th>
                 <th className="py-1 px-1">{t(lang, "qty")}</th>
@@ -167,12 +229,22 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
             </thead>
             <tbody>
               {expenses.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-6 text-gray-500">🐄 {t(lang, "noExpensesYet")}</td></tr>
+                <tr><td colSpan={expSelectMode ? 9 : 8} className="text-center py-6 text-gray-500">🐄 {t(lang, "noExpensesYet")}</td></tr>
               ) : (
                 expenses.map((e) => {
                   const typeKey = EXPENSE_TYPE_KEYS.find((k) => EXPENSE_TYPE_VALUES[k] === e.expense_type);
                   return (
                     <tr key={e.id} className="border-b border-gray-50 text-gray-900">
+                      {expSelectMode && (
+                        <td className="py-1 px-1">
+                          <input
+                            type="checkbox"
+                            checked={expSelectedIds.includes(e.id)}
+                            onChange={() => toggleExpSelect(e.id)}
+                            className="w-4 h-4 accent-green-600"
+                          />
+                        </td>
+                      )}
                       <td className="py-1 px-1 text-gray-700">{formatDMY(e.expense_date)}</td>
                       <td className="py-1 px-1 text-gray-700">{typeKey ? t(lang, typeKey) : e.expense_type}</td>
                       <td className="py-1 px-1 text-gray-900">{e.quantity ?? "—"}</td>
@@ -181,7 +253,9 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
                       <td className="py-1 px-1 text-gray-700">{e.vendor_name ?? "—"}</td>
                       <td className="py-1 px-1 text-gray-700">{e.description ?? "—"}</td>
                       <td className="py-1 px-1">
-                        <button onClick={() => deleteExpense(e.id)} className="hover:text-danger">🗑️</button>
+                        {!expSelectMode && (
+                          <button onClick={() => deleteExpense(e.id)} className="hover:text-danger">🗑️</button>
+                        )}
                       </td>
                     </tr>
                   );

@@ -9,21 +9,37 @@ import { t } from "../lib/labels";
 type MilkPayment = {
   id: string;
   payment_date: string;
-  period_from: string;
-  period_to: string;
-  milkman_name: string;
-  total_litres: number;
+  period_from: string | null;
+  period_to: string | null;
   expected_amount: number;
   received_amount: number;
   payment_status: string;
   remarks: string | null;
 };
 
-const PAYMENT_STATUS_BADGE: Record<string, string> = {
-  paid: "bg-green-100 text-green-700",
-  partially_paid: "bg-amber-100 text-amber-700",
-  pending: "bg-red-100 text-red-700",
+type MilkCollectionRow = {
+  collection_date: string;
+  daily_income: number | null;
+  morning_litres: number | null;
+  evening_litres: number | null;
+  rate_per_litre: number | null;
 };
+
+// daily_income is a DB-generated column — this just guards against a stale/null
+// value rather than trusting a genuine 0.
+const rowIncome = (m: MilkCollectionRow) => {
+  if (m.daily_income && m.daily_income > 0) return Number(m.daily_income);
+  const litres = (Number(m.morning_litres) || 0) + (Number(m.evening_litres) || 0);
+  return litres * (Number(m.rate_per_litre) || 0);
+};
+
+const PAYMENT_STATUS_BADGE: Record<string, string> = {
+  Paid: "bg-green-100 text-green-700",
+  Partial: "bg-amber-100 text-amber-700",
+  Excess: "bg-blue-100 text-blue-700",
+  Pending: "bg-red-100 text-red-700",
+};
+const PAYMENT_STATUS_ICON: Record<string, string> = { Paid: "✅", Partial: "⚠️", Excess: "💰", Pending: "⏳" };
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const formatDMY = (iso: string | null | undefined) => {
@@ -31,6 +47,7 @@ const formatDMY = (iso: string | null | undefined) => {
   const [y, m, d] = iso.split("-");
   return y && m && d ? `${d}/${m}/${y}` : iso;
 };
+const toISODate = (d: Date) => d.toISOString().slice(0, 10);
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
@@ -40,9 +57,11 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
   const paymentsTable = animalType === "buffalo" ? "buffalo_milk_payments" : "milk_payments";
 
   const [payments, setPayments] = useState<MilkPayment[]>([]);
+  const [collections, setCollections] = useState<MilkCollectionRow[]>([]);
 
   useEffect(() => {
     fetchPayments();
+    fetchCollections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animalType]);
 
@@ -51,13 +70,27 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
     if (data) setPayments(data);
   };
 
-  const totalExpected = payments.reduce((s, p) => s + Number(p.expected_amount), 0);
-  const totalReceived = payments.reduce((s, p) => s + Number(p.received_amount), 0);
-  const outstanding = totalExpected - totalReceived;
+  const fetchCollections = async () => {
+    const query = supabase.from("milk_collections").select("collection_date, daily_income, morning_litres, evening_litres, rate_per_litre");
+    const { data } =
+      animalType === "cow"
+        ? await query.or("animal_type.eq.cow,animal_type.is.null")
+        : await query.eq("animal_type", "buffalo");
+    if (data) setCollections(data);
+  };
 
+  // ---------------- Monthly summary (auto-calculated) ----------------
   const now = new Date();
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const thisMonthLitres = payments.filter((p) => p.payment_date.startsWith(monthPrefix)).reduce((s, p) => s + Number(p.total_litres), 0);
+  const monthName = now.toLocaleString(lang === "ta" ? "ta-IN" : "en-IN", { month: "long", year: "numeric" });
+
+  const monthCollections = collections.filter((c) => c.collection_date.startsWith(monthPrefix));
+  const monthTotalLitres = monthCollections.reduce((s, c) => s + (Number(c.morning_litres) || 0) + (Number(c.evening_litres) || 0), 0);
+  const monthTotalExpected = monthCollections.reduce((s, c) => s + rowIncome(c), 0);
+  const monthTotalReceived = payments
+    .filter((p) => p.payment_date.startsWith(monthPrefix))
+    .reduce((s, p) => s + Number(p.received_amount || 0), 0);
+  const monthOutstanding = monthTotalExpected - monthTotalReceived;
 
   // ---------------- Add / Edit payment ----------------
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -65,27 +98,42 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
   const [pmDate, setPmDate] = useState("");
   const [pmFrom, setPmFrom] = useState("");
   const [pmTo, setPmTo] = useState("");
-  const [pmMilkman, setPmMilkman] = useState("");
-  const [pmLitres, setPmLitres] = useState("");
-  const [pmRate, setPmRate] = useState("");
+  const [pmExpected, setPmExpected] = useState("");
   const [pmReceived, setPmReceived] = useState("");
-  const [pmStatus, setPmStatus] = useState("pending");
   const [pmRemarks, setPmRemarks] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
 
-  const pmExpected = (parseFloat(pmLitres) || 0) * (parseFloat(pmRate) || 0);
-  const pmDifference = (parseFloat(pmReceived) || 0) - pmExpected;
+  const pmDifference = (parseFloat(pmReceived) || 0) - (parseFloat(pmExpected) || 0);
+
+  // Period = the Thursday six days before the chosen Wednesday, through the Tuesday
+  // right before it — the milkman's usual weekly settlement window.
+  const calculatePeriod = (wednesdayDate: string) => {
+    if (!wednesdayDate) return;
+    const wed = new Date(wednesdayDate);
+    const tuesday = new Date(wed);
+    tuesday.setDate(wed.getDate() - 1);
+    const thursday = new Date(tuesday);
+    thursday.setDate(tuesday.getDate() - 6);
+    const from = toISODate(thursday);
+    const to = toISODate(tuesday);
+    setPmFrom(from);
+    setPmTo(to);
+    calculateExpectedForPeriod(from, to);
+  };
+
+  const calculateExpectedForPeriod = (from: string, to: string) => {
+    const rows = collections.filter((c) => c.collection_date >= from && c.collection_date <= to);
+    const expected = rows.reduce((s, c) => s + rowIncome(c), 0);
+    setPmExpected(expected.toFixed(2));
+  };
 
   const openAddPayment = () => {
     setEditingPaymentId(null);
     setPmDate("");
     setPmFrom("");
     setPmTo("");
-    setPmMilkman("");
-    setPmLitres("");
-    setPmRate("");
+    setPmExpected("");
     setPmReceived("");
-    setPmStatus("pending");
     setPmRemarks("");
     setPaymentModalOpen(true);
   };
@@ -93,15 +141,17 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
   const openEditPayment = (p: MilkPayment) => {
     setEditingPaymentId(p.id);
     setPmDate(p.payment_date);
-    setPmFrom(p.period_from);
-    setPmTo(p.period_to);
-    setPmMilkman(p.milkman_name);
-    setPmLitres(String(p.total_litres));
-    setPmRate(Number(p.total_litres) ? String(Number(p.expected_amount) / Number(p.total_litres)) : "");
-    setPmReceived(String(p.received_amount));
-    setPmStatus(p.payment_status);
+    setPmFrom(p.period_from ?? "");
+    setPmTo(p.period_to ?? "");
+    setPmExpected(String(p.expected_amount ?? ""));
+    setPmReceived(String(p.received_amount ?? ""));
     setPmRemarks(p.remarks ?? "");
     setPaymentModalOpen(true);
+  };
+
+  const closePaymentModal = () => {
+    setPaymentModalOpen(false);
+    setEditingPaymentId(null);
   };
 
   const savePayment = async () => {
@@ -111,18 +161,21 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
     }
     setSavingPayment(true);
     try {
-      const payload: Record<string, unknown> = {
-        payment_date: pmDate || null,
+      const expected = parseFloat(pmExpected) || 0;
+      const received = parseFloat(pmReceived) || 0;
+      const status = received === 0 ? "Pending" : received < expected ? "Partial" : received > expected ? "Excess" : "Paid";
+
+      // `difference` is a DB-generated column (received_amount - expected_amount) on
+      // milk_payments — never set it explicitly, same landmine as daily_income elsewhere.
+      const payload = {
+        payment_date: pmDate,
         period_from: pmFrom || null,
         period_to: pmTo || null,
-        milkman_name: pmMilkman.trim() || null,
-        total_litres: parseFloat(pmLitres) || null,
-        expected_amount: pmExpected || null,
-        received_amount: parseFloat(pmReceived) || null,
-        payment_status: pmStatus || "pending",
+        expected_amount: expected,
+        received_amount: received,
+        payment_status: status,
         remarks: pmRemarks.trim() || null,
       };
-      if (animalType === "cow") payload.farm_location = "Home";
       const { error } = editingPaymentId
         ? await supabase.from(paymentsTable).update(payload).eq("id", editingPaymentId)
         : await supabase.from(paymentsTable).insert(payload);
@@ -130,7 +183,8 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
         console.error("Error saving payment: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
-        setPaymentModalOpen(false);
+        toast.success(lang === "ta" ? "✅ பணம் சேமிக்கப்பட்டது!" : "✅ Payment saved!");
+        closePaymentModal();
         fetchPayments();
       }
     } catch (err) {
@@ -151,149 +205,216 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <p className="text-xs text-gray-500">{t(lang, "totalExpected")}</p>
-          <p className="text-lg font-bold text-gray-800">{inr(totalExpected)}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <p className="text-xs text-gray-500">{t(lang, "totalReceived")}</p>
-          <p className="text-lg font-bold text-success">{inr(totalReceived)}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <p className="text-xs text-gray-500">{t(lang, "outstanding")}</p>
-          <p className={`text-lg font-bold ${outstanding > 0 ? "text-danger" : "text-success"}`}>{inr(outstanding)}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <p className="text-xs text-gray-500">{t(lang, "thisMonth")} {t(lang, "totalLitres")}</p>
-          <p className="text-lg font-bold text-gray-800">{thisMonthLitres.toFixed(1)} L</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-gray-800">{t(lang, "income")}</h2>
-          <div className="flex items-center gap-2">
-            <ExportButton data={payments} filename={`${animalType === "cow" ? t(lang, "cowMilk") : t(lang, "buffaloMilk")}-Payments`} sheetName="Milk Payments" language={lang} />
-            <button onClick={openAddPayment} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
-              + {t(lang, "addPayment")}
-            </button>
+      {/* Monthly summary */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-3 sm:p-4">
+        <h2 className="text-sm font-semibold text-gray-800 mb-3">
+          📅 {monthName} · {t(lang, "summary")}
+          <span className="ml-2 text-xs font-normal text-gray-400">
+            ({animalType === "buffalo" ? t(lang, "buffalo") : t(lang, "cow")})
+          </span>
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-blue-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500">🥛 {t(lang, "totalLitres")}</p>
+            <p className="text-base font-bold text-blue-600">{monthTotalLitres.toFixed(1)}L</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "autoFromMilkCollection")}</p>
+          </div>
+          <div className="bg-green-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500">💰 {t(lang, "expectedAmount")}</p>
+            <p className="text-base font-bold text-success">{inr(monthTotalExpected)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "autoCalculated")}</p>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-3">
+            <p className="text-xs text-gray-500">✅ {t(lang, "receivedAmount")}</p>
+            <p className="text-base font-bold text-amber-600">{inr(monthTotalReceived)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "sumOfPayments")}</p>
+          </div>
+          <div className={`rounded-xl p-3 ${monthOutstanding > 0 ? "bg-red-50" : "bg-green-50"}`}>
+            <p className="text-xs text-gray-500">{monthOutstanding > 0 ? "⚠️" : "✅"} {t(lang, "outstanding")}</p>
+            <p className={`text-base font-bold ${monthOutstanding > 0 ? "text-danger" : "text-success"}`}>{inr(Math.abs(monthOutstanding))}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t(lang, "expectedMinusReceived")}</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
-                <th className="py-1 px-1">{t(lang, "date")}</th>
-                <th className="py-1 px-1">{t(lang, "periodFrom")}</th>
-                <th className="py-1 px-1">{t(lang, "milkmanName")}</th>
-                <th className="py-1 px-1">{t(lang, "totalLitres")}</th>
-                <th className="py-1 px-1">{t(lang, "rate")}</th>
-                <th className="py-1 px-1">{t(lang, "expectedAmount")}</th>
-                <th className="py-1 px-1">{t(lang, "receivedAmount")}</th>
-                <th className="py-1 px-1">{t(lang, "difference")}</th>
-                <th className="py-1 px-1">{t(lang, "status")}</th>
-                <th className="py-1 px-1"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-6 text-gray-500">🐄 {t(lang, "noPaymentsYet")}</td></tr>
-              ) : (
-                payments.map((p) => {
-                  const diff = Number(p.received_amount) - Number(p.expected_amount);
-                  return (
-                    <tr key={p.id} className="border-b border-gray-50 text-gray-900">
-                      <td className="py-1 px-1 text-gray-700">{formatDMY(p.payment_date)}</td>
-                      <td className="py-1 px-1 text-gray-700">{formatDMY(p.period_from)} → {formatDMY(p.period_to)}</td>
-                      <td className="py-1 px-1 text-gray-700">{p.milkman_name}</td>
-                      <td className="py-1 px-1 text-gray-900">{Number(p.total_litres).toFixed(1)} L</td>
-                      <td className="py-1 px-1 text-gray-700">{Number(p.total_litres) ? inr(Number(p.expected_amount) / Number(p.total_litres)) : "—"}</td>
-                      <td className="py-1 px-1 text-gray-700">{inr(Number(p.expected_amount))}</td>
-                      <td className="py-1 px-1 font-medium text-green-600">{inr(Number(p.received_amount))}</td>
-                      <td className={`py-1 px-1 font-medium ${diff < 0 ? "text-red-600" : "text-green-600"}`}>{inr(diff)}</td>
-                      <td className="py-1 px-1">
-                        <span className={`${PAYMENT_STATUS_BADGE[p.payment_status] ?? PAYMENT_STATUS_BADGE.pending} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
-                          {p.payment_status.replace("_", " ")}
-                        </span>
-                      </td>
-                      <td className="py-1 px-1 whitespace-nowrap">
-                        <button onClick={() => openEditPayment(p)} className="mr-2 hover:text-primary">✏️</button>
-                        <button onClick={() => deletePayment(p.id)} className="hover:text-danger">🗑️</button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-sm font-semibold text-gray-800">💳 {t(lang, "paymentRecords")}</h2>
+        <div className="flex items-center gap-2">
+          <ExportButton data={payments} filename={`${animalType === "cow" ? t(lang, "cowMilk") : t(lang, "buffaloMilk")}-Payments`} sheetName="Milk Payments" language={lang} />
+          <button onClick={openAddPayment} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition min-h-[44px] sm:min-h-0">
+            + {t(lang, "addPayment")}
+          </button>
         </div>
       </div>
 
+      {/* Payment list */}
+      {payments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <p className="text-3xl mb-2">💳</p>
+          <p className="text-sm text-gray-500">{t(lang, "noPaymentsYet")}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {[...payments]
+            .sort((a, b) => b.payment_date.localeCompare(a.payment_date))
+            .map((payment) => {
+              const diff = Number(payment.expected_amount || 0) - Number(payment.received_amount || 0);
+              const status = PAYMENT_STATUS_BADGE[payment.payment_status] ? payment.payment_status : "Pending";
+              return (
+                <div key={payment.id} className="bg-white rounded-xl shadow-sm border border-gray-100 w-full p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PAYMENT_STATUS_BADGE[status]}`}>
+                          {PAYMENT_STATUS_ICON[status]} {t(lang, status.toLowerCase() as "paid" | "partial" | "excess" | "pending")}
+                        </span>
+                        <span className="text-xs text-gray-400">{formatDMY(payment.payment_date)}</span>
+                      </div>
+
+                      <p className="text-xs text-gray-500">
+                        📅 {t(lang, "period")}: {payment.period_from ? `${formatDMY(payment.period_from)} → ${formatDMY(payment.period_to)}` : "—"}
+                      </p>
+
+                      <div className="flex gap-3 mt-1 flex-wrap">
+                        <span className="text-xs text-gray-600">{t(lang, "expectedAmount")}: {inr(Number(payment.expected_amount || 0))}</span>
+                        <span className="text-xs text-success font-medium">{t(lang, "receivedAmount")}: {inr(Number(payment.received_amount || 0))}</span>
+                      </div>
+
+                      {diff !== 0 && (
+                        <p className={`text-xs mt-0.5 ${diff > 0 ? "text-danger" : "text-blue-500"}`}>
+                          {diff > 0
+                            ? `⚠️ ${t(lang, "shortBy")}: ${inr(diff)}`
+                            : `💰 ${t(lang, "extra")}: ${inr(Math.abs(diff))}`}
+                        </p>
+                      )}
+
+                      {payment.remarks && <p className="text-xs text-gray-400 mt-0.5">💬 {payment.remarks}</p>}
+                    </div>
+
+                    <div className="flex gap-1 ml-2 shrink-0">
+                      <button onClick={() => openEditPayment(payment)} className="text-amber-400 hover:text-amber-600 text-sm p-1">✏️</button>
+                      <button onClick={() => deletePayment(payment.id)} className="text-red-400 hover:text-red-600 text-sm p-1">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {/* Add/Edit Payment Modal */}
       {paymentModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg sm:max-h-[90vh] h-full sm:h-auto overflow-y-auto p-5">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 sm:p-0">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm max-h-[90vh] overflow-y-auto p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{editingPaymentId ? t(lang, "editPayment") : t(lang, "addPayment")}</h2>
-              <button onClick={() => setPaymentModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+              <h2 className="text-lg font-bold text-primary">
+                {editingPaymentId ? t(lang, "editPayment") : t(lang, "addPayment")}
+                <span className="ml-2 text-sm font-normal text-gray-400">
+                  ({animalType === "buffalo" ? t(lang, "buffalo") : t(lang, "cow")})
+                </span>
+              </h2>
+              <button onClick={closePaymentModal} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="space-y-3">
               <div>
-                <label className={labelCls}>{t(lang, "paymentDate")}</label>
-                <input type="date" value={pmDate} onChange={(e) => setPmDate(e.target.value)} className={inputCls} />
+                <label className={labelCls}>📅 {t(lang, "paymentDateWednesday")} *</label>
+                <input
+                  type="date"
+                  value={pmDate}
+                  onChange={(e) => {
+                    setPmDate(e.target.value);
+                    calculatePeriod(e.target.value);
+                  }}
+                  className={inputCls}
+                />
               </div>
+
               <div>
-                <label className={labelCls}>{t(lang, "milkmanName")}</label>
-                <input type="text" value={pmMilkman} onChange={(e) => setPmMilkman(e.target.value)} className={inputCls} />
+                <label className={labelCls}>
+                  {t(lang, "periodFromAuto")} <span className="text-gray-400">({t(lang, "editableHint")})</span>
+                </label>
+                <input
+                  type="date"
+                  value={pmFrom}
+                  onChange={(e) => {
+                    setPmFrom(e.target.value);
+                    if (pmTo) calculateExpectedForPeriod(e.target.value, pmTo);
+                  }}
+                  className={inputCls}
+                />
               </div>
+
               <div>
-                <label className={labelCls}>{t(lang, "periodFrom")}</label>
-                <input type="date" value={pmFrom} onChange={(e) => setPmFrom(e.target.value)} className={inputCls} />
+                <label className={labelCls}>
+                  {t(lang, "periodToAuto")} <span className="text-gray-400">({t(lang, "editableHint")})</span>
+                </label>
+                <input
+                  type="date"
+                  value={pmTo}
+                  onChange={(e) => {
+                    setPmTo(e.target.value);
+                    if (pmFrom) calculateExpectedForPeriod(pmFrom, e.target.value);
+                  }}
+                  className={inputCls}
+                />
               </div>
+
               <div>
-                <label className={labelCls}>{t(lang, "periodTo")}</label>
-                <input type="date" value={pmTo} onChange={(e) => setPmTo(e.target.value)} className={inputCls} />
+                <label className={labelCls}>
+                  💰 {t(lang, "expectedAmount")} <span className="text-success">{t(lang, "autoCalculated")}</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={pmExpected}
+                  onChange={(e) => setPmExpected(e.target.value)}
+                  className={`${inputCls} bg-green-50`}
+                />
               </div>
+
               <div>
-                <label className={labelCls}>{t(lang, "totalLitres")}</label>
-                <input type="number" value={pmLitres} onChange={(e) => setPmLitres(e.target.value)} className={inputCls} />
+                <label className={labelCls}>✅ {t(lang, "receivedAmount")} *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={pmReceived}
+                  onChange={(e) => setPmReceived(e.target.value)}
+                  placeholder="0.00"
+                  className={inputCls}
+                />
               </div>
+
+              {pmExpected && pmReceived && (
+                <div className={`rounded-lg p-3 text-sm ${pmDifference < 0 ? "bg-red-50 text-danger" : pmDifference > 0 ? "bg-blue-50 text-blue-700" : "bg-green-50 text-success"}`}>
+                  {pmDifference === 0
+                    ? `✅ ${t(lang, "fullyPaid")}`
+                    : pmDifference < 0
+                      ? `⚠️ ${t(lang, "shortBy")}: ${inr(Math.abs(pmDifference))}`
+                      : `💰 ${t(lang, "extra")}: ${inr(pmDifference)}`}
+                </div>
+              )}
+
               <div>
-                <label className={labelCls}>{t(lang, "rate")} ({t(lang, "perLitre")}, ₹)</label>
-                <input type="number" value={pmRate} onChange={(e) => setPmRate(e.target.value)} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{t(lang, "expectedAmount")}</label>
-                <input type="number" value={pmExpected.toFixed(2)} disabled className={`${inputCls} bg-gray-50 text-gray-500`} />
-              </div>
-              <div>
-                <label className={labelCls}>{t(lang, "receivedAmount")}</label>
-                <input type="number" value={pmReceived} onChange={(e) => setPmReceived(e.target.value)} className={inputCls} />
-              </div>
-              <div className="col-span-2">
-                <p className={`text-xs font-semibold ${pmDifference < 0 ? "text-danger" : "text-success"}`}>
-                  {t(lang, "difference")}: {inr(pmDifference)}
-                </p>
-              </div>
-              <div>
-                <label className={labelCls}>{t(lang, "paymentStatus")}</label>
-                <select value={pmStatus} onChange={(e) => setPmStatus(e.target.value)} className={inputCls}>
-                  <option value="paid">{t(lang, "paid")}</option>
-                  <option value="partially_paid">{t(lang, "partiallyPaid")}</option>
-                  <option value="pending">{t(lang, "pending")}</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className={labelCls}>{t(lang, "remarks")}</label>
+                <label className={labelCls}>💬 {t(lang, "remarks")}</label>
                 <input type="text" value={pmRemarks} onChange={(e) => setPmRemarks(e.target.value)} className={inputCls} />
               </div>
             </div>
+
             <div className="flex gap-2 mt-4">
-              <button onClick={savePayment} disabled={savingPayment} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2.5 text-sm font-semibold transition">
-                {savingPayment ? "..." : t(lang, "save")}
-              </button>
-              <button onClick={() => setPaymentModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2.5 text-sm font-semibold transition">
+              <button
+                onClick={closePaymentModal}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-semibold transition min-h-[44px] sm:min-h-0"
+              >
                 {t(lang, "cancel")}
+              </button>
+              <button
+                onClick={savePayment}
+                disabled={savingPayment || !pmDate || !pmReceived}
+                className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl py-2.5 text-sm font-semibold transition min-h-[44px] sm:min-h-0"
+              >
+                {savingPayment ? "..." : t(lang, "save")}
               </button>
             </div>
           </div>
