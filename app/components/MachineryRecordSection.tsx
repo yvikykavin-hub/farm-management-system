@@ -3,6 +3,8 @@
 import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 export type MachineryField = {
   key: string;
@@ -63,6 +65,7 @@ export default function MachineryRecordSection({
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -143,16 +146,18 @@ export default function MachineryRecordSection({
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
-    const { error } = await supabase.from(table).delete().eq("id", id);
-    if (error) {
-      console.error(`Error deleting ${table}:`, error);
-      toast.error(L("Could not delete. Please try again.", "நீக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
-    } else {
-      fetchRecords();
-      onChanged?.();
-    }
+  const remove = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) {
+        console.error(`Error deleting ${table}:`, error);
+        toast.error(L("Could not delete. Please try again.", "நீக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
+      } else {
+        toast.success(L("Deleted!", "நீக்கப்பட்டது!"));
+        fetchRecords();
+        onChanged?.();
+      }
+    });
   };
 
   return (
@@ -281,6 +286,8 @@ export default function MachineryRecordSection({
           </div>
         </div>
       )}
+
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 export type CropFieldOption = { value: string; en: string; ta: string };
 
@@ -61,6 +63,7 @@ export default function CropRecordSection({
 
   const [records, setRecords] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
@@ -174,8 +177,8 @@ export default function CropRecordSection({
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
+  const remove = (id: string) => {
+    confirmDelete(async () => {
     const { error } = await supabase.from(table).delete().eq("id", id);
     if (error) {
       console.error(`Error deleting ${table}:`, error);
@@ -184,6 +187,7 @@ export default function CropRecordSection({
       fetchRecords();
       onChanged?.();
     }
+    });
   };
 
   const displayValue = (f: CropField, v: unknown) => {
@@ -320,6 +324,8 @@ export default function CropRecordSection({
           </div>
         </div>
       )}
+
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

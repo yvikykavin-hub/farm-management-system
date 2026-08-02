@@ -9,6 +9,8 @@ import Sidebar from "../../../components/Sidebar";
 import PullToRefresh from "../../../components/PullToRefresh";
 import EmptyState from "../../../components/EmptyState";
 import { SuccessCheckmark } from "../../../components/SuccessAnimation";
+import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
@@ -97,6 +99,7 @@ export default function GoatsListPage() {
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchAll();
@@ -131,17 +134,17 @@ export default function GoatsListPage() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+  const handleDelete = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("goats").delete().eq("id", id);
 
-    const { error } = await supabase.from("goats").delete().eq("id", id);
-
-    if (error) {
-      toast.error(t(lang, "couldNotDelete"));
-    } else {
-      toast.success(t(lang, "deletedSuccessfully"));
-      fetchAll();
-    }
+      if (error) {
+        toast.error(t(lang, "couldNotDelete"));
+      } else {
+        toast.success(t(lang, "deletedSuccessfully"));
+        fetchAll();
+      }
+    });
   };
 
   const saveGoat = async () => {
@@ -244,13 +247,17 @@ export default function GoatsListPage() {
     setSavingSale(false);
   };
 
-  const deleteSale = async (sid: string) => {
-    if (!confirm(t(lang, "deleteConfirmSale"))) return;
-    const { error } = await supabase.from("goat_income").delete().eq("id", sid);
-    if (error) {
-      console.error("Error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    } else fetchAll();
+  const deleteSale = (sid: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("goat_income").delete().eq("id", sid);
+      if (error) {
+        console.error("Error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        fetchAll();
+      }
+    });
   };
 
   // ---------------- Expenses ----------------
@@ -307,13 +314,17 @@ export default function GoatsListPage() {
     setSavingExpense(false);
   };
 
-  const deleteExpense = async (eid: string) => {
-    if (!confirm(t(lang, "deleteConfirmExpense"))) return;
-    const { error } = await supabase.from("goat_expenses").delete().eq("id", eid);
-    if (error) {
-      console.error("Error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    } else fetchAll();
+  const deleteExpense = (eid: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("goat_expenses").delete().eq("id", eid);
+      if (error) {
+        console.error("Error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        fetchAll();
+      }
+    });
   };
 
   return (
@@ -758,6 +769,7 @@ export default function GoatsListPage() {
       )}
 
       <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

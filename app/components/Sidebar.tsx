@@ -69,9 +69,9 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
         </button>
 
         {/* Logo area */}
-        <div className="p-6 border-b border-green-700/30 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-2xl shrink-0">
+        <div className="p-3 border-b border-green-700/30 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center text-lg shrink-0">
               👨‍🌾
             </div>
             <div>
@@ -85,8 +85,8 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Nav — compact, no scroll */}
+        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-hidden">
           {navItems.map((item) => {
             const isActive = item.startsWith ? pathname.startsWith(item.href) : pathname === item.href;
             return (
@@ -95,38 +95,38 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                 href={item.href}
                 title={item.label}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative border-l-2 ${
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-200 relative border-l-2 ${
                   isActive
                     ? "bg-white/10 text-white font-medium border-green-300"
                     : "text-green-200 border-transparent hover:bg-white/[0.08] hover:text-white"
                 }`}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span className="text-sm font-medium">{lang === "ta" ? item.labelTa : item.label}</span>
-                {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-300" />}
+                <span className="text-base flex-shrink-0">{item.icon}</span>
+                <span className="text-xs font-medium truncate">{lang === "ta" ? item.labelTa : item.label}</span>
+                {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-300 flex-shrink-0" />}
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom: language + dark mode + logout */}
-        <div className="p-3 border-t border-green-700/30 space-y-1 shrink-0">
+        <div className="p-2 border-t border-green-700/30 space-y-0.5 shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={toggleLang}
-              className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white transition-all duration-200 min-w-0"
+              className="flex-1 flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white transition-all duration-200 min-w-0"
             >
-              <span>🌐</span>
-              <span className="text-sm font-medium truncate">{lang === "ta" ? "English" : "தமிழ்"}</span>
+              <span className="text-base">🌐</span>
+              <span className="text-xs font-medium truncate">{lang === "ta" ? "English" : "தமிழ்"}</span>
             </button>
             <DarkModeToggle variant="sidebar" />
           </div>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200"
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-green-200 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200"
           >
-            <span>🚪</span>
-            <span className="text-sm font-medium">{lang === "ta" ? "வெளியேறு" : "Logout"}</span>
+            <span className="text-base">🚪</span>
+            <span className="text-xs font-medium">{lang === "ta" ? "வெளியேறு" : "Logout"}</span>
           </button>
         </div>
       </aside>

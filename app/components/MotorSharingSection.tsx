@@ -3,6 +3,8 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 interface Partner {
   id?: string;
@@ -42,6 +44,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
     const [loading, setLoading] = useState(true);
     const [showSchedule, setShowSchedule] = useState(false);
     const [showAddPartner, setShowAddPartner] = useState(false);
+    const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
     // Form states
     const [turnOwner, setTurnOwner] = useState("me");
@@ -168,12 +171,12 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
       }
     };
 
-    const removePartner = async (id: string) => {
-      if (!window.confirm(language === "ta" ? "இந்த பகிர்வு கூட்டாளியை நீக்கவா?" : "Remove this partner?")) return;
-
-      await supabase.from("motor_sharing_neighbors").delete().eq("id", id);
-
-      fetchMotorSharing();
+    const removePartner = (id: string) => {
+      confirmDelete(async () => {
+        await supabase.from("motor_sharing_neighbors").delete().eq("id", id);
+        toast.success(language === "ta" ? "நீக்கப்பட்டது!" : "Removed!");
+        fetchMotorSharing();
+      });
     };
 
     // Calculate upcoming schedule. Duration is in fractional days (e.g. 0.5 =
@@ -474,6 +477,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
             </div>
           </div>
         )}
+        <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={language} />
       </div>
     );
   }

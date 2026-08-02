@@ -9,6 +9,8 @@ import { t } from "../lib/labels";
 import { milkRateWarning } from "../lib/validators";
 import EmptyState from "./EmptyState";
 import { SuccessCheckmark } from "./SuccessAnimation";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -154,6 +156,7 @@ export default function MilkCollectionSection({
   const [rates, setRates] = useState<MilkRate[]>([]);
   const [collections, setCollections] = useState<MilkCollection[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchRates();
@@ -615,16 +618,18 @@ export default function MilkCollectionSection({
     setSavingOcr(false);
   };
 
-  const deleteCollection = async (cid: string) => {
-    if (!confirm(t(lang, "deleteConfirmRecord"))) return;
-    const { error } = await supabase.from("milk_collections").delete().eq("id", cid);
-    if (error) {
-      console.error("Error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    } else {
-      fetchCollections();
-      onChanged?.();
-    }
+  const deleteCollection = (cid: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("milk_collections").delete().eq("id", cid);
+      if (error) {
+        console.error("Error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        fetchCollections();
+        onChanged?.();
+      }
+    });
   };
 
   // ---------------- Bulk select + delete ----------------
@@ -635,24 +640,20 @@ export default function MilkCollectionSection({
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
 
-  const bulkDeleteCollections = async () => {
-    if (
-      !window.confirm(
-        lang === "ta" ? `${selectedIds.length} உள்ளீடுகளை நீக்கவா?` : `Delete ${selectedIds.length} entries?`
-      )
-    )
-      return;
-    const { error } = await supabase.from("milk_collections").delete().in("id", selectedIds);
-    if (error) {
-      console.error("Bulk delete error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    } else {
-      toast.success(lang === "ta" ? `✅ ${selectedIds.length} நீக்கப்பட்டது!` : `✅ ${selectedIds.length} deleted!`);
-      setSelectedIds([]);
-      setSelectMode(false);
-      fetchCollections();
-      onChanged?.();
-    }
+  const bulkDeleteCollections = () => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("milk_collections").delete().in("id", selectedIds);
+      if (error) {
+        console.error("Bulk delete error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? `✅ ${selectedIds.length} நீக்கப்பட்டது!` : `✅ ${selectedIds.length} deleted!`);
+        setSelectedIds([]);
+        setSelectMode(false);
+        fetchCollections();
+        onChanged?.();
+      }
+    });
   };
 
   // ---------------- Monthly view + weekly breakdown ----------------
@@ -1388,6 +1389,7 @@ export default function MilkCollectionSection({
       )}
 
       <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

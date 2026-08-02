@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import Sidebar from "../../../components/Sidebar";
 import MotorSharingSection, { type MotorSharingSectionHandle } from "../../../components/MotorSharingSection";
+import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 
@@ -163,6 +165,7 @@ export default function LandDetailPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "location" | "drawing" | "documents">("overview");
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   const showToast = (msg: string) => toast.success(msg);
 
@@ -404,10 +407,14 @@ export default function LandDetailPage() {
     setSavingDrawing(false);
   };
 
-  const deleteDrawing = async (drawingId: string) => {
-    if (!confirm(L("Delete this drawing?", "இந்த வரைபடத்தை நீக்கவா?"))) return;
-    const { error } = await supabase.from("farm_drawings").delete().eq("id", drawingId);
-    if (!error) fetchDrawings();
+  const deleteDrawing = (drawingId: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("farm_drawings").delete().eq("id", drawingId);
+      if (!error) {
+        toast.success(L("Deleted!", "நீக்கப்பட்டது!"));
+        fetchDrawings();
+      }
+    });
   };
 
   const openAddDocument = () => {
@@ -450,10 +457,14 @@ export default function LandDetailPage() {
     setSavingDocument(false);
   };
 
-  const deleteDocument = async (documentId: string) => {
-    if (!confirm(L("Delete this document? Cannot be undone.", "இந்த ஆவணத்தை நீக்கவா?"))) return;
-    const { error } = await supabase.from("land_documents").delete().eq("id", documentId);
-    if (!error) fetchDocuments();
+  const deleteDocument = (documentId: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("land_documents").delete().eq("id", documentId);
+      if (!error) {
+        toast.success(L("Deleted!", "நீக்கப்பட்டது!"));
+        fetchDocuments();
+      }
+    });
   };
 
   const viewDocument = (doc: LandDocument) => {
@@ -1091,6 +1102,7 @@ export default function LandDetailPage() {
         </motion.div>
       )}
       </AnimatePresence>
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

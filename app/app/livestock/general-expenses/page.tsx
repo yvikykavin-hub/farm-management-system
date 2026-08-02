@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
+import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
@@ -64,6 +66,7 @@ export default function GeneralExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [farmFilter, setFarmFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | "Accepted" | "Pending" | "Rejected">("All");
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -156,14 +159,17 @@ export default function GeneralExpensesPage() {
     setSaving(false);
   };
 
-  const deleteExpense = async (id: string) => {
-    if (!confirm(t(lang, "deleteConfirmExpense"))) return;
-    const { error } = await supabase.from("livestock_general_expenses").delete().eq("id", id);
-    if (error) {
-      console.error("Error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    }
-    else fetchAll();
+  const deleteExpense = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("livestock_general_expenses").delete().eq("id", id);
+      if (error) {
+        console.error("Error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        fetchAll();
+      }
+    });
   };
 
   return (
@@ -390,6 +396,8 @@ export default function GeneralExpensesPage() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

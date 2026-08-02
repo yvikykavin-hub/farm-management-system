@@ -298,18 +298,23 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
   };
 
   const clearAllDismissed = () => {
-    // Wipe dismissal history entirely (rather than adding the current items to
-    // it) — with ids now week-scoped, a stale dismissal can never suppress a
-    // tip forever anyway, so this just resets the slate and lets a fresh fetch
-    // repopulate whatever's still genuinely true.
-    localStorage.removeItem(DISMISSED_KEY);
+    // Permanently dismiss every currently-shown notification (rather than
+    // wiping the dismissed list) — ids are week-scoped where it makes sense
+    // to reappear later (crop tips, seasonal tips), so this never silences a
+    // genuinely new alert forever, it just clears what's visible right now.
+    const currentIds = items.map((i) => i.id);
+    const existing = getDismissedIds();
+    const updated = Array.from(new Set([...existing, ...currentIds]));
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(updated));
+
     setItems([]);
 
-    setTimeout(() => {
-      fetchNotifications();
-    }, 500);
+    toast.success(language === "ta" ? "அனைத்தும் அழிக்கப்பட்டன" : "All cleared");
+  };
 
-    toast.success(language === "ta" ? "அனைத்து அறிவிப்புகளும் அழிக்கப்பட்டன" : "Notifications cleared");
+  const handleRefresh = () => {
+    // Keep the dismissed list intact — just regenerate whatever's still true.
+    fetchNotifications();
   };
 
   const severityCls: Record<Severity, string> = {
@@ -353,15 +358,18 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
           <div className="p-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">🔔 {L("Notifications", "அறிவிப்புகள்")}</h3>
             <div className="flex items-center gap-2">
-              {items.length > 0 && <span className="text-xs text-gray-400">{items.length}</span>}
+              {items.length > 0 ? (
+                <button onClick={clearAllDismissed} className="text-xs text-red-400 hover:text-red-600">
+                  {L("Clear all", "அனைத்தும் அழி")}
+                </button>
+              ) : (
+                <span className="text-xs text-gray-400">{L("No notifications", "அறிவிப்புகள் இல்லை")}</span>
+              )}
               <button
-                onClick={() => fetchNotifications()}
+                onClick={handleRefresh}
                 className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg"
               >
                 🔄 {L("Refresh", "புதுப்பி")}
-              </button>
-              <button onClick={clearAllDismissed} className="text-xs text-red-400 hover:text-red-600">
-                {L("Clear all", "அனைத்தும் அழி")}
               </button>
             </div>
           </div>

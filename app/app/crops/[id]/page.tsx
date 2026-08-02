@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../components/Sidebar";
 import CropRecordSection from "../../../components/CropRecordSection";
+import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import toast from "react-hot-toast";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
@@ -630,6 +632,7 @@ export default function CropDetail() {
   const [endDateError, setEndDateError] = useState("");
   const [savingEndDate, setSavingEndDate] = useState(false);
   const [deletingCultivation, setDeletingCultivation] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   const [editingDetails, setEditingDetails] = useState(false);
   const [varietyInput, setVarietyInput] = useState("");
@@ -969,9 +972,9 @@ export default function CropDetail() {
     setSavingDetails(false);
   };
 
-  const deleteCultivation = async () => {
+  const deleteCultivation = () => {
     if (!cultivation) return;
-    if (!confirm(L("Delete this cultivation? This cannot be undone.", "இந்த பயிரை நீக்கவா? இதை மீட்க முடியாது."))) return;
+    confirmDelete(async () => {
     setDeletingCultivation(true);
     try {
       const { error } = await supabase.from("cultivations").delete().eq("id", id);
@@ -985,6 +988,7 @@ export default function CropDetail() {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
       setDeletingCultivation(false);
     }
+    });
   };
 
   const fetchCoconutDetails = async () => {
@@ -1496,11 +1500,12 @@ export default function CropDetail() {
     setSavingNellIncome(false);
   };
 
-  const deleteNellIncome = async (incomeId: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
-    const { error } = await supabase.from("rice_income").delete().eq("id", incomeId);
-    if (error) reportError("Error deleting income", error.message);
-    else fetchNellIncome();
+  const deleteNellIncome = (incomeId: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("rice_income").delete().eq("id", incomeId);
+      if (error) reportError("Error deleting income", error.message);
+      else fetchNellIncome();
+    });
   };
 
   // ---- Fodder corn cutting cycles ----
@@ -1637,11 +1642,12 @@ export default function CropDetail() {
     setSavingOnionSale(false);
   };
 
-  const deleteOnionIncome = async (recordId: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
-    const { error } = await supabase.from("income_records").delete().eq("id", recordId);
-    if (error) reportError("Error deleting income", error.message);
-    else fetchIncomeRecords();
+  const deleteOnionIncome = (recordId: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("income_records").delete().eq("id", recordId);
+      if (error) reportError("Error deleting income", error.message);
+      else fetchIncomeRecords();
+    });
   };
 
   // ---- Onion storage & maintenance expense ----
@@ -1701,11 +1707,12 @@ export default function CropDetail() {
     setSavingOnionStorageExpense(false);
   };
 
-  const deleteOnionStorageExpense = async (recordId: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
-    const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
-    if (error) reportError("Error deleting storage expense", error.message);
-    else fetchExpenseRecords();
+  const deleteOnionStorageExpense = (recordId: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
+      if (error) reportError("Error deleting storage expense", error.message);
+      else fetchExpenseRecords();
+    });
   };
 
   // ---- Kuchi kilangu income ----
@@ -2073,8 +2080,8 @@ export default function CropDetail() {
     setFormValues((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
   };
 
-  const deleteExpenseRecord = async (recordId: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
+  const deleteExpenseRecord = (recordId: string) => {
+    confirmDelete(async () => {
     try {
       const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
@@ -2082,10 +2089,11 @@ export default function CropDetail() {
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
+    });
   };
 
-  const deleteIncomeRecord = async (recordId: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
+  const deleteIncomeRecord = (recordId: string) => {
+    confirmDelete(async () => {
     try {
       const { error } = await supabase.from("income_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
@@ -2093,6 +2101,7 @@ export default function CropDetail() {
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
+    });
   };
 
   const toggleIncomeExpand = (recordId: string) => {
@@ -2266,18 +2275,18 @@ export default function CropDetail() {
     setSavingTurmericSale(false);
   };
 
-  const deleteTurmericSaleGroup = async (group: TurmericSaleGroup) => {
-    const confirmMsg = L("Delete this sale entry?", "இந்த விற்பனை பதிவை நீக்கவா?");
-    if (!confirm(confirmMsg)) return;
+  const deleteTurmericSaleGroup = (group: TurmericSaleGroup) => {
     const ids = [group.bulb?.id, group.finger?.id].filter((v): v is string => !!v);
     if (ids.length === 0) return;
-    try {
-      const { error } = await supabase.from("income_records").delete().in("id", ids);
-      if (error) reportError("Error deleting record", error.message);
-      else fetchIncomeRecords();
-    } catch (err) {
-      reportError("Unexpected error", err instanceof Error ? err.message : String(err));
-    }
+    confirmDelete(async () => {
+      try {
+        const { error } = await supabase.from("income_records").delete().in("id", ids);
+        if (error) reportError("Error deleting record", error.message);
+        else fetchIncomeRecords();
+      } catch (err) {
+        reportError("Unexpected error", err instanceof Error ? err.message : String(err));
+      }
+    });
   };
 
   const totalIncome = incomeRecords.reduce((sum, r) => sum + Number(r.amount), 0);
@@ -4488,6 +4497,8 @@ export default function CropDetail() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

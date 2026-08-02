@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { t } from "../lib/labels";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
 type CowExpense = {
   id: string;
@@ -43,6 +45,7 @@ const labelCls = "block mb-1 text-xs font-medium text-gray-700";
 
 export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
   const [expenses, setExpenses] = useState<CowExpense[]>([]);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchExpenses();
@@ -118,13 +121,17 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
     setSavingExpense(false);
   };
 
-  const deleteExpense = async (eid: string) => {
-    if (!confirm(t(lang, "deleteConfirmExpense"))) return;
-    const { error } = await supabase.from("cow_expenses").delete().eq("id", eid);
-    if (error) {
-      console.error("Error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    } else fetchExpenses();
+  const deleteExpense = (eid: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("cow_expenses").delete().eq("id", eid);
+      if (error) {
+        console.error("Error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        fetchExpenses();
+      }
+    });
   };
 
   // ---------------- Bulk select + delete ----------------
@@ -139,23 +146,19 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
     setExpSelectedIds(expSelectedIds.length === expenses.length ? [] : expenses.map((e) => e.id));
   };
 
-  const handleBulkDeleteExpense = async () => {
-    if (
-      !window.confirm(
-        lang === "ta" ? `${expSelectedIds.length} செலவுகளை நீக்கவா?` : `Delete ${expSelectedIds.length} expenses?`
-      )
-    )
-      return;
-    const { error } = await supabase.from("cow_expenses").delete().in("id", expSelectedIds);
-    if (error) {
-      console.error("Bulk delete error: ", error);
-      toast.error(t(lang, "saveFailedMessage"));
-    } else {
-      toast.success(lang === "ta" ? `✅ ${expSelectedIds.length} நீக்கப்பட்டன` : `✅ ${expSelectedIds.length} deleted`);
-      setExpSelectedIds([]);
-      setExpSelectMode(false);
-      fetchExpenses();
-    }
+  const handleBulkDeleteExpense = () => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("cow_expenses").delete().in("id", expSelectedIds);
+      if (error) {
+        console.error("Bulk delete error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        toast.success(lang === "ta" ? `✅ ${expSelectedIds.length} நீக்கப்பட்டன` : `✅ ${expSelectedIds.length} deleted`);
+        setExpSelectedIds([]);
+        setExpSelectMode(false);
+        fetchExpenses();
+      }
+    });
   };
 
   return (
@@ -320,6 +323,8 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
           </div>
         </div>
       )}
+
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

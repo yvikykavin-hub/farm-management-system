@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../../components/Sidebar";
+import DeleteConfirmDialog from "../../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../../lib/supabase";
 import { t } from "../../../../lib/labels";
 import { useLang } from "../../../../lib/useLang";
@@ -71,6 +73,7 @@ export default function CowDetailPage() {
   const [editingOverview, setEditingOverview] = useState(false);
   const [ovForm, setOvForm] = useState<Record<string, string>>({});
   const [savingOverview, setSavingOverview] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   const startEditOverview = () => {
     if (!cow) return;
@@ -127,17 +130,17 @@ export default function CowDetailPage() {
     setSavingOverview(false);
   };
 
-  const handleDeleteAnimal = async () => {
-    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+  const handleDeleteAnimal = () => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("cows").delete().eq("id", id);
 
-    const { error } = await supabase.from("cows").delete().eq("id", id);
-
-    if (error) {
-      toast.error(t(lang, "couldNotDelete"));
-    } else {
-      toast.success(t(lang, "deletedSuccessfully"));
-      router.push("/livestock/cows");
-    }
+      if (error) {
+        toast.error(t(lang, "couldNotDelete"));
+      } else {
+        toast.success(t(lang, "deletedSuccessfully"));
+        router.push("/livestock/cows");
+      }
+    });
   };
 
   if (loading) {
@@ -284,6 +287,7 @@ export default function CowDetailPage() {
           </div>
         </div>
       </main>
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

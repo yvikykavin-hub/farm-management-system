@@ -8,6 +8,8 @@ import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
 import PullToRefresh from "../../../components/PullToRefresh";
 import { SuccessCheckmark } from "../../../components/SuccessAnimation";
+import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import MilkCollectionSection from "../../../components/MilkCollectionSection";
 import MilkIncomeSection from "../../../components/MilkIncomeSection";
 import CattleExpensesSection from "../../../components/CattleExpensesSection";
@@ -97,6 +99,7 @@ export default function CowsListPage() {
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchAll();
@@ -166,17 +169,17 @@ export default function CowsListPage() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(t(lang, "deleteConfirmAnimal"))) return;
+  const handleDelete = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("cows").delete().eq("id", id);
 
-    const { error } = await supabase.from("cows").delete().eq("id", id);
-
-    if (error) {
-      toast.error(t(lang, "couldNotDelete"));
-    } else {
-      toast.success(t(lang, "deletedSuccessfully"));
-      fetchAll();
-    }
+      if (error) {
+        toast.error(t(lang, "couldNotDelete"));
+      } else {
+        toast.success(t(lang, "deletedSuccessfully"));
+        fetchAll();
+      }
+    });
   };
 
   const saveCow = async () => {
@@ -561,6 +564,7 @@ export default function CowsListPage() {
       )}
 
       <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

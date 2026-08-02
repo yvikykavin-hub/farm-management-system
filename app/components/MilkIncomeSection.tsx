@@ -2,10 +2,13 @@
 
 import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { supabase } from "../lib/supabase";
-import ExportButton from "./ExportButton";
 import EmptyState from "./EmptyState";
 import { SuccessCheckmark } from "./SuccessAnimation";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { t } from "../lib/labels";
 
 type MilkPayment = {
@@ -61,6 +64,8 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
   const [payments, setPayments] = useState<MilkPayment[]>([]);
   const [collections, setCollections] = useState<MilkCollectionRow[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchPayments();
@@ -240,13 +245,96 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
     setSavingPayment(false);
   };
 
-  const deletePayment = async (pid: string) => {
-    if (!confirm(t(lang, "deleteConfirmPayment"))) return;
-    const { error } = await supabase.from(paymentsTable).delete().eq("id", pid);
-    if (error) {
-      console.error("Error: ", error);
+  const deletePayment = (pid: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from(paymentsTable).delete().eq("id", pid);
+      if (error) {
+        console.error("Error: ", error);
+        toast.error(t(lang, "saveFailedMessage"));
+      } else {
+        fetchPayments();
+        toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+      }
+    });
+  };
+
+  // ---------------- Excel export (current month range) ----------------
+  const handleExport = async () => {
+    const hasPayments = monthPayments.length > 0;
+    const hasCollections = monthCollections.length > 0;
+
+    if (!hasPayments && !hasCollections) {
+      toast.error(lang === "ta" ? "இந்த மாதத்தில் தரவு இல்லை" : "No data found for selected month");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const wb = XLSX.utils.book_new();
+
+      if (hasPayments) {
+        const paymentSheet = monthPayments.map((p) => ({
+          "Payment Date": p.payment_date,
+          "Period From": p.period_from || "",
+          "Period To": p.period_to || "",
+          "Expected (₹)": Number(p.expected_amount || 0),
+          "Received (₹)": Number(p.received_amount || 0),
+          "Difference (₹)": Number(p.expected_amount || 0) - Number(p.received_amount || 0),
+          "Status": p.payment_status || "",
+          "Remarks": p.remarks || "",
+        }));
+        const ws1 = XLSX.utils.json_to_sheet(paymentSheet);
+        XLSX.utils.book_append_sheet(wb, ws1, "Payments");
+      }
+
+      if (hasCollections) {
+        const collectionSheet = monthCollections.map((c) => {
+          const litres = (Number(c.morning_litres) || 0) + (Number(c.evening_litres) || 0);
+          const income = rowIncome(c);
+          return {
+            "Date": c.collection_date,
+            "Morning (L)": Number(c.morning_litres) || 0,
+            "Evening (L)": Number(c.evening_litres) || 0,
+            "Total (L)": litres,
+            "Rate (₹/L)": Number(c.rate_per_litre) || 0,
+            "Income (₹)": Number(income.toFixed(2)),
+          };
+        });
+        const ws2 = XLSX.utils.json_to_sheet(collectionSheet);
+        XLSX.utils.book_append_sheet(wb, ws2, "Daily Collection");
+      }
+
+      const summarySheet = [
+        {
+          "Month": getMonthName(),
+          "Animal Type": animalType === "buffalo" ? "Buffalo" : "Cow",
+          "Total Litres": Number(monthTotalLitres.toFixed(1)),
+          "Expected Income (₹)": Number(monthTotalExpected.toFixed(2)),
+          "Total Received (₹)": Number(monthTotalReceived.toFixed(2)),
+          "Outstanding (₹)": Number(monthOutstanding.toFixed(2)),
+          "Days Recorded": monthCollections.length,
+          "Payments Made": monthPayments.length,
+        },
+      ];
+      const ws3 = XLSX.utils.json_to_sheet(summarySheet);
+      XLSX.utils.book_append_sheet(wb, ws3, "Summary");
+
+      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const monthStr = new Date(incomeYear, incomeMonth)
+        .toLocaleString("en-IN", { month: "short", year: "numeric" })
+        .replace(" ", "-");
+
+      saveAs(blob, `Milk-Income-${animalType}-${monthStr}.xlsx`);
+      toast.success(lang === "ta" ? "✅ Excel பதிவிறக்கப்பட்டது!" : "✅ Excel downloaded!");
+    } catch (err) {
+      console.error("Export error:", err);
       toast.error(t(lang, "saveFailedMessage"));
-    } else fetchPayments();
+    }
+    setExporting(false);
   };
 
   return (
@@ -310,7 +398,13 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
             )}
           </h2>
           <div className="flex items-center gap-2">
-            <ExportButton data={payments} filename={`${animalType === "cow" ? t(lang, "cowMilk") : t(lang, "buffaloMilk")}-Payments`} sheetName="Milk Payments" language={lang} />
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-green-50 transition min-h-[44px] sm:min-h-0"
+            >
+              {exporting ? "..." : `📤 ${t(lang, "export")}`}
+            </button>
             <button onClick={openAddPayment} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors min-h-[44px] sm:min-h-0">
               + {t(lang, "addPayment")}
             </button>
@@ -594,6 +688,7 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
       )}
 
       <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "பணம் சேமிக்கப்பட்டது!" : "Payment saved!"} />
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }

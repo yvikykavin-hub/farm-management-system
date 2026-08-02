@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "../../../../components/Sidebar";
 import MachineryRecordSection from "../../../../components/MachineryRecordSection";
+import DeleteConfirmDialog from "../../../../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../../lib/supabase";
 import { useLang } from "../../../../lib/useLang";
 
@@ -283,6 +285,7 @@ function OverviewTab({
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   const startEdit = () => {
     setForm({
@@ -340,15 +343,16 @@ function OverviewTab({
     setSaving(false);
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(L("Delete this tractor? This cannot be undone.", "இந்த டிராக்டரை நீக்கவா? இதை மீட்டெடுக்க முடியாது."))) return;
-    const { error } = await supabase.from("tractors").update({ is_active: false }).eq("id", tractor.id);
-    if (error) {
-      toast.error(L("Could not delete", "நீக்க முடியவில்லை"));
-    } else {
-      toast.success(L("Deleted successfully!", "நீக்கப்பட்டது!"));
-      router.push("/machinery/tractor");
-    }
+  const handleDelete = () => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("tractors").update({ is_active: false }).eq("id", tractor.id);
+      if (error) {
+        toast.error(L("Could not delete", "நீக்க முடியவில்லை"));
+      } else {
+        toast.success(L("Deleted successfully!", "நீக்கப்பட்டது!"));
+        router.push("/machinery/tractor");
+      }
+    });
   };
 
   const oilBannerBg =
@@ -464,6 +468,7 @@ function OverviewTab({
         </div>
       )}
     </div>
+    <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={L("en", "ta")} />
     </div>
   );
 }
@@ -479,6 +484,7 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchRecords();
@@ -546,10 +552,11 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
-    const { error } = await supabase.from("tractor_diesel").delete().eq("id", id);
-    if (!error) fetchRecords();
+  const remove = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("tractor_diesel").delete().eq("id", id);
+      if (!error) fetchRecords();
+    });
   };
 
   return (
@@ -645,6 +652,7 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
           </div>
         </div>
       )}
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={L("en", "ta")} />
     </div>
   );
 }
@@ -675,6 +683,7 @@ function UsageTab({
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   const durationHoursRaw = startTime && endTime ? computeDurationHours(startTime, endTime) : 0;
   const durationValid = durationHoursRaw > 0;
@@ -744,10 +753,11 @@ function UsageTab({
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(L("Delete this record?", "இந்த பதிவை நீக்கவா?"))) return;
-    const { error } = await supabase.from("tractor_usage").delete().eq("id", id);
-    if (!error) refetch();
+  const remove = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("tractor_usage").delete().eq("id", id);
+      if (!error) refetch();
+    });
   };
 
   // usage is sorted ascending by date from parent; compute cumulative hours
@@ -864,6 +874,7 @@ function UsageTab({
           </div>
         </div>
       )}
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={L("en", "ta")} />
     </div>
   );
 }
@@ -899,6 +910,7 @@ function EngineOilTab({
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
   const [existingHours, setExistingHours] = useState<number | null>(null);
 
   const totalSpent = engineOil.reduce((s, r) => s + Number(r.amount), 0);
@@ -954,10 +966,11 @@ function EngineOilTab({
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(L("Delete this record? This will affect the oil change counter.", "இந்த பதிவை நீக்கவா? இது ஆயில் கவுண்டரை பாதிக்கும்."))) return;
-    const { error } = await supabase.from("tractor_engine_oil").delete().eq("id", id);
-    if (!error) refetch();
+  const remove = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("tractor_engine_oil").delete().eq("id", id);
+      if (!error) refetch();
+    });
   };
 
   if (loadingShared) {
@@ -1068,6 +1081,7 @@ function EngineOilTab({
           </div>
         </div>
       )}
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={L("en", "ta")} />
     </div>
   );
 }
@@ -1173,6 +1187,7 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchPhotos();
@@ -1223,10 +1238,11 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(L("Delete this photo?", "இந்த புகைப்படத்தை நீக்கவா?"))) return;
-    const { error } = await supabase.from("tractor_photos").delete().eq("id", id);
-    if (!error) fetchPhotos();
+  const remove = (id: string) => {
+    confirmDelete(async () => {
+      const { error } = await supabase.from("tractor_photos").delete().eq("id", id);
+      if (!error) fetchPhotos();
+    });
   };
 
   return (
@@ -1317,6 +1333,7 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
           </div>
         </div>
       )}
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={L("en", "ta")} />
     </div>
   );
 }

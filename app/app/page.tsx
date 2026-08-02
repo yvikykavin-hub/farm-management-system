@@ -7,6 +7,8 @@ import Sidebar from "../components/Sidebar";
 import { StaggerContainer, StaggerItem } from "../components/AnimatedContainer";
 import { SuccessCheckmark } from "../components/SuccessAnimation";
 import EmptyState from "../components/EmptyState";
+import DeleteConfirmDialog from "../components/DeleteConfirmDialog";
+import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { SkeletonDashboard } from "../components/Skeleton";
 import DarkModeToggle from "../components/DarkModeToggle";
 import NotificationBell from "../components/NotificationBell";
@@ -48,6 +50,7 @@ export default function Dashboard() {
   const [hasMotor, setHasMotor] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
   useEffect(() => {
     fetchFarms();
@@ -107,22 +110,18 @@ export default function Dashboard() {
     setSaving(false);
   };
 
-  const deleteFarm = async (e: React.MouseEvent, farm: Farm) => {
+  const deleteFarm = (e: React.MouseEvent, farm: Farm) => {
     e.preventDefault();
     e.stopPropagation();
-    const confirmed = window.confirm(
-      lang === "ta"
-        ? `${farm.name} நீக்கவா? இதை மீட்டெடுக்க முடியாது.`
-        : `Delete ${farm.name}? This cannot be undone.`
-    );
-    if (!confirmed) return;
-    const { error } = await supabase.from("farms").delete().eq("id", farm.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(lang === "ta" ? "நிலம் நீக்கப்பட்டது" : "Farm deleted successfully");
-    fetchFarms();
+    confirmDelete(async () => {
+      const { error } = await supabase.from("farms").delete().eq("id", farm.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(lang === "ta" ? "நிலம் நீக்கப்பட்டது" : "Farm deleted successfully");
+      fetchFarms();
+    });
   };
 
   const totalArea = farms.reduce((sum, f) => sum + Number(f.total_area), 0);
@@ -322,6 +321,7 @@ export default function Dashboard() {
       </main>
       <ChatWidget language={lang} />
       <SuccessCheckmark show={showSuccess} message={lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved!"} />
+      <DeleteConfirmDialog isOpen={deleteOpen} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} language={lang} />
     </div>
   );
 }
