@@ -118,7 +118,7 @@ export default function LivestockLandingPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">{t(lang, "livestock")}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t(lang, "livestock")}</h1>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"

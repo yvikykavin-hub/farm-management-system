@@ -204,10 +204,10 @@ export default function Dashboard() {
                 <div className={`${card.bg} rounded-2xl p-5 border border-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}>
                   <div className="absolute top-0 right-0 w-20 h-20 bg-white/40 rounded-full -mr-8 -mt-8" />
                   <div className="flex justify-between items-start mb-1">
-                    <p className="text-xs text-gray-700">{card.label}</p>
+                    <p className="text-sm text-gray-700">{card.label}</p>
                     <span className="text-base">{card.icon}</span>
                   </div>
-                  <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
+                  <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
                 </div>
               </StaggerItem>
             ))}

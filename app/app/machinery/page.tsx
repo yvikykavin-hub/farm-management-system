@@ -128,7 +128,7 @@ export default function MachineryLandingPage() {
           </Link>
 
           <div className="flex justify-between items-center">
-            <h1 className="text-xl font-bold text-primary">{L("Machinery Management", "இயந்திர மேலாண்மை")}</h1>
+            <h1 className="text-2xl font-bold text-primary">{L("Machinery Management", "இயந்திர மேலாண்மை")}</h1>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
