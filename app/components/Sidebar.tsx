@@ -95,22 +95,27 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                   href={item.href}
                   title={item.label}
                   onClick={() => setIsOpen(false)}
-                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
-                    isActive ? "bg-white/20 text-white shadow-sm" : "text-green-200 hover:bg-white/10 hover:text-white"
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group overflow-hidden ${
+                    isActive ? "bg-white/15 text-white" : "text-green-200 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  {/* Active left border indicator */}
+                  {/* Fluorescent green left glow - ACTIVE */}
                   {isActive && (
                     <motion.div
-                      layoutId="activeIndicator"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"
+                      layoutId="activeGlow"
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-[#4ade80] shadow-[0_0_8px_2px_#4ade80,0_0_16px_4px_#22c55e80]"
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                   )}
 
+                  {/* Left glow spreading effect */}
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-green-400/20 to-transparent rounded-l-xl pointer-events-none" />
+                  )}
+
                   {/* Icon */}
                   <span
-                    className={`text-lg flex-shrink-0 transition-transform duration-200 ${
+                    className={`text-lg flex-shrink-0 transition-transform duration-200 z-10 ${
                       isActive ? "scale-110" : "group-hover:scale-105"
                     }`}
                   >
@@ -118,14 +123,14 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                   </span>
 
                   {/* Label */}
-                  <span className="truncate text-sm">{lang === "ta" ? item.labelTa : item.label}</span>
+                  <span className="truncate text-sm z-10">{lang === "ta" ? item.labelTa : item.label}</span>
 
-                  {/* Active dot on right */}
+                  {/* Active dot right */}
                   {isActive && (
                     <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-80 flex-shrink-0"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="ml-auto w-1.5 h-1.5 rounded-full bg-[#4ade80] shadow-[0_0_4px_2px_#4ade80] flex-shrink-0 z-10"
                     />
                   )}
                 </Link>
