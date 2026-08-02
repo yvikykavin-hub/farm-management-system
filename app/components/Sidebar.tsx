@@ -103,7 +103,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                   {isActive && (
                     <motion.div
                       layoutId="activeGlow"
-                      className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl bg-[#4ade80] shadow-[1px_0_4px_0px_#4ade8060]"
+                      className="absolute left-0 -top-1 -bottom-1 w-[3px] bg-[#4ade80] shadow-[1px_0_4px_0px_#4ade8060]"
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                   )}
