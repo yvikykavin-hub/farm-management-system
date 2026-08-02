@@ -124,7 +124,7 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         supabase.from("milk_payments").select("id").eq("payment_status", "pending"),
         supabase.from("cultivations").select("id, farm_id, crop_type, start_date").is("end_date", null),
         supabase.from("farms").select("id, name"),
-        supabase.from("motor_sharing").select("*, farms(name, name_tamil)").eq("is_shared", true),
+        supabase.from("motor_sharing").select("*, motor_sharing_neighbors(*), farms(name, name_tamil)").eq("is_shared", true),
       ]);
 
       const detected: NotificationItem[] = [];
@@ -269,6 +269,75 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
                   : `Starts in ${Math.round(hoursUntilMyTurn)} hour(s)`,
             });
           }
+        }
+      });
+
+      // Motor sharing — whose turn is TODAY, walking the rotation day-by-day
+      // from the configured start (mirrors MotorSharingSection's getTodaysTurn).
+      // The id is date-scoped so dismissing today's card doesn't hide tomorrow's.
+      (motorData ?? []).forEach((motor) => {
+        if (!motor.current_turn_start) return;
+
+        const allParticipants = [
+          { name: "me", days: Number(motor.current_turn_days) || 2 },
+          ...(motor.motor_sharing_neighbors || []).map((n: { partner_name?: string; neighbor_name?: string; turn_days: number }) => ({
+            name: n.partner_name || n.neighbor_name || "Neighbor",
+            days: Number(n.turn_days) || 2,
+          })),
+        ];
+
+        const startIndex = allParticipants.findIndex((p) => p.name === motor.current_turn_owner);
+        if (startIndex === -1) return;
+
+        let currentDate = new Date(motor.current_turn_start);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let participantIndex = startIndex;
+        let todayOwner = allParticipants[startIndex];
+        let daysRemaining = 0;
+        let iterations = 0;
+
+        while (currentDate <= today && iterations < 365) {
+          const participant = allParticipants[participantIndex % allParticipants.length];
+
+          const endDate = new Date(currentDate);
+          endDate.setDate(endDate.getDate() + participant.days);
+          endDate.setHours(18, 0, 0, 0);
+
+          if (today < endDate) {
+            todayOwner = participant;
+            daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            break;
+          }
+
+          currentDate = new Date(endDate);
+          participantIndex++;
+          iterations++;
+        }
+
+        const motorFarmName = getFarmName(motor.farms as FarmRef);
+        const todayStr = today.toISOString().split("T")[0];
+
+        if (todayOwner.name === "me") {
+          detected.push({
+            id: `motor-my-turn-${motor.id}-${todayStr}`,
+            severity: "warning",
+            icon: "🚰",
+            title: lang === "ta" ? `${motorFarmName} - இன்று உங்கள் முறை!` : `${motorFarmName} - Today is Your Turn!`,
+            message:
+              lang === "ta"
+                ? `${daysRemaining} நாள் உள்ளது - இப்போதே பாசனம் செய்யலாம்`
+                : `${daysRemaining} day(s) left - Water your fields now`,
+          });
+        } else {
+          detected.push({
+            id: `motor-neighbor-turn-${motor.id}-${todayStr}`,
+            severity: "info",
+            icon: "💧",
+            title: lang === "ta" ? `${motorFarmName} - இன்று ${todayOwner.name} முறை` : `${motorFarmName} - Today is ${todayOwner.name}'s Turn`,
+            message: lang === "ta" ? `${daysRemaining} நாளில் உங்கள் முறை வரும்` : `Your turn comes in ${daysRemaining} day(s)`,
+          });
         }
       });
 
