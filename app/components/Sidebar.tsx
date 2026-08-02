@@ -41,7 +41,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-40 bg-primary text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-lg text-lg"
+        className="no-press lg:hidden fixed top-3 left-3 z-40 bg-primary text-white w-9 h-9 rounded-lg flex items-center justify-center shadow-lg text-lg"
         title="Menu"
       >
         ☰
@@ -63,7 +63,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
         {/* Close button, mobile only */}
         <button
           onClick={() => setIsOpen(false)}
-          className="lg:hidden absolute top-4 right-4 text-green-200 hover:text-white text-xl"
+          className="no-press lg:hidden absolute top-4 right-4 text-green-200 hover:text-white text-xl"
         >
           ✕
         </button>
@@ -119,7 +119,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={toggleLang}
-              className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white text-sm font-medium transition-all duration-200 min-w-0"
+              className="no-press flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white text-sm font-medium transition-all duration-200 min-w-0"
             >
               <span className="text-lg">🌐</span>
               <span className="truncate">{lang === "ta" ? "English" : "தமிழ்"}</span>
@@ -128,7 +128,7 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
           </div>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 text-sm font-medium transition-all duration-200"
+            className="no-press w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 text-sm font-medium transition-all duration-200"
           >
             <span className="text-lg">🚪</span>
             <span>{lang === "ta" ? "வெளியேறு" : "Logout"}</span>

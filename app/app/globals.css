@@ -72,6 +72,24 @@ body {
   50% { transform: translateY(-8px); }
 }
 
+/* Quick Win 1: consistent press feedback on every button in the app.
+   .no-press opts specific buttons out (e.g. the sidebar, which was
+   deliberately reverted to a static, motion-free nav earlier). The extra
+   class in the selector gives it higher specificity than `button:active`
+   regardless of source order, so it always wins. */
+button {
+  transition: transform 100ms ease, opacity 100ms ease;
+}
+button:active {
+  transform: scale(0.95);
+}
+button:disabled:active {
+  transform: scale(1);
+}
+button.no-press:active {
+  transform: none;
+}
+
 /* ---------------------------------------------------------------------
    Dark mode
    -------------------------------------------------------------------
