@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { clearLockedCookie } from "../lib/lockCookie";
@@ -94,13 +95,39 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                   href={item.href}
                   title={item.label}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActive ? "bg-white/15 text-white shadow-sm" : "text-green-200 hover:bg-white/10 hover:text-white"
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    isActive ? "bg-white/20 text-white shadow-sm" : "text-green-200 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <span className="text-lg flex-shrink-0">{item.icon}</span>
+                  {/* Active left border indicator */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeIndicator"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+
+                  {/* Icon */}
+                  <span
+                    className={`text-lg flex-shrink-0 transition-transform duration-200 ${
+                      isActive ? "scale-110" : "group-hover:scale-105"
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+
+                  {/* Label */}
                   <span className="truncate text-sm">{lang === "ta" ? item.labelTa : item.label}</span>
-                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-70" />}
+
+                  {/* Active dot on right */}
+                  {isActive && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-80 flex-shrink-0"
+                    />
+                  )}
                 </Link>
               );
             })}
