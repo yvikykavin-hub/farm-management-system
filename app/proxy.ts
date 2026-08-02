@@ -2,7 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { LOCK_COOKIE_NAME } from "./lib/lockCookie";
 
-const PUBLIC_PATHS = ["/login", "/manifest.json", "/forgot-password", "/reset-password", "/privacy-policy"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/manifest.json",
+  "/forgot-password",
+  "/reset-password",
+  "/privacy-policy",
+  "/api/auth/lookup",
+  "/api/auth/verify",
+];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
