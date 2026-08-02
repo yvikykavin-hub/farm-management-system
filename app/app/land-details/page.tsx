@@ -97,7 +97,7 @@ export default function LandDetailsPage() {
               <button
                 onClick={() => fetchFarms(true)}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-all duration-200 border border-green-200"
               >
                 <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
                 {isRefreshing ? L("Refreshing...", "புதுப்பிக்கிறது...") : L("Refresh", "புதுப்பி")}
@@ -137,8 +137,8 @@ export default function LandDetailsPage() {
                     <Link href={`/land-details/${f.id}`}>
                       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer active:scale-[0.99] flex flex-col gap-1.5 h-full">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-bold text-gray-900">🌾 {f.name || "—"}</p>
-                          <span className="text-xs font-semibold text-gray-700">{area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
+                          <p className="text-sm font-semibold text-gray-900">🌾 {f.name || "—"}</p>
+                          <span className="text-xs font-medium text-gray-700">{area ?? "—"} {L("Acres", "ஏக்கர்")}</span>
                         </div>
                         <p className="text-xs text-gray-600">
                           {L("Survey", "சர்வே")}: {f.survey_numbers || "—"} • {L("Patta", "பட்டா")}: {f.patta_number || "—"}

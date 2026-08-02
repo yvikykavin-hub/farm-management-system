@@ -166,7 +166,7 @@ export default function Dashboard() {
                 <span className="text-4xl shrink-0">👨‍🌾</span>
                 <div className="min-w-0">
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t.title}</h1>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t.tagline}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{t.tagline}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -175,7 +175,7 @@ export default function Dashboard() {
                 {/* Language Toggle */}
                 <button
                   onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-                  className="min-h-[44px] px-3 py-2 sm:px-4 sm:py-2 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
+                  className="min-h-[44px] px-3 py-2 sm:px-4 sm:py-2 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-green-50 transition"
                 >
                   {lang === "ta" ? "English" : "தமிழ்"}
                 </button>
@@ -204,10 +204,10 @@ export default function Dashboard() {
                 <div className={`${card.bg} rounded-2xl p-5 border border-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}>
                   <div className="absolute top-0 right-0 w-20 h-20 bg-white/40 rounded-full -mr-8 -mt-8" />
                   <div className="flex justify-between items-start mb-1">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700">{card.label}</p>
+                    <p className="text-xs text-gray-700">{card.label}</p>
                     <span className="text-base">{card.icon}</span>
                   </div>
-                  <p className={`text-lg sm:text-2xl font-bold ${card.color}`}>{card.value}</p>
+                  <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
                 </div>
               </StaggerItem>
             ))}
@@ -287,7 +287,7 @@ export default function Dashboard() {
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-semibold text-sm text-primary truncate">{farm.name}</h3>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mt-0.5">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                               {t.well}: {farm.has_well ? t.yes : t.no} &nbsp;|&nbsp;
                               {t.motor}: {farm.has_motor ? t.yes : t.no}
                             </p>
@@ -295,13 +295,13 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right">
-                            <span className="text-primary font-bold text-sm">{farm.total_area}</span>
-                            <span className="text-primary text-xs font-medium ml-1">{t.acres}</span>
+                            <span className="text-primary text-xs">{farm.total_area}</span>
+                            <span className="text-primary text-xs ml-1">{t.acres}</span>
                           </div>
                           <button
                             onClick={(e) => deleteFarm(e, farm)}
                             title={lang === "ta" ? "நீக்கு" : "Delete"}
-                            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400 hover:text-red-600 text-sm shrink-0 transition-colors"
+                            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400 hover:text-red-600 text-xs font-medium shrink-0 transition-colors"
                           >
                             🗑️
                           </button>

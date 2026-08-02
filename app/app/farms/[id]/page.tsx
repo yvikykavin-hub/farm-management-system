@@ -307,7 +307,7 @@ export default function FarmDetail() {
           <Link href="/" className="text-primary hover:text-primary text-sm font-semibold">
             ← {t.back}
           </Link>
-          <h1 className="text-base font-bold text-primary">{farm?.name}</h1>
+          <h1 className="text-xl font-bold text-primary">{farm?.name}</h1>
           <button
             onClick={() => setLang(lang === "ta" ? "en" : "ta")}
             className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
@@ -328,49 +328,49 @@ export default function FarmDetail() {
 
             <div className="overflow-y-auto flex-1">
               <div className="mb-1">
-                <label className="text-xs font-medium text-gray-600">{t.farmName}</label>
+                <label className="text-xs text-gray-600">{t.farmName}</label>
                 <input
                   type="text"
                   placeholder={t.farmNamePlaceholder}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white text-gray-900 placeholder:text-sm"
                 />
               </div>
               <div className="mb-1">
-                <label className="text-xs font-medium text-gray-600">{t.totalArea}</label>
+                <label className="text-xs text-gray-600">{t.totalArea}</label>
                 <input
                   type="number"
                   step="0.01"
                   placeholder={t.acresPlaceholder}
                   value={totalArea}
                   onChange={(e) => setTotalArea(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white text-gray-900 placeholder:text-sm"
                 />
               </div>
               <div className="mb-1">
-                <label className="text-xs font-medium text-gray-600">{t.surveyNumbers}</label>
+                <label className="text-xs text-gray-600">{t.surveyNumbers}</label>
                 <input
                   type="text"
                   placeholder={t.surveyNumbersPlaceholder}
                   value={surveyNumbers}
                   onChange={(e) => setSurveyNumbers(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white text-gray-900 placeholder:text-sm"
                 />
               </div>
               <div className="mb-1">
-                <label className="text-xs font-medium text-gray-600">{t.pattaNumber}</label>
+                <label className="text-xs text-gray-600">{t.pattaNumber}</label>
                 <input
                   type="text"
                   placeholder={t.pattaNumberPlaceholder}
                   value={pattaNumber}
                   onChange={(e) => setPattaNumber(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white text-gray-900 placeholder:text-sm"
                 />
               </div>
 
               <div className="flex items-center gap-2 mt-2">
-                <label className="text-sm font-medium text-gray-700">{t.well}</label>
+                <label className="text-xs text-gray-700">{t.well}</label>
                 <TogglePill value={hasWell} onChange={setHasWell} yesLabel={t.yes} noLabel={t.no} />
               </div>
               <div className="mt-1">
@@ -380,12 +380,12 @@ export default function FarmDetail() {
                   placeholder={t.wellDepthPlaceholder}
                   value={wellDepth}
                   onChange={(e) => setWellDepth(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white text-gray-900 placeholder:text-sm"
                 />
               </div>
 
               <div className="flex items-center gap-2 mt-2">
-                <label className="text-sm font-medium text-gray-700">{t.motor}</label>
+                <label className="text-xs text-gray-700">{t.motor}</label>
                 <TogglePill value={hasMotor} onChange={setHasMotor} yesLabel={t.yes} noLabel={t.no} />
               </div>
               <div className="mt-1">
@@ -395,7 +395,7 @@ export default function FarmDetail() {
                   placeholder={t.motorDetailsPlaceholder}
                   value={motorDetails}
                   onChange={(e) => setMotorDetails(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white text-gray-900 placeholder:text-xs"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white text-gray-900 placeholder:text-sm"
                 />
               </div>
 
@@ -405,7 +405,7 @@ export default function FarmDetail() {
             <button
               onClick={saveFarm}
               disabled={saving}
-              className="shrink-0 w-full bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-1.5 text-xs font-semibold transition shadow-sm"
+              className="shrink-0 w-full bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-1.5 text-sm font-medium transition shadow-sm"
             >
               {saving ? "..." : t.saveChanges}
             </button>
@@ -418,7 +418,7 @@ export default function FarmDetail() {
               <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                 <span className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center text-xs">🌾</span>
                 {t.cultivations}
-                <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">
                   {activeCultivationsCount} {t.activeCount}, {doneCultivationsCount} {t.doneCount}
                 </span>
               </h2>
@@ -428,7 +428,7 @@ export default function FarmDetail() {
                   <select
                     value={cropType}
                     onChange={(e) => setCropType(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-sm min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option className="text-gray-900" value="">{t.selectCrop}</option>
                     {CROP_TYPES.map((c) => (
@@ -445,7 +445,7 @@ export default function FarmDetail() {
                     placeholder={t.acresPlaceholder}
                     value={cropArea}
                     onChange={(e) => setCropArea(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs w-24 truncate placeholder:text-xs placeholder:text-gray-500 placeholder:truncate focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-sm w-24 truncate placeholder:text-sm placeholder:text-gray-500 placeholder:truncate focus:outline-none focus:ring-2 focus:ring-primary"
                   />
 
                   <input
@@ -453,13 +453,13 @@ export default function FarmDetail() {
                     title={t.startDate}
                     value={cropStartDate}
                     onChange={(e) => setCropStartDate(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="bg-white border border-gray-300 text-gray-900 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
 
                   <button
                     onClick={addCultivation}
                     disabled={addingCultivation || isFull}
-                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-3 py-1.5 text-sm font-semibold transition shadow-sm shrink-0"
+                    className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm shrink-0"
                   >
                     {addingCultivation ? "..." : t.addCultivation}
                   </button>
@@ -485,7 +485,7 @@ export default function FarmDetail() {
             </div>
 
             {cultivations.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-sm font-medium gap-2">
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-sm font-semibold gap-2">
                 <span className="text-3xl">🌱</span>
                 {t.noCultivations}
               </div>
@@ -508,11 +508,11 @@ export default function FarmDetail() {
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
                             {isDone ? (
-                              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                              <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">
                                 ✓ {t.statusDone}
                               </span>
                             ) : (
-                              <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                              <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
                                 ● {t.statusActive}
                               </span>
                             )}

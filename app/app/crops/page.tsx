@@ -140,7 +140,7 @@ export default function CropsPage() {
               <button
                 onClick={() => fetchAll(true)}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-all duration-200 border border-green-200"
               >
                 <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
                 {isRefreshing
@@ -242,7 +242,7 @@ export default function CropsPage() {
                 </div>
 
                 {filteredCompleted.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">
+                  <p className="text-sm font-semibold text-gray-500 text-center py-8">
                     {L("No completed crops", "முடிந்த பயிர்கள் இல்லை")} ✅
                   </p>
                 ) : (

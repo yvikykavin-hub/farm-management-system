@@ -118,7 +118,7 @@ const convertToBase64 = (file: File): Promise<string> => {
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
-const labelCls = "block mb-1 text-xs font-medium text-gray-700";
+const labelCls = "block mb-1 text-xs text-gray-700";
 
 function TogglePill({
   value,
@@ -513,7 +513,7 @@ export default function LandDetailPage() {
             <Link href="/land-details" className="text-primary hover:text-primary text-sm font-semibold">
               ← {L("Back", "திரும்பு")}
             </Link>
-            <h1 className="text-lg font-bold text-primary text-center">{farm?.name}</h1>
+            <h1 className="text-xl font-bold text-primary text-center">{farm?.name}</h1>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
@@ -532,7 +532,7 @@ export default function LandDetailPage() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
                   activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
@@ -576,7 +576,7 @@ export default function LandDetailPage() {
                 <button
                   onClick={saveBasicInfo}
                   disabled={savingBasic}
-                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition shadow-sm"
                 >
                   {savingBasic ? "..." : L("Save", "சேமி")}
                 </button>
@@ -613,7 +613,7 @@ export default function LandDetailPage() {
                 <button
                   onClick={saveSoilInfo}
                   disabled={savingSoil}
-                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition shadow-sm"
                 >
                   {savingSoil ? "..." : L("Save", "சேமி")}
                 </button>
@@ -634,7 +634,7 @@ export default function LandDetailPage() {
                 <button
                   onClick={saveBasicInfo}
                   disabled={savingBasic}
-                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition shadow-sm"
                 >
                   {savingBasic ? "..." : L("Save", "சேமி")}
                 </button>
@@ -644,7 +644,7 @@ export default function LandDetailPage() {
                 <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Well & Motor", "கிணறு & மோட்டார்")}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">{L("Well", "கிணறு")}</label>
+                    <label className="text-xs text-gray-700">{L("Well", "கிணறு")}</label>
                     <TogglePill value={well} onChange={setWell} yesLabel={L("Yes", "உண்டு")} noLabel={L("No", "இல்லை")} />
                   </div>
                   {well && (
@@ -660,7 +660,7 @@ export default function LandDetailPage() {
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">{L("Motor", "மோட்டார்")}</label>
+                    <label className="text-xs text-gray-700">{L("Motor", "மோட்டார்")}</label>
                     <TogglePill value={motor} onChange={setMotor} yesLabel={L("Yes", "உண்டு")} noLabel={L("No", "இல்லை")} />
                   </div>
                   {motor && (
@@ -696,7 +696,7 @@ export default function LandDetailPage() {
                 <button
                   onClick={saveWaterInfo}
                   disabled={savingWater}
-                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition shadow-sm"
                 >
                   {savingWater ? "..." : L("Save", "சேமி")}
                 </button>
@@ -711,7 +711,7 @@ export default function LandDetailPage() {
             <div className="bg-white rounded-xl shadow-sm p-6">
 
               <div className="mb-6">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                <label className="text-xs text-gray-700 mb-2 block">
                   {L("Google Maps Link", "கூகுள் வரைபட இணைப்பு")}
                 </label>
                 <div className="flex gap-2">
@@ -742,7 +742,7 @@ export default function LandDetailPage() {
                 <div className="border-2 border-green-200 rounded-xl overflow-hidden bg-green-50">
                   <div className="h-64 bg-gradient-to-br from-green-100 to-emerald-200 flex flex-col items-center justify-center relative overflow-hidden">
                     <div className="text-6xl mb-3 animate-bounce">📍</div>
-                    <p className="text-green-800 font-semibold text-lg">
+                    <p className="text-green-800 font-semibold text-base">
                       {L("Farm Location Saved", "நில இடம் சேமிக்கப்பட்டது")}
                     </p>
                     <div
@@ -782,7 +782,7 @@ export default function LandDetailPage() {
               ) : (
                 <div className="border-2 border-dashed border-gray-200 rounded-xl h-48 flex flex-col items-center justify-center text-center p-6">
                   <div className="text-4xl mb-3">🗺️</div>
-                  <p className="text-gray-500 font-medium">{L("No location saved yet", "இடம் எதுவும் சேமிக்கப்படவில்லை")}</p>
+                  <p className="text-sm font-semibold text-gray-500">{L("No location saved yet", "இடம் எதுவும் சேமிக்கப்படவில்லை")}</p>
                   <p className="text-gray-400 text-xs mt-3">
                     {L("Paste your Google Maps link above to save your farm location", "உங்கள் நிலத்தின் இடத்தை சேமிக்க மேலே கூகுள் வரைபட இணைப்பை ஒட்டவும்")}
                   </p>
@@ -795,7 +795,7 @@ export default function LandDetailPage() {
           {activeTab === "drawing" && (
             <div className="flex flex-col gap-3">
               <div className="flex justify-end">
-                <button onClick={openAddDrawing} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                <button onClick={openAddDrawing} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
                   + {L("Upload Drawing", "வரைபடம் பதிவேற்ற")}
                 </button>
               </div>
@@ -831,8 +831,8 @@ export default function LandDetailPage() {
                           />
                         )}
                         <div className="p-2">
-                          <p className="text-xs font-bold text-gray-900">{d.title}</p>
-                          {d.notes && <p className="text-[11px] text-gray-500 mt-0.5">{d.notes}</p>}
+                          <p className="text-sm font-semibold text-gray-900">{d.title}</p>
+                          {d.notes && <p className="text-xs text-gray-500 mt-0.5">{d.notes}</p>}
                           <div className="flex items-center gap-2 mt-1">
                             {isPdf ? (
                               <button
@@ -842,16 +842,16 @@ export default function LandDetailPage() {
                                     `<iframe src="${d.drawing_data}" width="100%" height="100%" style="border:0"></iframe>`
                                   );
                                 }}
-                                className="text-[11px] text-primary hover:underline"
+                                className="text-xs font-medium text-primary hover:underline"
                               >
                                 📄 {L("View Full PDF", "முழு PDF காண")}
                               </button>
                             ) : (
-                              <button onClick={() => setViewerUrl(d.drawing_data)} className="text-[11px] text-primary hover:underline">
+                              <button onClick={() => setViewerUrl(d.drawing_data)} className="text-xs font-medium text-primary hover:underline">
                                 {L("View Full", "முழுவதும் காண")}
                               </button>
                             )}
-                            <button onClick={() => deleteDrawing(d.id)} className="text-[11px] text-danger hover:underline">
+                            <button onClick={() => deleteDrawing(d.id)} className="text-xs font-medium text-danger hover:underline">
                               {L("Delete", "நீக்கு")}
                             </button>
                           </div>
@@ -868,7 +868,7 @@ export default function LandDetailPage() {
           {activeTab === "documents" && (
             <div className="flex flex-col gap-3">
               <div className="flex justify-end">
-                <button onClick={openAddDocument} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                <button onClick={openAddDocument} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
                   + {L("Upload Document", "ஆவணம் பதிவேற்ற")}
                 </button>
               </div>
@@ -880,10 +880,10 @@ export default function LandDetailPage() {
               ) : documents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="text-5xl mb-4">📄</div>
-                  <h3 className="text-base font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-700">
                     {L("No documents uploaded yet", "ஆவணங்கள் எதுவும் பதிவேற்றப்படவில்லை")}
                   </h3>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-1">
                     {L("Upload your land documents, patta, survey maps etc.", "பட்டா, சர்வே வரைபடம் போன்ற ஆவணங்களை பதிவேற்றுங்கள்")}
                   </p>
                 </div>
@@ -910,17 +910,17 @@ export default function LandDetailPage() {
                           />
                         )}
                         <div className="p-2">
-                          <p className="text-xs font-bold text-gray-900">{d.title}</p>
-                          <span className={`${DOCUMENT_TYPE_BADGE[d.document_type] ?? DOCUMENT_TYPE_BADGE.other} inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1`}>
+                          <p className="text-sm font-semibold text-gray-900">{d.title}</p>
+                          <span className={`${DOCUMENT_TYPE_BADGE[d.document_type] ?? DOCUMENT_TYPE_BADGE.other} inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1`}>
                             {documentTypeLabel(d.document_type)}
                           </span>
-                          {isPdf && <p className="text-[11px] text-gray-500 mt-1 truncate">{d.file_name}</p>}
-                          {d.notes && <p className="text-[11px] text-gray-500 mt-0.5">{d.notes}</p>}
+                          {isPdf && <p className="text-xs text-gray-500 mt-1 truncate">{d.file_name}</p>}
+                          {d.notes && <p className="text-xs text-gray-500 mt-0.5">{d.notes}</p>}
                           <div className="flex items-center gap-2 mt-1">
-                            <button onClick={() => viewDocument(d)} className="text-[11px] text-primary hover:underline">
+                            <button onClick={() => viewDocument(d)} className="text-xs font-medium text-primary hover:underline">
                               👁️ {L("View", "காண")}
                             </button>
-                            <button onClick={() => deleteDocument(d.id)} className="text-[11px] text-danger hover:underline">
+                            <button onClick={() => deleteDocument(d.id)} className="text-xs font-medium text-danger hover:underline">
                               🗑️ {L("Delete", "நீக்கு")}
                             </button>
                           </div>
@@ -959,7 +959,7 @@ export default function LandDetailPage() {
             className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{L("Upload Drawing", "வரைபடம் பதிவேற்ற")}</h2>
+              <h2 className="text-base font-semibold text-primary">{L("Upload Drawing", "வரைபடம் பதிவேற்ற")}</h2>
               <button onClick={() => setDrawingModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -993,12 +993,12 @@ export default function LandDetailPage() {
                   </div>
                 </div>
                 {drawingFile && drawingFile.type !== "application/pdf" && drawingFile.size > MAX_RECOMMENDED_PHOTO_BYTES && (
-                  <p className="text-[11px] text-amber-600 mt-1">
+                  <p className="text-xs text-amber-600 mt-1">
                     ⚠️ {L("Photo is large and may slow the app. Please use a compressed image under 2MB.", "புகைப்படம் பெரியது, செயலியை மெதுவாக்கலாம். 2MB க்கும் குறைவான சுருக்கப்பட்ட படத்தை பயன்படுத்தவும்.")}
                   </p>
                 )}
                 {drawingFile && drawingFile.size > MAX_RECOMMENDED_PDF_BYTES && (
-                  <p className="text-[11px] text-amber-600 mt-1">
+                  <p className="text-xs text-amber-600 mt-1">
                     ⚠️ {L(
                       `File is large (${(drawingFile.size / (1024 * 1024)).toFixed(1)}MB). Large files may slow the app. Consider compressing before uploading.`,
                       `கோப்பு பெரியது (${(drawingFile.size / (1024 * 1024)).toFixed(1)}MB). பெரிய கோப்புகள் செயலியை மெதுவாக்கலாம். பதிவேற்றும் முன் சுருக்கவும்.`
@@ -1017,10 +1017,10 @@ export default function LandDetailPage() {
                 />
               </div>
               <div className="flex gap-2">
-                <button onClick={saveDrawing} disabled={savingDrawing} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={saveDrawing} disabled={savingDrawing} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {savingDrawing ? "..." : L("Save", "சேமி")}
                 </button>
-                <button onClick={() => setDrawingModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setDrawingModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
@@ -1046,7 +1046,7 @@ export default function LandDetailPage() {
             className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{L("Upload Document", "ஆவணம் பதிவேற்ற")}</h2>
+              <h2 className="text-base font-semibold text-primary">{L("Upload Document", "ஆவணம் பதிவேற்ற")}</h2>
               <button onClick={() => setDocumentModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -1090,7 +1090,7 @@ export default function LandDetailPage() {
                   </p>
                 </div>
                 {docFile && docFile.size > MAX_RECOMMENDED_DOCUMENT_BYTES && (
-                  <p className="text-[11px] text-amber-600 mt-1">
+                  <p className="text-xs text-amber-600 mt-1">
                     ⚠️ {L(
                       `File is large (${(docFile.size / (1024 * 1024)).toFixed(1)}MB). Consider compressing.`,
                       `கோப்பு பெரியது (${(docFile.size / (1024 * 1024)).toFixed(1)}MB). சுருக்குவதை பரிசீலிக்கவும்.`
@@ -1108,10 +1108,10 @@ export default function LandDetailPage() {
                 />
               </div>
               <div className="flex gap-2">
-                <button onClick={saveDocument} disabled={savingDocument} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={saveDocument} disabled={savingDocument} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {savingDocument ? "..." : L("Save", "சேமி")}
                 </button>
-                <button onClick={() => setDocumentModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setDocumentModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
