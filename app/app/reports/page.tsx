@@ -440,7 +440,7 @@ export default function ReportsPage() {
               <button
                 onClick={() => fetchAll(true)}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-all duration-200 border border-green-200"
               >
                 <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
                 {isRefreshing ? L("Refreshing...", "புதுப்பிக்கிறது...") : L("Refresh", "புதுப்பி")}
@@ -469,7 +469,7 @@ export default function ReportsPage() {
               {/* Filters */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2">
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-1">{L("Farm", "நிலம்")}</p>
+                  <p className="text-xs text-gray-500 mb-1">{L("Farm", "நிலம்")}</p>
                   <div className="flex flex-wrap gap-2">
                     {farms.map((f) => (
                       <button key={f.id} onClick={() => setSelectedFarms(toggleIn(selectedFarms, f.id))} className={pillCls(selectedFarms.includes(f.id))}>
@@ -479,7 +479,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-1">{L("Crop", "பயிர்")}</p>
+                  <p className="text-xs text-gray-500 mb-1">{L("Crop", "பயிர்")}</p>
                   <div className="flex flex-wrap gap-2">
                     {Object.keys(CROP_LABELS).map((ct) => (
                       <button key={ct} onClick={() => setSelectedCrops(toggleIn(selectedCrops, ct))} className={pillCls(selectedCrops.includes(ct))}>
@@ -489,7 +489,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-1">{L("Year", "ஆண்டு")}</p>
+                  <p className="text-xs text-gray-500 mb-1">{L("Year", "ஆண்டு")}</p>
                   <div className="flex flex-wrap gap-2">
                     {availableYears.map((y) => (
                       <button key={y} onClick={() => setSelectedYears(toggleIn(selectedYears, y))} className={pillCls(selectedYears.includes(y))}>
@@ -499,16 +499,16 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-1">{L("Date Range (optional, overrides Year)", "தேதி வரம்பு (விருப்பம்)")}</p>
+                  <p className="text-xs text-gray-500 mb-1">{L("Date Range (optional, overrides Year)", "தேதி வரம்பு (விருப்பம்)")}</p>
                   <div className="flex gap-2 flex-wrap">
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-900" />
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-900" />
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white text-gray-900" />
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white text-gray-900" />
                   </div>
                 </div>
                 <button
                   onClick={generateReport}
                   disabled={generating}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-xl py-3 text-base font-semibold transition shadow-sm mt-1"
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-xl py-3 text-sm font-medium transition shadow-sm mt-1"
                 >
                   {generating ? (
                     <span className="flex items-center justify-center gap-2">
@@ -556,26 +556,26 @@ export default function ReportsPage() {
                       <AnimatedCard delay={0}>
                       <div className="bg-green-50 rounded-xl p-3">
                         <p className="text-xs text-gray-600">{L("Total Income", "மொத்த வருமானம்")}</p>
-                        <p className="text-lg font-bold text-green-600">{inr(report.totalIncome)}</p>
+                        <p className="text-base font-bold text-green-600">{inr(report.totalIncome)}</p>
                       </div>
                       </AnimatedCard>
                       <AnimatedCard delay={0.1}>
                       <div className="bg-red-50 rounded-xl p-3">
                         <p className="text-xs text-gray-600">{L("Total Expense", "மொத்த செலவு")}</p>
-                        <p className="text-lg font-bold text-red-600">{inr(report.totalExpense)}</p>
+                        <p className="text-base font-bold text-red-600">{inr(report.totalExpense)}</p>
                       </div>
                       </AnimatedCard>
                       <AnimatedCard delay={0.2}>
                       <div className={`rounded-xl p-3 ${report.totalNet >= 0 ? "bg-green-50" : "bg-red-50"}`}>
                         <p className="text-xs text-gray-600">{L("Net Profit/Loss", "நிகர லாப/நஷ்டம்")}</p>
-                        <p className={`text-lg font-bold ${report.totalNet >= 0 ? "text-green-700" : "text-red-600"}`}>{inr(report.totalNet)}</p>
+                        <p className={`text-base font-bold ${report.totalNet >= 0 ? "text-green-700" : "text-red-600"}`}>{inr(report.totalNet)}</p>
                       </div>
                       </AnimatedCard>
                       <AnimatedCard delay={0.3}>
                       <div className="bg-gray-50 rounded-xl p-3">
                         <p className="text-xs text-gray-600">{L("Best Performing Crop", "சிறந்த பயிர்")}</p>
                         {bestCrop ? (
-                          <p className="text-sm font-bold text-gray-900">{cropEmoji(bestCrop.cropType)} {cropLabel(bestCrop.cropType, lang)}<br /><span className="text-green-700">{inr(bestCrop.net)}</span></p>
+                          <p className="text-base font-bold text-gray-900">{cropEmoji(bestCrop.cropType)} {cropLabel(bestCrop.cropType, lang)}<br /><span className="text-green-700">{inr(bestCrop.net)}</span></p>
                         ) : (
                           <p className="text-sm text-gray-500">—</p>
                         )}
@@ -587,7 +587,7 @@ export default function ReportsPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs border-collapse">
                         <thead>
-                          <tr className="bg-gray-50 text-left text-gray-500 uppercase text-[10px] border-b">
+                          <tr className="bg-gray-50 text-left text-gray-500 uppercase text-xs font-medium border-b">
                             <th className="py-2 px-2">{L("Crop", "பயிர்")}</th>
                             <th className="py-2 px-2">{L("Farm", "நிலம்")}</th>
                             <th className="py-2 px-2">{L("Income (₹)", "வருமானம் (₹)")}</th>
@@ -632,7 +632,7 @@ export default function ReportsPage() {
                     {/* Expense breakdown per crop */}
                     {report.cropTotals.filter((c) => c.categories.length > 0).length > 0 && (
                       <div className="flex flex-col gap-2">
-                        <h3 className="text-sm font-semibold text-gray-800">{L("Expense Breakdown by Crop", "பயிர் வாரியான செலவு பகுப்பு")}</h3>
+                        <h3 className="text-base font-semibold text-gray-800">{L("Expense Breakdown by Crop", "பயிர் வாரியான செலவு பகுப்பு")}</h3>
                         {report.cropTotals.filter((c) => c.categories.length > 0).map((c) => {
                           const isOpen = expandedCrops.includes(c.cropType);
                           return (
@@ -649,7 +649,7 @@ export default function ReportsPage() {
                               {isOpen && (
                                 <table className="w-full text-xs">
                                   <thead>
-                                    <tr className="text-left text-gray-500 uppercase text-[10px] border-b">
+                                    <tr className="text-left text-gray-500 uppercase text-xs font-medium border-b">
                                       <th className="py-1.5 px-2">{L("Category", "வகை")}</th>
                                       <th className="py-1.5 px-2">{L("Amount", "தொகை")}</th>
                                       <th className="py-1.5 px-2">%</th>
@@ -681,7 +681,7 @@ export default function ReportsPage() {
 
                     {/* Key insights */}
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">💡 {L("Key Insights", "முக்கிய தகவல்கள்")}</h3>
+                      <h3 className="text-base font-semibold text-gray-800 mb-2">💡 {L("Key Insights", "முக்கிய தகவல்கள்")}</h3>
                       <div className="flex flex-col gap-1 text-xs text-gray-700">
                         {bestCrop && (
                           <p>✅ {L("Most Profitable", "அதிக லாபம்")}: {cropLabel(bestCrop.cropType, lang)} ({inr(bestCrop.net)})</p>

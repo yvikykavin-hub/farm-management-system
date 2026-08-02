@@ -71,11 +71,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-6 max-w-md border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">
               🔐 {L("Session Management", "அமர்வு நிர்வாகம்")}
             </h2>
 
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-xs text-gray-500 mb-6">
               {L("Manage your login sessions across devices.", "உங்கள் சாதனங்களில் உள்நுழைவு அமர்வுகளை நிர்வகிக்கவும்.")}
             </p>
 
@@ -83,7 +83,7 @@ export default function SettingsPage() {
             <button
               onClick={handleLogout}
               disabled={loading}
-              className="w-full mb-3 px-4 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full mb-3 px-4 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
             >
               🚪 {L("Logout This Device", "இந்த சாதனத்தில் வெளியேறு")}
               <span className="text-xs opacity-80">{L("(this device only)", "(இந்த சாதனம் மட்டும்)")}</span>
@@ -93,7 +93,7 @@ export default function SettingsPage() {
             <button
               onClick={handleLogoutAll}
               disabled={loading}
-              className="w-full px-4 py-3 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
             >
               🔐 {L("Logout All Devices", "அனைத்து சாதனங்களிலும் வெளியேறு")}
               <span className="text-xs opacity-80">{L("(all devices)", "(அனைத்து சாதனங்கள்)")}</span>

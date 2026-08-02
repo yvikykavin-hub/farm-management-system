@@ -259,7 +259,7 @@ export default function FinancePage() {
               <button
                 onClick={() => fetchAll(true)}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition-all duration-200 border border-green-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-all duration-200 border border-green-200"
               >
                 <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
                 {isRefreshing ? L("Refreshing...", "புதுப்பிக்கிறது...") : L("Refresh", "புதுப்பி")}
@@ -279,7 +279,7 @@ export default function FinancePage() {
               <ExportButton data={chartData} filename="Finance-Report" sheetName="Finance" language={lang} />
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 mb-1">{L("Year", "ஆண்டு")}</p>
+              <p className="text-xs text-gray-500 mb-1">{L("Year", "ஆண்டு")}</p>
               <div className="flex flex-wrap gap-2">
                 {availableYears.map((y) => (
                   <button key={y} onClick={() => setSelectedYears(toggleIn(selectedYears, y))} className={pillCls(selectedYears.includes(y))}>
@@ -289,7 +289,7 @@ export default function FinancePage() {
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 mb-1">{L("Crop", "பயிர்")}</p>
+              <p className="text-xs text-gray-500 mb-1">{L("Crop", "பயிர்")}</p>
               <div className="flex flex-wrap gap-2">
                 {Object.keys(CROP_LABELS).map((ct) => (
                   <button key={ct} onClick={() => setSelectedCrops(toggleIn(selectedCrops, ct))} className={pillCls(selectedCrops.includes(ct))}>
@@ -299,7 +299,7 @@ export default function FinancePage() {
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 mb-1">{L("Farm", "நிலம்")}</p>
+              <p className="text-xs text-gray-500 mb-1">{L("Farm", "நிலம்")}</p>
               <div className="flex flex-wrap gap-2">
                 {farms.map((f) => (
                   <button key={f.id} onClick={() => setSelectedFarms(toggleIn(selectedFarms, f.id))} className={pillCls(selectedFarms.includes(f.id))}>
@@ -331,27 +331,27 @@ export default function FinancePage() {
                 <div className="bg-white rounded-2xl shadow-sm p-5 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-20 h-20 bg-green-50 rounded-full -mr-8 -mt-8" />
                   <p className="text-xs text-gray-500">{L("Total Income", "மொத்த வருமானம்")}</p>
-                  <p className="text-lg font-bold text-green-600">{inr(totalIncome)}</p>
+                  <p className="text-xl font-bold text-green-600">{inr(totalIncome)}</p>
                 </div>
                 </AnimatedCard>
                 <AnimatedCard delay={0.1}>
                 <div className="bg-white rounded-2xl shadow-sm p-5 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-20 h-20 bg-red-50 rounded-full -mr-8 -mt-8" />
                   <p className="text-xs text-gray-500">{L("Total Expense", "மொத்த செலவு")}</p>
-                  <p className="text-lg font-bold text-red-500">{inr(totalExpense)}</p>
+                  <p className="text-xl font-bold text-red-500">{inr(totalExpense)}</p>
                 </div>
                 </AnimatedCard>
                 <AnimatedCard delay={0.2}>
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <p className="text-xs text-gray-500">{L("Net Profit/Loss", "நிகர லாப/நஷ்டம்")}</p>
-                  <p className={`text-lg font-bold ${totalNet >= 0 ? "text-emerald-600" : "text-orange-500"}`}>{inr(totalNet)}</p>
+                  <p className={`text-base font-bold ${totalNet >= 0 ? "text-emerald-600" : "text-orange-500"}`}>{inr(totalNet)}</p>
                 </div>
                 </AnimatedCard>
                 {bestCrop && (
                   <AnimatedCard delay={0.3}>
                   <div className="bg-white rounded-2xl shadow-sm p-5">
                     <p className="text-xs text-gray-500">{L("Best Performing Crop", "சிறந்த செயல்திறன் பயிர்")}</p>
-                    <p className="text-sm font-bold text-emerald-600">{bestCrop.label}</p>
+                    <p className="text-sm font-semibold text-emerald-600">{bestCrop.label}</p>
                     <p className="text-xs text-gray-500">{inr(bestCrop.net)}</p>
                   </div>
                   </AnimatedCard>
@@ -360,7 +360,7 @@ export default function FinancePage() {
                   <AnimatedCard delay={0.4}>
                   <div className="bg-white rounded-2xl shadow-sm p-5">
                     <p className="text-xs text-gray-500">{L("Worst Performing Crop", "குறைந்த செயல்திறன் பயிர்")}</p>
-                    <p className="text-sm font-bold text-orange-500">{worstCrop.label}</p>
+                    <p className="text-sm font-semibold text-orange-500">{worstCrop.label}</p>
                     <p className="text-xs text-gray-500">{inr(worstCrop.net)}</p>
                   </div>
                   </AnimatedCard>
@@ -417,7 +417,7 @@ export default function FinancePage() {
               {/* Yearly Comparison chart */}
               {yearlyData.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm p-5 mt-6">
-                  <h3 className="font-semibold text-gray-800 mb-4">
+                  <h3 className="text-base font-semibold text-gray-800 mb-4">
                     📅 {L("Yearly Comparison", "ஆண்டு வாரியான ஒப்பீடு")}
                   </h3>
 
@@ -446,7 +446,7 @@ export default function FinancePage() {
                     {yearlyData.map((year) => (
                       <div key={year.year} className="bg-gray-50 rounded-xl p-3 text-center">
                         <p className="text-xs text-gray-500">{year.year}</p>
-                        <p className={`text-sm font-bold mt-1 ${year.net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <p className={`text-base font-bold mt-1 ${year.net >= 0 ? "text-green-600" : "text-red-600"}`}>
                           {year.net >= 0 ? "+" : "-"}₹{Math.abs(year.net).toLocaleString("en-IN")}
                         </p>
                         <p className="text-xs text-gray-400">{year.net >= 0 ? L("Profit", "இலாபம்") : L("Loss", "நஷ்டம்")}</p>
