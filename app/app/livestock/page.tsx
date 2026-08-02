@@ -134,7 +134,7 @@ export default function LivestockLandingPage() {
                 <Link href={card.href}>
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-6 sm:p-8 flex flex-col items-center gap-2 cursor-pointer">
                     <span className="text-4xl">{card.icon}</span>
-                    <span className="text-sm font-semibold text-gray-800">{card.label}</span>
+                    <span className="text-base font-bold text-gray-800">{card.label}</span>
                   </div>
                 </Link>
               </AnimatedCard>
