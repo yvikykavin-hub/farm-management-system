@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { clearLockedCookie } from "../lib/lockCookie";
@@ -95,44 +94,15 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                   href={item.href}
                   title={item.label}
                   onClick={() => setIsOpen(false)}
-                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group overflow-hidden ${
-                    isActive ? "bg-white/15 text-white" : "text-green-200 hover:bg-white/10 hover:text-white"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative border-l-2 ${
+                    isActive
+                      ? "bg-white/10 text-white font-medium border-green-300"
+                      : "text-green-200 border-transparent hover:bg-white/[0.08] hover:text-white"
                   }`}
                 >
-                  {/* Green curved left accent */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeGlow"
-                      className="absolute left-0 -top-1 -bottom-1 w-[3px] bg-[#4ade80] shadow-[1px_0_4px_0px_#4ade8060]"
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    />
-                  )}
-
-                  {/* Very subtle left green tint */}
-                  {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-green-400/10 to-transparent rounded-l-xl pointer-events-none" />
-                  )}
-
-                  {/* Icon */}
-                  <span
-                    className={`text-lg flex-shrink-0 transition-transform duration-200 z-10 ${
-                      isActive ? "scale-110" : "group-hover:scale-105"
-                    }`}
-                  >
-                    {item.icon}
-                  </span>
-
-                  {/* Label */}
-                  <span className="truncate text-sm z-10">{lang === "ta" ? item.labelTa : item.label}</span>
-
-                  {/* Small active dot right */}
-                  {isActive && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="ml-auto w-1.5 h-1.5 rounded-full bg-[#4ade80] flex-shrink-0 z-10"
-                    />
-                  )}
+                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-sm font-medium">{lang === "ta" ? item.labelTa : item.label}</span>
+                  {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-300 flex-shrink-0" />}
                 </Link>
               );
             })}
