@@ -1114,7 +1114,7 @@ export default function MilkCollectionSection({
                     <YAxis tick={{ fontSize: 10 }} />
                     <Tooltip formatter={(value) => inr(Number(value))} />
                     <Legend />
-                    <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" />
+                    <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1131,7 +1131,7 @@ export default function MilkCollectionSection({
                     <YAxis tick={{ fontSize: 10 }} />
                     <Tooltip formatter={(value) => `${value} L`} />
                     <Legend />
-                    <Bar dataKey="litres" name={t(lang, "totalLitres")} fill="#3b82f6" />
+                    <Bar dataKey="litres" name={t(lang, "totalLitres")} fill="#3b82f6" isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

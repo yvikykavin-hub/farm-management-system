@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "../../../../components/Sidebar";
 import MachineryRecordSection from "../../../../components/MachineryRecordSection";
 import DeleteConfirmDialog from "../../../../components/DeleteConfirmDialog";
@@ -214,6 +215,14 @@ export default function TractorDetailPage() {
             ))}
           </div>
 
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
           {activeTab === "overview" && tractor && (
             <OverviewTab
               L={L}
@@ -258,6 +267,8 @@ export default function TractorDetailPage() {
           {activeTab === "maintenance" && <MaintenanceTab lang={lang} tractorId={tractorId} />}
 
           {activeTab === "photos" && <PhotosTab L={L} tractorId={tractorId} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
     </div>

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AnimatedCard from "../../components/AnimatedCard";
-import { SkeletonCard } from "../../components/Skeleton";
+import { SkeletonTable } from "../../components/Skeleton";
 import ExportButton from "../../components/ExportButton";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
@@ -463,7 +463,7 @@ export default function ReportsPage() {
           </div>
 
           {loading ? (
-            <SkeletonCard />
+            <SkeletonTable rows={5} />
           ) : (
             <>
               {/* Filters */}

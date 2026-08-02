@@ -1,8 +1,9 @@
 "use client";
 
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import AnimatedCard from "../../../components/AnimatedCard";
-import { SkeletonCard } from "../../../components/Skeleton";
+import { SkeletonList } from "../../../components/Skeleton";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
@@ -360,6 +361,15 @@ export default function CowsListPage() {
             ))}
           </div>
 
+          {/* Tab content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
           {/* ANIMALS TAB */}
           {activeTab === "animals" && (
             <div className="flex flex-col gap-4">
@@ -371,9 +381,7 @@ export default function CowsListPage() {
                   </button>
                 </div>
                 {loading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
-                  </div>
+                  <SkeletonList count={3} />
                 ) : cowsList.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <div className="text-5xl mb-3 opacity-60">🐄</div>
@@ -473,6 +481,8 @@ export default function CowsListPage() {
 
           {/* EXPENSES TAB */}
           {activeTab === "expenses" && <CattleExpensesSection lang={lang} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
         </PullToRefresh>
       </main>

@@ -1,8 +1,9 @@
 "use client";
 
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import AnimatedCard from "../../../components/AnimatedCard";
-import { SkeletonCard } from "../../../components/Skeleton";
+import { SkeletonList } from "../../../components/Skeleton";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "../../../components/Sidebar";
@@ -405,6 +406,15 @@ export default function GoatsListPage() {
             ))}
           </div>
 
+          {/* Tab content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
           {/* ANIMALS TAB */}
           {activeTab === "animals" && (
             <div className="flex flex-col gap-3">
@@ -417,9 +427,7 @@ export default function GoatsListPage() {
                 </button>
               </div>
               {loading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-                </div>
+                <SkeletonList count={6} />
               ) : goats.length === 0 ? (
                 <EmptyState
                   type="goats"
@@ -559,6 +567,8 @@ export default function GoatsListPage() {
               </div>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
         </PullToRefresh>
       </main>

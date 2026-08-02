@@ -252,9 +252,9 @@ export default function LivestockLandingPage() {
                           <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${Number(v).toLocaleString("en-IN")}`} />
                           <Tooltip formatter={(value, name) => [`₹${Number(value).toLocaleString("en-IN")}`, name]} />
                           <Legend wrapperStyle={{ fontSize: "11px" }} />
-                          <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="profit" name={t(lang, "profit")} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="income" name={t(lang, "income")} fill="#22c55e" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                          <Bar dataKey="expense" name={t(lang, "expense")} fill="#ef4444" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                          <Bar dataKey="profit" name={t(lang, "profit")} fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

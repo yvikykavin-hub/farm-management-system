@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "../../../components/Sidebar";
 import CropRecordSection from "../../../components/CropRecordSection";
 import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
@@ -2632,6 +2633,14 @@ export default function CropDetail() {
             ))}
           </div>
 
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
           {/* OVERVIEW TAB */}
           {activeTab === "overview" && (
             <div className="flex flex-col gap-3">
@@ -4220,6 +4229,8 @@ export default function CropDetail() {
 
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
 
         </div>
       </main>

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../../components/Sidebar";
 import AnimatedCard from "../../components/AnimatedCard";
 import EmptyState from "../../components/EmptyState";
-import { SkeletonCard } from "../../components/Skeleton";
+import { SkeletonList } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 
@@ -112,11 +112,7 @@ export default function LandDetailsPage() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
+            <SkeletonList count={4} />
           ) : farms.length === 0 ? (
             <EmptyState
               type="land"

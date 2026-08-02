@@ -8,7 +8,7 @@ import Sidebar from "../../../components/Sidebar";
 import AnimatedCard from "../../../components/AnimatedCard";
 import EmptyState from "../../../components/EmptyState";
 import { SuccessCheckmark } from "../../../components/SuccessAnimation";
-import { SkeletonCard } from "../../../components/Skeleton";
+import { SkeletonList } from "../../../components/Skeleton";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 import { getTractorOilStatus, type TractorOilStatus } from "../../../lib/tractorOilStatus";
@@ -139,11 +139,7 @@ export default function TractorListPage() {
           </div>
 
           {loading ? (
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
+            <SkeletonList count={3} />
           ) : (
             <>
               {tractors.map((tractor, i) => {

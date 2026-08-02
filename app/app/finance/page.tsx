@@ -315,7 +315,7 @@ export default function FinancePage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
-              <div className="h-80 bg-gray-200 rounded-2xl animate-pulse" />
+              <div className="h-80 rounded-2xl shimmer" />
             </div>
           ) : chartData.length === 0 ? (
             <EmptyState
@@ -401,9 +401,9 @@ export default function FinancePage() {
                         <YAxis tickFormatter={inrAxis} tick={{ fontSize: 12 }} />
                         <Tooltip content={<CustomTooltip L={L} />} />
                         <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
-                        <Bar dataKey="income" name="income" fill="#3B82F6" radius={[4, 4, 0, 0]} animationDuration={600} legendType="none" />
-                        <Bar dataKey="expense" name="expense" fill="#F59E0B" radius={[4, 4, 0, 0]} animationDuration={600} legendType="none" />
-                        <Bar dataKey="net" name="net" radius={[4, 4, 0, 0]} animationDuration={600} legendType="none">
+                        <Bar dataKey="income" name="income" fill="#3B82F6" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={600} animationEasing="ease-out" legendType="none" />
+                        <Bar dataKey="expense" name="expense" fill="#F59E0B" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={600} animationEasing="ease-out" legendType="none" />
+                        <Bar dataKey="net" name="net" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={600} animationEasing="ease-out" legendType="none">
                           {chartData.map((entry, i) => (
                             <Cell key={i} fill={entry.net >= 0 ? "#22C55E" : "#EF4444"} />
                           ))}
@@ -429,14 +429,18 @@ export default function FinancePage() {
                       <Tooltip content={<CustomTooltip L={L} />} />
                       <Legend />
 
-                      <Bar dataKey="income" name={L("Income", "வருமானம்")} fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="expense" name={L("Expense", "செலவு")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="income" name={L("Income", "வருமானம்")} fill="#3B82F6" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
+                      <Bar dataKey="expense" name={L("Expense", "செலவு")} fill="#F59E0B" radius={[4, 4, 0, 0]} isAnimationActive={true} animationBegin={0} animationDuration={800} animationEasing="ease-out" />
                       <Line
                         dataKey="net"
                         name={L("Net Profit", "நிகர லாபம்")}
                         stroke="#22C55E"
                         strokeWidth={2}
                         dot={{ fill: "#22C55E", r: 4 }}
+                        isAnimationActive={true}
+                        animationBegin={0}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
                       />
                     </ComposedChart>
                   </div>

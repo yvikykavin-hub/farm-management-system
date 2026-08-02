@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "../../../components/Sidebar";
 import MachineryRecordSection from "../../../components/MachineryRecordSection";
 import { supabase } from "../../../lib/supabase";
@@ -86,63 +87,73 @@ export default function KalappaiPage() {
             ))}
           </div>
 
-          {activeTab === "overview" && (
-            loading ? (
-              <div className="flex flex-col gap-3">
-                {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse" />)}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{L("Last Blade Replacement", "கடைசி பிளேடு மாற்றம்")}</p>
-                  <p className="text-sm font-bold text-gray-900">{formatDMY(lastBlade?.replacement_date)}</p>
-                  {lastBlade && <p className="text-xs text-danger font-medium">{inr(lastBlade.cost)}</p>}
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{L("Total Blade Replacements", "மொத்த பிளேடு மாற்றங்கள்")}</p>
-                  <p className="text-xl font-bold text-primary">{bladeCount}</p>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs text-gray-500">{L("This Month Expenses", "இந்த மாத செலவு")}</p>
-                  <p className="text-base font-bold text-danger">{inr(monthExpenses)}</p>
-                </div>
-              </div>
-            )
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {activeTab === "overview" && (
+                loading ? (
+                  <div className="flex flex-col gap-3">
+                    {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse" />)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="bg-white rounded-xl shadow-sm p-3">
+                      <p className="text-xs text-gray-500">{L("Last Blade Replacement", "கடைசி பிளேடு மாற்றம்")}</p>
+                      <p className="text-sm font-bold text-gray-900">{formatDMY(lastBlade?.replacement_date)}</p>
+                      {lastBlade && <p className="text-xs text-danger font-medium">{inr(lastBlade.cost)}</p>}
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm p-3">
+                      <p className="text-xs text-gray-500">{L("Total Blade Replacements", "மொத்த பிளேடு மாற்றங்கள்")}</p>
+                      <p className="text-xl font-bold text-primary">{bladeCount}</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm p-3">
+                      <p className="text-xs text-gray-500">{L("This Month Expenses", "இந்த மாத செலவு")}</p>
+                      <p className="text-base font-bold text-danger">{inr(monthExpenses)}</p>
+                    </div>
+                  </div>
+                )
+              )}
 
-          {activeTab === "blades" && (
-            <MachineryRecordSection
-              lang={lang}
-              table="kalappai_blades"
-              titleEn="Blade Replacement"
-              titleTa="பிளேடு மாற்றம்"
-              icon="🔧"
-              dateField="replacement_date"
-              fields={[
-                { key: "replacement_date", en: "Date", ta: "தேதி", type: "date", required: true },
-                { key: "blade_size", en: "Blade Size", ta: "பிளேடு அளவு", type: "text" },
-                { key: "cost", en: "Cost (₹)", ta: "செலவு (₹)", type: "number", required: true, isCost: true },
-              ]}
-              onChanged={fetchOverview}
-            />
-          )}
+              {activeTab === "blades" && (
+                <MachineryRecordSection
+                  lang={lang}
+                  table="kalappai_blades"
+                  titleEn="Blade Replacement"
+                  titleTa="பிளேடு மாற்றம்"
+                  icon="🔧"
+                  dateField="replacement_date"
+                  fields={[
+                    { key: "replacement_date", en: "Date", ta: "தேதி", type: "date", required: true },
+                    { key: "blade_size", en: "Blade Size", ta: "பிளேடு அளவு", type: "text" },
+                    { key: "cost", en: "Cost (₹)", ta: "செலவு (₹)", type: "number", required: true, isCost: true },
+                  ]}
+                  onChanged={fetchOverview}
+                />
+              )}
 
-          {activeTab === "expenses" && (
-            <MachineryRecordSection
-              lang={lang}
-              table="kalappai_expenses"
-              titleEn="Expenses"
-              titleTa="செலவுகள்"
-              icon="💸"
-              dateField="date"
-              fields={[
-                { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
-                { key: "description", en: "Description", ta: "விவரம்", type: "text", required: true },
-                { key: "cost", en: "Cost (₹)", ta: "செலவு (₹)", type: "number", required: true, isCost: true },
-              ]}
-              onChanged={fetchOverview}
-            />
-          )}
+              {activeTab === "expenses" && (
+                <MachineryRecordSection
+                  lang={lang}
+                  table="kalappai_expenses"
+                  titleEn="Expenses"
+                  titleTa="செலவுகள்"
+                  icon="💸"
+                  dateField="date"
+                  fields={[
+                    { key: "date", en: "Date", ta: "தேதி", type: "date", required: true },
+                    { key: "description", en: "Description", ta: "விவரம்", type: "text", required: true },
+                    { key: "cost", en: "Cost (₹)", ta: "செலவு (₹)", type: "number", required: true, isCost: true },
+                  ]}
+                  onChanged={fetchOverview}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
 
         </div>
       </main>
