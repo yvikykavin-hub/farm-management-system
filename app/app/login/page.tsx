@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 import DarkModeToggle from "../../components/DarkModeToggle";
 import { clearLockedCookie } from "../../lib/lockCookie";
 
 const REMEMBER_ME_KEY = "marutham_remember_me";
+const CURRENT_USER_KEY = "marutham_current_user";
+const LANG_KEY = "marutham_lang";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
@@ -48,12 +51,26 @@ const recordFailedAttempt = () => {
 
 const clearAttempts = () => localStorage.removeItem(RATE_LIMIT_KEY);
 
+// Applies this user's own remembered language (falling back to whatever's
+// currently active, which becomes their saved preference from now on).
+const applyPerUserLanguage = (username: string) => {
+  const userLangKey = `marutham_lang_${username}`;
+  const savedLang = localStorage.getItem(userLangKey);
+  if (savedLang) {
+    localStorage.setItem(LANG_KEY, savedLang);
+  } else {
+    const currentLang = localStorage.getItem(LANG_KEY) || "en";
+    localStorage.setItem(userLangKey, currentLang);
+  }
+  localStorage.setItem(CURRENT_USER_KEY, username);
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [lang] = useLang();
   const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -79,53 +96,131 @@ export default function LoginPage() {
       return;
     }
 
-    if (!email.trim() || !password) {
-      setError(L("Email and password are required.", "மின்னஞ்சல் மற்றும் கடவுச்சொல் தேவை."));
+    const cleanUsername = username.toLowerCase().trim();
+
+    if (!cleanUsername || cleanUsername.length < 3) {
+      setError(L("Please enter a valid username.", "சரியான பயனர்பெயர் உள்ளிடவும்."));
+      return;
+    }
+
+    if (!password) {
+      setError(L("Please enter your password.", "கடவுச்சொல் உள்ளிடவும்."));
       return;
     }
 
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
 
-    if (signInError) {
-      recordFailedAttempt();
-      const after = checkRateLimit();
-      setRateCheck(after);
-
-      if (!after.allowed) {
+    const failLogin = (afterCheck: RateCheck) => {
+      if (!afterCheck.allowed) {
         setError(
           L(
-            `Too many attempts! Please wait ${after.remainingMinutes} minutes.`,
-            `அதிக முயற்சிகள்! ${after.remainingMinutes} நிமிடம் காத்திருங்கள்.`
+            `Too many attempts! Please wait ${afterCheck.remainingMinutes} minutes.`,
+            `அதிக முயற்சிகள்! ${afterCheck.remainingMinutes} நிமிடம் காத்திருங்கள்.`
           )
         );
-      } else if (after.remaining <= 2) {
+      } else if (afterCheck.remaining <= 2) {
         setError(
-          L(`Wrong password. ${after.remaining} attempts remaining.`, `தவறான கடவுச்சொல். ${after.remaining} முயற்சிகள் மீதம்.`)
+          L(
+            `Invalid username or password. ${afterCheck.remaining} attempts remaining.`,
+            `தவறான பயனர்பெயர் அல்லது கடவுச்சொல். ${afterCheck.remaining} முயற்சிகள் மட்டுமே.`
+          )
         );
       } else {
-        setError(L("Invalid email or password.", "தவறான மின்னஞ்சல் அல்லது கடவுச்சொல்."));
+        setError(L("Invalid username or password.", "தவறான பயனர்பெயர் அல்லது கடவுச்சொல்."));
       }
+    };
+
+    try {
+      // Step 1: look up the username server-side.
+      const lookupRes = await fetch("/api/auth/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: cleanUsername }),
+      });
+
+      if (lookupRes.status === 429) {
+        const data = await lookupRes.json();
+        setRateCheck({ allowed: false, remainingMinutes: data.remainingMinutes });
+        setError(
+          L(
+            `Too many attempts! Please wait ${data.remainingMinutes} minutes.`,
+            `அதிக முயற்சிகள்! ${data.remainingMinutes} நிமிடம் காத்திருங்கள்.`
+          )
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!lookupRes.ok) {
+        recordFailedAttempt();
+        failLogin(checkRateLimit());
+        setLoading(false);
+        return;
+      }
+
+      const { displayName, token } = await lookupRes.json();
+
+      // Step 2: verify the password server-side. The email address behind this
+      // username never reaches the browser at any point in this flow.
+      const verifyRes = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+
+      if (verifyRes.status === 429) {
+        const data = await verifyRes.json();
+        setRateCheck({ allowed: false, remainingMinutes: data.remainingMinutes });
+        setError(
+          L(
+            `Too many attempts! Please wait ${data.remainingMinutes} minutes.`,
+            `அதிக முயற்சிகள்! ${data.remainingMinutes} நிமிடம் காத்திருங்கள்.`
+          )
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!verifyRes.ok) {
+        recordFailedAttempt();
+        failLogin(checkRateLimit());
+        setLoading(false);
+        return;
+      }
+
+      const { session } = await verifyRes.json();
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      });
+
+      if (setSessionError) {
+        setError(L("An error occurred. Please try again.", "பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்."));
+        setLoading(false);
+        return;
+      }
+
+      clearAttempts();
+      setRateCheck({ allowed: true, remaining: MAX_ATTEMPTS });
+      clearLockedCookie();
+
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, "true");
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY);
+      }
+
+      applyPerUserLanguage(cleanUsername);
+
+      toast.success(L(`Welcome ${displayName}! 👋`, `வணக்கம் ${displayName}! 👋`));
+
       setLoading(false);
-      return;
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError(L("An error occurred. Please try again.", "பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்."));
+      setLoading(false);
     }
-
-    clearAttempts();
-    setRateCheck({ allowed: true, remaining: MAX_ATTEMPTS });
-    setLoading(false);
-    clearLockedCookie();
-
-    if (rememberMe) {
-      localStorage.setItem(REMEMBER_ME_KEY, "true");
-    } else {
-      localStorage.removeItem(REMEMBER_ME_KEY);
-    }
-
-    router.push("/");
-    router.refresh();
   };
 
   return (
@@ -164,14 +259,18 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-3">
           <div>
-            <label className="block mb-1 text-xs font-medium text-gray-600">{L("Email", "மின்னஞ்சல்")}</label>
+            <label className="block mb-1 text-xs font-medium text-gray-600">{L("Username", "பயனர்பெயர்")}</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
+              placeholder={L("Enter your username", "உங்கள் பயனர்பெயர்")}
+              maxLength={20}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="you@example.com"
             />
           </div>
 

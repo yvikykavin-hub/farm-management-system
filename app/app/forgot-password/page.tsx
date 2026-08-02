@@ -44,8 +44,11 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={lang === "ta" ? "மின்னஞ்சல் முகவரி" : "Email address"}
               required
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
+            <p className="text-xs text-gray-400 mt-1 mb-4">
+              {lang === "ta" ? "உங்கள் பதிவு செய்த மின்னஞ்சல் முகவரி உள்ளிடவும்" : "Enter your registered email address"}
+            </p>
             <button
               type="submit"
               disabled={loading}

@@ -31,6 +31,9 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
   const toggleLang = () => setLang?.(lang === "ta" ? "en" : "ta");
 
   const logout = async () => {
+    // Per-user language is already kept in sync on every toggle (see useLang),
+    // so logout just needs to stop applying it to whoever logs in next.
+    localStorage.removeItem("marutham_current_user");
     await supabase.auth.signOut();
     clearLockedCookie();
     router.push("/login");
