@@ -128,7 +128,7 @@ export default function MachineryLandingPage() {
           </Link>
 
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-primary">{L("Machinery Management", "இயந்திர மேலாண்மை")}</h1>
+            <h1 className="text-xl font-bold text-primary">{L("Machinery Management", "இயந்திர மேலாண்மை")}</h1>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
@@ -139,7 +139,7 @@ export default function MachineryLandingPage() {
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
             <p className="text-xs text-gray-500">{L("Total Machinery Expenses This Month", "இந்த மாத மொத்த இயந்திர செலவு")}</p>
-            <p className="text-2xl font-bold text-danger">{loading ? "..." : inr(monthExpenses)}</p>
+            <p className="text-xl font-bold text-danger">{loading ? "..." : inr(monthExpenses)}</p>
           </div>
 
           {loading ? (
@@ -155,7 +155,7 @@ export default function MachineryLandingPage() {
                   <Link href={card.href}>
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-5 flex flex-col items-center gap-2 cursor-pointer text-center">
                       <span className="text-4xl">{card.icon}</span>
-                      <span className="text-base font-bold text-gray-800">{card.label}</span>
+                      <span className="text-sm font-semibold text-gray-800">{card.label}</span>
                       <div className="mt-1">{card.stats}</div>
                     </div>
                   </Link>

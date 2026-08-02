@@ -78,7 +78,7 @@ const daysUntil = (iso: string | null | undefined) => {
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
-const labelCls = "block mb-1 text-xs font-medium text-gray-700";
+const labelCls = "block mb-1 text-xs text-gray-700";
 
 const computeDurationHours = (startTime: string, endTime: string) => {
   const start = new Date(`2000-01-01T${startTime}`);
@@ -205,7 +205,7 @@ export default function TractorDetailPage() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
                   activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
@@ -367,7 +367,7 @@ function OverviewTab({
       <div className={`rounded-xl p-4 ${oilBannerBg}`}>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xl">{oilStatus === "danger" ? "🚨" : oilStatus === "warning" ? "⚠️" : "✅"}</span>
-          <p className="text-sm font-semibold">{L("Engine Oil Status", "இயந்திர எண்ணெய் நிலை")}</p>
+          <p className="text-sm font-medium">{L("Engine Oil Status", "இயந்திர எண்ணெய் நிலை")}</p>
         </div>
         <p className="text-sm">{L("Total Hours", "மொத்த மணி நேரம்")}: {totalHours.toFixed(1)} {L("hrs", "மணி")}</p>
         <p className="text-sm">{L("Hours Remaining", "மீதமுள்ள மணி நேரம்")}: {Math.max(hoursRemaining, 0).toFixed(1)} {L("hrs", "மணி")}</p>
@@ -377,7 +377,7 @@ function OverviewTab({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-800">{L("Details", "விவரங்கள்")}</h2>
         {!editing && (
-          <button onClick={startEdit} className="text-xs font-semibold text-primary hover:text-primary/80">
+          <button onClick={startEdit} className="text-sm font-medium text-primary hover:text-primary/80">
             ✏️ {L("Edit", "திருத்து")}
           </button>
         )}
@@ -385,19 +385,19 @@ function OverviewTab({
 
       {!editing ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div><span className="text-gray-500">{L("Brand", "பிராண்ட்")}:</span> <span className="font-medium text-gray-800">{tractor.brand || "—"}</span></div>
-          <div><span className="text-gray-500">{L("Model", "மாடல்")}:</span> <span className="font-medium text-gray-800">{tractor.model || "—"}</span></div>
-          <div><span className="text-gray-500">{L("Year of Purchase", "வாங்கிய ஆண்டு")}:</span> <span className="font-medium text-gray-800">{tractor.year_of_purchase ?? "—"}</span></div>
-          <div><span className="text-gray-500">{L("Purchase Price (₹)", "வாங்கிய விலை (₹)")}:</span> <span className="font-medium text-gray-800">{tractor.purchase_price != null ? inr(Number(tractor.purchase_price)) : "—"}</span></div>
-          <div><span className="text-gray-500">{L("Registration Number", "பதிவு எண்")}:</span> <span className="font-medium text-gray-800">{tractor.registration_number || "—"}</span></div>
-          <div><span className="text-gray-500">{L("Engine Number", "இயந்திர எண்")}:</span> <span className="font-medium text-gray-800">{tractor.engine_number || "—"}</span></div>
-          <div><span className="text-gray-500">{L("Chassis Number", "சேஸி எண்")}:</span> <span className="font-medium text-gray-800">{tractor.chassis_number || "—"}</span></div>
-          <div><span className="text-gray-500">{L("Insurance Number", "காப்பீடு எண்")}:</span> <span className="font-medium text-gray-800">{tractor.insurance_number || "—"}</span></div>
-          <div><span className="text-gray-500">{L("Insurance Expiry", "காப்பீடு முடிவு தேதி")}:</span> <span className="font-medium text-gray-800">{formatDMY(tractor.insurance_expiry)}</span></div>
-          <div><span className="text-gray-500">{L("Oil Change Interval (Hours)", "எண்ணெய் மாற்று இடைவெளி (மணி நேரம்)")}:</span> <span className="font-medium text-gray-800">{tractor.oil_change_interval_hours}</span></div>
-          <div className="sm:col-span-2"><span className="text-gray-500">{L("Notes", "குறிப்புகள்")}:</span> <span className="font-medium text-gray-800">{tractor.notes || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Brand", "பிராண்ட்")}:</span> <span className="font-medium text-gray-800">{tractor.brand || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Model", "மாடல்")}:</span> <span className="font-medium text-gray-800">{tractor.model || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Year of Purchase", "வாங்கிய ஆண்டு")}:</span> <span className="font-medium text-gray-800">{tractor.year_of_purchase ?? "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Purchase Price (₹)", "வாங்கிய விலை (₹)")}:</span> <span className="font-medium text-gray-800">{tractor.purchase_price != null ? inr(Number(tractor.purchase_price)) : "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Registration Number", "பதிவு எண்")}:</span> <span className="font-medium text-gray-800">{tractor.registration_number || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Engine Number", "இயந்திர எண்")}:</span> <span className="font-medium text-gray-800">{tractor.engine_number || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Chassis Number", "சேஸி எண்")}:</span> <span className="font-medium text-gray-800">{tractor.chassis_number || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Insurance Number", "காப்பீடு எண்")}:</span> <span className="font-medium text-gray-800">{tractor.insurance_number || "—"}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Insurance Expiry", "காப்பீடு முடிவு தேதி")}:</span> <span className="font-medium text-gray-800">{formatDMY(tractor.insurance_expiry)}</span></div>
+          <div><span className="text-xs text-gray-500">{L("Oil Change Interval (Hours)", "எண்ணெய் மாற்று இடைவெளி (மணி நேரம்)")}:</span> <span className="text-sm font-semibold text-gray-800">{tractor.oil_change_interval_hours}</span></div>
+          <div className="sm:col-span-2"><span className="text-xs text-gray-500">{L("Notes", "குறிப்புகள்")}:</span> <span className="font-medium text-gray-800">{tractor.notes || "—"}</span></div>
           <div className="sm:col-span-2 pt-3 border-t border-gray-100">
-            <button onClick={handleDelete} className="bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-4 py-2 text-sm font-semibold transition">
+            <button onClick={handleDelete} className="bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-4 py-2 text-sm font-medium transition">
               🗑️ {L("Delete Tractor", "டிராக்டரை நீக்கு")}
             </button>
           </div>
@@ -458,10 +458,10 @@ function OverviewTab({
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputCls} rows={2} />
           </div>
           <div className="sm:col-span-2 flex gap-2">
-            <button onClick={save} disabled={saving} className="w-full sm:w-auto bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">
+            <button onClick={save} disabled={saving} className="w-full sm:w-auto bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-2 text-sm font-medium transition">
               {saving ? "..." : L("Save", "சேமி")}
             </button>
-            <button onClick={() => setEditing(false)} className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 text-sm font-semibold transition">
+            <button onClick={() => setEditing(false)} className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium transition">
               {L("Cancel", "ரத்து")}
             </button>
           </div>
@@ -575,7 +575,7 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-gray-800">⛽ {L("Diesel Records", "டீசல் பதிவுகள்")}</h2>
-          <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+          <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
             + {L("Add Diesel", "டீசல் சேர்க்க")}
           </button>
         </div>
@@ -585,7 +585,7 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                <tr className="text-left text-gray-500 uppercase text-xs font-medium tracking-wide border-b">
                   <th className="py-1 px-1">{L("Date", "தேதி")}</th>
                   <th className="py-1 px-1">{L("Litres", "லிட்டர்")}</th>
                   <th className="py-1 px-1">{L("Amount", "தொகை")}</th>
@@ -601,7 +601,7 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
                     <tr key={r.id} className="border-b border-gray-50">
                       <td className="py-1 px-1 text-gray-900">{formatDMY(r.date)}</td>
                       <td className="py-1 px-1 text-gray-900">{Number(r.litres).toFixed(1)} L</td>
-                      <td className="py-1 px-1 text-danger font-medium">{inr(Number(r.amount))}</td>
+                      <td className="py-1 px-1 text-danger font-semibold">{inr(Number(r.amount))}</td>
                       <td className="py-1 px-1 text-gray-600">{r.notes || "—"}</td>
                       <td className="py-1 px-1 whitespace-nowrap">
                         <button onClick={() => openEdit(r)} className="mr-2 hover:text-primary">✏️</button>
@@ -620,7 +620,7 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{editingId ? L("Edit Diesel", "டீசலைத் திருத்து") : L("Add Diesel", "டீசல் சேர்க்க")}</h2>
+              <h2 className="text-base font-semibold text-primary">{editingId ? L("Edit Diesel", "டீசலைத் திருத்து") : L("Add Diesel", "டீசல் சேர்க்க")}</h2>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -641,10 +641,10 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} rows={2} />
               </div>
               <div className="flex gap-2">
-                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {saving ? "..." : L("Save", "சேமி")}
                 </button>
-                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
@@ -772,10 +772,10 @@ function UsageTab({
     <div className="flex flex-col gap-3">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
         <p className="text-xs text-gray-500">{L("Total Operating Hours", "மொத்த இயக்க நேரம்")}</p>
-        <p className="text-3xl font-bold text-primary">{totalHours.toFixed(2)} {L("hrs", "மணி")}</p>
+        <p className="text-xl font-bold text-primary">{totalHours.toFixed(2)} {L("hrs", "மணி")}</p>
       </div>
 
-      <div className={`rounded-xl border-2 p-3 text-sm font-semibold ${oilBannerColor}`}>
+      <div className={`rounded-xl border-2 p-3 text-sm font-medium ${oilBannerColor}`}>
         {hoursRemaining < 20
           ? `⚠️ ${L(`Only ${Math.max(hoursRemaining, 0).toFixed(1)} hours remaining for engine oil change!`, `எஞ்சின் ஆயில் மாற்ற ${Math.max(hoursRemaining, 0).toFixed(1)} மணி நேரம் மட்டுமே உள்ளது!`)}`
           : `${L("Hours remaining until next oil change", "அடுத்த ஆயில் மாற்றத்திற்கு மீதமுள்ள நேரம்")}: ${Math.max(hoursRemaining, 0).toFixed(1)}`}
@@ -784,14 +784,14 @@ function UsageTab({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-gray-800">{L("Usage History", "பயன்பாட்டு வரலாறு")}</h2>
-          <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+          <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
             + {L("Add Usage Entry", "பயன்பாடு சேர்க்க")}
           </button>
         </div>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-gray-50">
-              <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+              <tr className="text-left text-gray-500 uppercase text-xs font-medium tracking-wide border-b">
                 <th className="py-1 px-1">{L("Date", "தேதி")}</th>
                 <th className="py-1 px-1">{L("Start", "தொடக்கம்")}</th>
                 <th className="py-1 px-1">{L("End", "முடிவு")}</th>
@@ -811,7 +811,7 @@ function UsageTab({
                     <td className="py-1 px-1 text-gray-900">{row.start_time}</td>
                     <td className="py-1 px-1 text-gray-900">{row.end_time}</td>
                     <td className="py-1 px-1 text-gray-900">{Number(row.duration_hours).toFixed(2)} {L("hrs", "மணி")}</td>
-                    <td className="py-1 px-1 font-medium text-primary">{cumulative.toFixed(2)}</td>
+                    <td className="py-1 px-1 font-semibold text-primary">{cumulative.toFixed(2)}</td>
                     <td className="py-1 px-1 text-gray-600">{row.notes || "—"}</td>
                     <td className="py-1 px-1 whitespace-nowrap">
                       <button onClick={() => openEdit(row)} className="mr-2 hover:text-primary">✏️</button>
@@ -829,7 +829,7 @@ function UsageTab({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{editingId ? L("Edit Usage Entry", "பயன்பாட்டைத் திருத்து") : L("Add Usage Entry", "பயன்பாடு சேர்க்க")}</h2>
+              <h2 className="text-base font-semibold text-primary">{editingId ? L("Edit Usage Entry", "பயன்பாட்டைத் திருத்து") : L("Add Usage Entry", "பயன்பாடு சேர்க்க")}</h2>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -863,10 +863,10 @@ function UsageTab({
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} rows={2} />
               </div>
               <div className="flex gap-2">
-                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {saving ? "..." : L("Save", "சேமி")}
                 </button>
-                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
@@ -980,8 +980,8 @@ function EngineOilTab({
   return (
     <div className="flex flex-col gap-3">
       <div className={`rounded-2xl border-2 p-4 ${oilBannerColor}`}>
-        <p className="text-xs font-medium">{L("Hours Since Last Oil Change", "கடைசி ஆயில் மாற்றத்திலிருந்து")}: <span className="font-bold">{Math.max(hoursSinceOilChange, 0).toFixed(1)}</span></p>
-        <p className="text-xs font-medium">
+        <p className="text-sm font-medium">{L("Hours Since Last Oil Change", "கடைசி ஆயில் மாற்றத்திலிருந்து")}: <span className="font-bold">{Math.max(hoursSinceOilChange, 0).toFixed(1)}</span></p>
+        <p className="text-sm font-medium">
           {L("Hours Remaining Until Next Oil Change", "அடுத்த ஆயில் மாற்றத்திற்கு மீதமுள்ள நேரம்")}:{" "}
           <span className={`font-bold ${oilStatus === "danger" ? "text-red-600" : oilStatus === "warning" ? "text-amber-500" : "text-green-600"}`}>
             {Math.max(hoursRemaining, 0).toFixed(1)}
@@ -1002,7 +1002,7 @@ function EngineOilTab({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-gray-800">🛢️ {L("Engine Oil Change", "எஞ்சின் ஆயில் மாற்றம்")}</h2>
-          <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+          <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
             + {L("Add", "சேர்க்க")}
           </button>
         </div>
@@ -1010,7 +1010,7 @@ function EngineOilTab({
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+              <tr className="text-left text-gray-500 uppercase text-xs font-medium tracking-wide border-b">
                 <th className="py-1 px-1">{L("Date", "தேதி")}</th>
                 <th className="py-1 px-1">{L("Brand", "பிராண்ட்")}</th>
                 <th className="py-1 px-1">{L("Amount", "தொகை")}</th>
@@ -1026,7 +1026,7 @@ function EngineOilTab({
                   <tr key={r.id} className="border-b border-gray-50">
                     <td className="py-1 px-1 text-gray-900">{formatDMY(r.date)}</td>
                     <td className="py-1 px-1 text-gray-900">{r.oil_brand || "—"}</td>
-                    <td className="py-1 px-1 text-danger font-medium">{inr(Number(r.amount))}</td>
+                    <td className="py-1 px-1 text-danger font-semibold">{inr(Number(r.amount))}</td>
                     <td className="py-1 px-1 text-gray-900">{Number(r.hours_at_service).toFixed(1)}</td>
                     <td className="py-1 px-1 whitespace-nowrap">
                       <button onClick={() => openEdit(r)} className="mr-2 hover:text-primary">✏️</button>
@@ -1044,7 +1044,7 @@ function EngineOilTab({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{editingId ? L("Edit Engine Oil Change", "திருத்து") : L("Add Engine Oil Change", "எஞ்சின் ஆயில் சேர்க்க")}</h2>
+              <h2 className="text-base font-semibold text-primary">{editingId ? L("Edit Engine Oil Change", "திருத்து") : L("Add Engine Oil Change", "எஞ்சின் ஆயில் சேர்க்க")}</h2>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -1065,15 +1065,15 @@ function EngineOilTab({
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} rows={2} />
               </div>
               {!editingId && (
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {L(`This will record ${totalHours.toFixed(1)} hrs as the service point and reset the oil change counter.`, `இது ${totalHours.toFixed(1)} மணி நேரத்தை சேவை புள்ளியாக பதிவு செய்து கவுண்டரை மீட்டமைக்கும்.`)}
                 </p>
               )}
               <div className="flex gap-2">
-                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {saving ? "..." : L("Save", "சேமி")}
                 </button>
-                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>
@@ -1248,7 +1248,7 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
   return (
     <div className="flex flex-col gap-3">
       <div className="flex justify-end">
-        <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+        <button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
           + {L("Upload Photo", "புகைப்படம் பதிவேற்ற")}
         </button>
       </div>
@@ -1269,8 +1269,8 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.photo_data} alt={p.caption} className="w-full h-32 object-cover cursor-pointer" onClick={() => setViewerUrl(p.photo_data)} />
               <div className="p-2">
-                <p className="text-xs font-bold text-gray-900">{p.caption}</p>
-                <button onClick={() => remove(p.id)} className="text-[11px] text-danger hover:underline mt-1">{L("Delete", "நீக்கு")}</button>
+                <p className="text-xs text-gray-900">{p.caption}</p>
+                <button onClick={() => remove(p.id)} className="text-xs text-danger hover:underline mt-1">{L("Delete", "நீக்கு")}</button>
               </div>
             </div>
           ))}
@@ -1288,7 +1288,7 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{L("Upload Photo", "புகைப்படம் பதிவேற்ற")}</h2>
+              <h2 className="text-base font-semibold text-primary">{L("Upload Photo", "புகைப்படம் பதிவேற்ற")}</h2>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -1316,16 +1316,16 @@ function PhotosTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
                   </div>
                 </div>
                 {file && file.size > MAX_RECOMMENDED_PHOTO_BYTES && (
-                  <p className="text-[11px] text-amber-600 mt-1">
+                  <p className="text-xs text-amber-600 mt-1">
                     ⚠️ {L("Photo is large and may slow the app. Please use a compressed image under 2MB.", "புகைப்படம் பெரியது, செயலியை மெதுவாக்கலாம். 2MB க்கும் குறைவான சுருக்கப்பட்ட படத்தை பயன்படுத்தவும்.")}
                   </p>
                 )}
               </div>
               <div className="flex gap-2">
-                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={save} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {saving ? "..." : L("Save", "சேமி")}
                 </button>
-                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {L("Cancel", "ரத்து")}
                 </button>
               </div>

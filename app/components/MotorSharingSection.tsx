@@ -32,10 +32,10 @@ const DAY_OPTIONS = [1, 2, 3, 4, 5];
 const HOUR_OPTIONS = [1, 2, 3, 6, 12];
 const HOURS_PER_DAY = 24;
 
-const labelCls = "text-sm text-gray-600 dark:text-gray-400";
+const labelCls = "text-xs text-gray-600 dark:text-gray-400";
 const valueInputCls =
   "w-full border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 block";
-const sectionTitleCls = "text-sm font-semibold text-gray-700 dark:text-gray-300";
+const sectionTitleCls = "text-base font-semibold text-gray-700 dark:text-gray-300";
 
 const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: string; language?: "ta" | "en" }>(
   function MotorSharingSection({ farmId, language = "en" }, ref) {
@@ -342,7 +342,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="text-white font-bold text-sm leading-tight"
+                    className="text-white font-semibold text-sm leading-tight"
                   >
                     {todaysTurn.isMyTurn
                       ? language === "ta" ? "✅ இன்று உங்கள் முறை!" : "✅ Today is Your Turn!"
@@ -366,7 +366,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                   transition={{ delay: 0.4 }}
                   className="bg-white/25 rounded-xl px-2.5 py-1.5 text-center flex-shrink-0"
                 >
-                  <p className="text-white font-bold text-lg leading-none">{todaysTurn.daysRemaining}</p>
+                  <p className="text-white font-bold text-xl leading-none">{todaysTurn.daysRemaining}</p>
                   <p className="text-white/80 text-xs">{language === "ta" ? "நாள்" : "days"}</p>
                 </motion.div>
               </div>
@@ -575,7 +575,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
               {partners.map((partner) => (
                 <div key={partner.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-lg px-3 py-2 mb-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.partner_name}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{partner.partner_name}</p>
                     <p className={labelCls}>
                       {partner.partner_phone && `📞 ${partner.partner_phone} • `}
                       {partner.turn_days} {language === "ta" ? "நாட்கள்" : "days/turn"}
@@ -590,7 +590,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
               {/* Add partner toggle */}
               <button
                 onClick={() => setShowAddPartner(true)}
-                className="text-xs text-green-600 hover:text-green-700 font-medium flex items-center gap-1 mt-2"
+                className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1 mt-2"
               >
                 + {language === "ta" ? "பகிர்வு கூட்டாளி சேர்க்கவும்" : "Add Shared Partner"}
               </button>
@@ -612,7 +612,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                     className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-gray-500">{language === "ta" ? "நாட்கள்:" : "Days:"}</span>
+                    <span className="text-xs text-gray-500">{language === "ta" ? "நாட்கள்:" : "Days:"}</span>
                     {DAY_OPTIONS.map((day) => (
                       <button
                         key={day}
@@ -633,7 +633,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                         setNewPartnerPhone("");
                         setNewPartnerDays(2);
                       }}
-                      className="flex-1 text-sm py-2 rounded-lg bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
+                      className="flex-1 text-sm font-medium py-2 rounded-lg bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
                     >
                       {language === "ta" ? "ரத்து" : "Cancel"}
                     </button>

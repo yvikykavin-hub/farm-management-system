@@ -26,7 +26,7 @@ const BRANDS = ["Mahindra", "John Deere", "Sonalika", "TAFE", "Eicher", "New Hol
 
 const inputCls =
   "w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500";
-const labelCls = "text-sm text-gray-600 dark:text-gray-400 mb-1 block";
+const labelCls = "text-xs text-gray-600 dark:text-gray-400 mb-1 block";
 
 const emptyForm = {
   name: "",
@@ -165,8 +165,8 @@ export default function TractorListPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">{tractor.name}</h3>
-                          <p className="text-sm text-gray-500">{[tractor.brand, tractor.model].filter(Boolean).join(" ") || "—"}</p>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tractor.name}</h3>
+                          <p className="text-xs text-gray-500">{[tractor.brand, tractor.model].filter(Boolean).join(" ") || "—"}</p>
                           {tractor.registration_number && (
                             <p className="text-xs text-gray-400 mt-1">🔢 {tractor.registration_number}</p>
                           )}
@@ -216,7 +216,7 @@ export default function TractorListPage() {
       {showAddForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🚜 {L("Add New Tractor", "புதிய டிராக்டர் சேர்")}</h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">🚜 {L("Add New Tractor", "புதிய டிராக்டர் சேர்")}</h3>
 
             <div className="space-y-3">
               <div>

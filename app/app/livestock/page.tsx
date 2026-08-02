@@ -118,7 +118,7 @@ export default function LivestockLandingPage() {
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t(lang, "livestock")}</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">{t(lang, "livestock")}</h1>
             <button
               onClick={() => setLang(lang === "ta" ? "en" : "ta")}
               className="px-3 py-1.5 rounded-lg border border-primary/40 text-primary text-sm font-medium hover:bg-green-50 transition"
@@ -134,7 +134,7 @@ export default function LivestockLandingPage() {
                 <Link href={card.href}>
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99] p-6 sm:p-8 flex flex-col items-center gap-2 cursor-pointer">
                     <span className="text-4xl">{card.icon}</span>
-                    <span className="text-base font-bold text-gray-800">{card.label}</span>
+                    <span className="text-sm font-semibold text-gray-800">{card.label}</span>
                   </div>
                 </Link>
               </AnimatedCard>
@@ -149,7 +149,7 @@ export default function LivestockLandingPage() {
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-base">📊</span>
-                <span className="text-sm font-semibold text-gray-800">{t(lang, "financialOverview")}</span>
+                <span className="text-base font-semibold text-gray-800">{t(lang, "financialOverview")}</span>
                 {!showFinancial && (
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${totalNetProfit >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                     {totalNetProfit >= 0 ? "✅" : "❌"} {inr(Math.abs(totalNetProfit))}
@@ -222,16 +222,16 @@ export default function LivestockLandingPage() {
                     <tfoot>
                       <tr className="border-t-2 border-gray-200 dark:border-slate-600">
                         <td className="py-2.5 pr-3">
-                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{t(lang, "total")}</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{t(lang, "total")}</span>
                         </td>
                         <td className="text-right py-2.5 px-2">
-                          <span className="text-xs font-bold text-green-600 dark:text-green-400">{inr(cattleIncome + goatIncome + henIncome)}</span>
+                          <span className="text-sm font-bold text-green-600 dark:text-green-400">{inr(cattleIncome + goatIncome + henIncome)}</span>
                         </td>
                         <td className="text-right py-2.5 px-2">
-                          <span className="text-xs font-bold text-red-500 dark:text-red-400">{inr(cattleExpense + goatExpense + henExpense)}</span>
+                          <span className="text-sm font-bold text-red-500 dark:text-red-400">{inr(cattleExpense + goatExpense + henExpense)}</span>
                         </td>
                         <td className="text-right py-2.5 pl-2">
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-lg ${totalNetProfit >= 0 ? "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30" : "text-orange-700 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30"}`}>
+                          <span className={`text-sm font-bold px-1.5 py-0.5 rounded-lg ${totalNetProfit >= 0 ? "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30" : "text-orange-700 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30"}`}>
                             {totalNetProfit >= 0 ? "+" : "-"}{inr(Math.abs(totalNetProfit))}
                           </span>
                         </td>
@@ -242,7 +242,7 @@ export default function LivestockLandingPage() {
 
                 {/* Spacing between table and chart */}
                 <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-700">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">📊 {t(lang, "chartOverview")}</p>
+                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">📊 {t(lang, "chartOverview")}</p>
                   <div className="overflow-x-auto">
                     <div style={{ minWidth: 300 }}>
                       <ResponsiveContainer width="100%" height={220}>

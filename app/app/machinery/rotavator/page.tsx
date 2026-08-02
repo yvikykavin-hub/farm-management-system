@@ -77,7 +77,7 @@ export default function RotavatorPage() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
                   activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
@@ -100,11 +100,11 @@ export default function RotavatorPage() {
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-3">
                   <p className="text-xs text-gray-500">{L("Total Blade Replacements", "மொத்த பிளேடு மாற்றங்கள்")}</p>
-                  <p className="text-2xl font-bold text-primary">{bladeCount}</p>
+                  <p className="text-xl font-bold text-primary">{bladeCount}</p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-3">
                   <p className="text-xs text-gray-500">{L("This Month Expenses", "இந்த மாத செலவு")}</p>
-                  <p className="text-lg font-bold text-danger">{inr(monthExpenses)}</p>
+                  <p className="text-base font-bold text-danger">{inr(monthExpenses)}</p>
                 </div>
               </div>
             )

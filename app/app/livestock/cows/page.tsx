@@ -63,7 +63,7 @@ const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigi
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
-const labelCls = "block mb-1 text-xs font-medium text-gray-700";
+const labelCls = "block mb-1 text-xs text-gray-700";
 
 const emptyForm = {
   name: "",
@@ -229,11 +229,11 @@ export default function CowsListPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-3">
         <div className="flex items-start justify-between">
           <Link href={`/livestock/cows/${cow.id}`} className="flex-1 cursor-pointer">
-            <h3 className="text-sm font-bold text-gray-900">{emoji} {cow.name}</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{emoji} {cow.name}</h3>
             <p className="text-xs text-gray-500">{cow.tag_number || "—"}</p>
           </Link>
           <div className="flex items-center gap-1 shrink-0">
-            <span className={`${STATUS_BADGE[cow.current_status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+            <span className={`${STATUS_BADGE[cow.current_status] ?? STATUS_BADGE.active} text-xs font-semibold px-2 py-0.5 rounded-full`}>
               {cow.current_status}
             </span>
             <button onClick={() => handleDelete(cow.id)} className="text-red-400 hover:text-red-600 transition-colors duration-200 p-1">
@@ -262,7 +262,7 @@ export default function CowsListPage() {
 
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h1 className="text-2xl font-bold text-primary">🐄 {t(lang, "cows")}</h1>
+              <h1 className="text-xl font-bold text-primary">🐄 {t(lang, "cows")}</h1>
               <p className="text-sm text-gray-500">{t(lang, "livestock")}</p>
             </div>
             <div className="flex items-center gap-2">
@@ -288,19 +288,19 @@ export default function CowsListPage() {
             <div className="mb-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                 <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs font-medium text-gray-500">{t(lang, "totalCows")}</p>
+                  <p className="text-xs text-gray-500">{t(lang, "totalCows")}</p>
                   <p className="text-xl font-bold text-gray-800">{totalCows}</p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs font-medium text-gray-500">{t(lang, "active")}</p>
+                  <p className="text-xs text-gray-500">{t(lang, "active")}</p>
                   <p className="text-xl font-bold text-success">{activeCows}</p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs font-medium text-gray-500">{t(lang, "sold")}</p>
+                  <p className="text-xs text-gray-500">{t(lang, "sold")}</p>
                   <p className="text-xl font-bold text-blue-600">{soldCows}</p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-3">
-                  <p className="text-xs font-medium text-gray-500">{t(lang, "deceased")}</p>
+                  <p className="text-xs text-gray-500">{t(lang, "deceased")}</p>
                   <p className="text-xl font-bold text-gray-500">{deceasedCows}</p>
                 </div>
               </div>
@@ -318,17 +318,17 @@ export default function CowsListPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-2.5 shadow-sm border border-green-100 dark:border-green-800/50">
                   <p className="text-xs text-gray-500 dark:text-gray-400">💰 {t(lang, "income")}</p>
-                  <p className="text-sm font-bold text-green-600 dark:text-green-400 mt-0.5">{inr(thisYearIncome)}</p>
+                  <p className="text-base font-bold text-green-600 dark:text-green-400 mt-0.5">{inr(thisYearIncome)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{selectedYear}</p>
                 </div>
                 <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-2.5 shadow-sm border border-red-100 dark:border-red-800/50">
                   <p className="text-xs text-gray-500 dark:text-gray-400">💸 {t(lang, "expense")}</p>
-                  <p className="text-sm font-bold text-red-600 dark:text-red-400 mt-0.5">{inr(thisYearExpenses)}</p>
+                  <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">{inr(thisYearExpenses)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{selectedYear}</p>
                 </div>
                 <div className={`rounded-xl p-2.5 shadow-sm ${netPL >= 0 ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50" : "bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50"}`}>
                   <p className="text-xs text-gray-500 dark:text-gray-400">📊 {t(lang, "profit")}</p>
-                  <p className={`text-sm font-bold mt-0.5 ${netPL >= 0 ? "text-green-700 dark:text-green-400" : "text-orange-700 dark:text-orange-400"}`}>
+                  <p className={`text-base font-bold mt-0.5 ${netPL >= 0 ? "text-green-700 dark:text-green-400" : "text-orange-700 dark:text-orange-400"}`}>
                     {netPL >= 0 ? "+" : "-"}{inr(Math.abs(netPL))}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">{selectedYear}</p>
@@ -365,8 +365,8 @@ export default function CowsListPage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h2 className="text-sm font-bold text-gray-700">🐄 {t(lang, "cows")}</h2>
-                  <button onClick={() => openAddModal("cow")} className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition">
+                  <h2 className="text-base font-semibold text-gray-700">🐄 {t(lang, "cows")}</h2>
+                  <button onClick={() => openAddModal("cow")} className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-medium shadow-sm transition">
                     + {t(lang, "addCow")}
                   </button>
                 </div>
@@ -388,8 +388,8 @@ export default function CowsListPage() {
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h2 className="text-sm font-bold text-gray-700">🐃 {t(lang, "buffalo")}</h2>
-                  <button onClick={() => openAddModal("buffalo")} className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition">
+                  <h2 className="text-base font-semibold text-gray-700">🐃 {t(lang, "buffalo")}</h2>
+                  <button onClick={() => openAddModal("buffalo")} className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-medium shadow-sm transition">
                     + {t(lang, "addBuffalo")}
                   </button>
                 </div>
@@ -413,13 +413,13 @@ export default function CowsListPage() {
               <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 w-fit overflow-x-auto">
                 <button
                   onClick={() => setMilkType("cow")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${milkType === "cow" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${milkType === "cow" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
                 >
                   🐄 {t(lang, "cowMilk")}
                 </button>
                 <button
                   onClick={() => setMilkType("buffalo")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${milkType === "buffalo" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${milkType === "buffalo" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
                 >
                   🐃 {t(lang, "buffaloMilk")}
                 </button>
@@ -431,7 +431,7 @@ export default function CowsListPage() {
                   <p className="text-sm text-gray-600">{t(lang, "noBuffaloAddedYet")}</p>
                   <button
                     onClick={() => { setActiveTab("animals"); }}
-                    className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-xs font-semibold transition"
+                    className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-sm font-medium transition"
                   >
                     + {t(lang, "addBuffalo")}
                   </button>
@@ -448,13 +448,13 @@ export default function CowsListPage() {
               <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 w-fit overflow-x-auto">
                 <button
                   onClick={() => setIncomeType("cow")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${incomeType === "cow" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${incomeType === "cow" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
                 >
                   🐄 {t(lang, "cowIncome")}
                 </button>
                 <button
                   onClick={() => setIncomeType("buffalo")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${incomeType === "buffalo" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${incomeType === "buffalo" ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`}
                 >
                   🐃 {t(lang, "buffaloIncome")}
                 </button>
@@ -482,7 +482,7 @@ export default function CowsListPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl sm:max-h-[90vh] h-full sm:h-auto overflow-y-auto p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">
+              <h2 className="text-base font-semibold text-primary">
                 {addAnimalType === "buffalo" ? `🐃 ${t(lang, "addBuffalo")}` : `🐄 ${t(lang, "addCow")}`}
               </h2>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
@@ -548,13 +548,13 @@ export default function CowsListPage() {
               <button
                 onClick={saveCow}
                 disabled={saving}
-                className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl py-2.5 text-sm font-semibold transition"
+                className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl py-2.5 text-sm font-medium transition"
               >
                 {saving ? "..." : t(lang, "save")}
               </button>
               <button
                 onClick={() => setModalOpen(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-semibold transition"
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-medium transition"
               >
                 {t(lang, "cancel")}
               </button>

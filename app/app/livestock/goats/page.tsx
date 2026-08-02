@@ -70,7 +70,7 @@ const formatDMY = (iso: string | null | undefined) => {
 
 const inputCls =
   "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
-const labelCls = "block mb-1 text-xs font-medium text-gray-700";
+const labelCls = "block mb-1 text-xs text-gray-700";
 
 const emptyForm = {
   name: "",
@@ -341,7 +341,7 @@ export default function GoatsListPage() {
 
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h1 className="text-2xl font-bold text-primary">🐐 {t(lang, "goats")}</h1>
+              <h1 className="text-xl font-bold text-primary">🐐 {t(lang, "goats")}</h1>
               <p className="text-sm text-gray-500">{t(lang, "livestock")}</p>
             </div>
             <div className="flex items-center gap-2">
@@ -362,27 +362,27 @@ export default function GoatsListPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "total")}</p>
+              <p className="text-xs text-gray-500">{t(lang, "total")}</p>
               <p className="text-xl font-bold text-gray-800">{totalGoats}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "active")}</p>
+              <p className="text-xs text-gray-500">{t(lang, "active")}</p>
               <p className="text-xl font-bold text-success">{activeGoats}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "sold")}</p>
+              <p className="text-xs text-gray-500">{t(lang, "sold")}</p>
               <p className="text-xl font-bold text-blue-600">{soldGoats}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "income")}</p>
+              <p className="text-xs text-gray-500">{t(lang, "income")}</p>
               <p className="text-xl font-bold text-success">{inr(totalIncome)}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "expense")}</p>
+              <p className="text-xs text-gray-500">{t(lang, "expense")}</p>
               <p className="text-xl font-bold text-danger">{inr(totalExpense)}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">
-              <p className="text-xs font-medium text-gray-500">{t(lang, "netPL")}</p>
+              <p className="text-xs text-gray-500">{t(lang, "netPL")}</p>
               <p className={`text-xl font-bold ${netPL >= 0 ? "text-success" : "text-danger"}`}>{inr(netPL)}</p>
             </div>
           </div>
@@ -396,7 +396,7 @@ export default function GoatsListPage() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
                   activeTab === key ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
@@ -411,7 +411,7 @@ export default function GoatsListPage() {
               <div className="flex justify-end">
                 <button
                   onClick={openAddModal}
-                  className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition"
+                  className="bg-primary hover:bg-primary/90 text-white rounded-xl px-4 py-2 text-sm font-medium shadow-sm transition"
                 >
                   + {t(lang, "addGoat")}
                 </button>
@@ -434,11 +434,11 @@ export default function GoatsListPage() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-3">
                       <div className="flex items-start justify-between">
                         <Link href={`/livestock/goats/${goat.id}`} className="flex-1 cursor-pointer">
-                          <h3 className="text-sm font-bold text-gray-900">🐐 {goat.name}</h3>
+                          <h3 className="text-sm font-semibold text-gray-900">🐐 {goat.name}</h3>
                           <p className="text-xs text-gray-500">{goat.tag_number || "—"}</p>
                         </Link>
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className={`${STATUS_BADGE[goat.current_status] ?? STATUS_BADGE.active} text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+                          <span className={`${STATUS_BADGE[goat.current_status] ?? STATUS_BADGE.active} text-xs font-semibold px-2 py-0.5 rounded-full`}>
                             {goat.current_status}
                           </span>
                           <button onClick={() => handleDelete(goat.id)} className="text-red-400 hover:text-red-600 transition-colors duration-200 p-1">
@@ -465,15 +465,15 @@ export default function GoatsListPage() {
             <div className="flex flex-col gap-3">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-semibold text-gray-800">{t(lang, "salesHistory")}</h2>
-                  <button onClick={openAddSale} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                  <h2 className="text-base font-semibold text-gray-800">{t(lang, "salesHistory")}</h2>
+                  <button onClick={openAddSale} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
                     + {t(lang, "addSale")}
                   </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                      <tr className="text-left text-gray-500 uppercase text-xs font-medium tracking-wide border-b">
                         <th className="py-1 px-1">{t(lang, "name")}</th>
                         <th className="py-1 px-1">{t(lang, "date")}</th>
                         <th className="py-1 px-1">{t(lang, "weight")}</th>
@@ -515,15 +515,15 @@ export default function GoatsListPage() {
             <div className="flex flex-col gap-3">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-semibold text-gray-800">{t(lang, "expenseRecords")}</h2>
-                  <button onClick={openAddExpense} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition">
+                  <h2 className="text-base font-semibold text-gray-800">{t(lang, "expenseRecords")}</h2>
+                  <button onClick={openAddExpense} className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">
                     + {t(lang, "addExpense")}
                   </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-left text-gray-500 uppercase text-[10px] tracking-wide border-b">
+                      <tr className="text-left text-gray-500 uppercase text-xs font-medium tracking-wide border-b">
                         <th className="py-1 px-1">{t(lang, "name")}</th>
                         <th className="py-1 px-1">{t(lang, "date")}</th>
                         <th className="py-1 px-1">{t(lang, "type")}</th>
@@ -568,7 +568,7 @@ export default function GoatsListPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl sm:max-h-[90vh] h-full sm:h-auto overflow-y-auto p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{t(lang, "addGoat")}</h2>
+              <h2 className="text-base font-semibold text-primary">{t(lang, "addGoat")}</h2>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
 
@@ -633,10 +633,10 @@ export default function GoatsListPage() {
             </div>
 
             <div className="flex gap-2 mt-4">
-              <button onClick={saveGoat} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl py-2.5 text-sm font-semibold transition">
+              <button onClick={saveGoat} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-xl py-2.5 text-sm font-medium transition">
                 {saving ? "..." : t(lang, "save")}
               </button>
-              <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-semibold transition">
+              <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-medium transition">
                 {t(lang, "cancel")}
               </button>
             </div>
@@ -649,7 +649,7 @@ export default function GoatsListPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{t(lang, "addSale")}</h2>
+              <h2 className="text-base font-semibold text-primary">{t(lang, "addSale")}</h2>
               <button onClick={() => setSaleModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -697,10 +697,10 @@ export default function GoatsListPage() {
                 <input type="text" value={saleRemarks} onChange={(e) => setSaleRemarks(e.target.value)} className={inputCls} />
               </div>
               <div className="flex gap-2">
-                <button onClick={saveSale} disabled={savingSale} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={saveSale} disabled={savingSale} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {savingSale ? "..." : t(lang, "save")}
                 </button>
-                <button onClick={() => setSaleModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setSaleModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {t(lang, "cancel")}
                 </button>
               </div>
@@ -714,7 +714,7 @@ export default function GoatsListPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-0">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-primary">{t(lang, "addExpense")}</h2>
+              <h2 className="text-base font-semibold text-primary">{t(lang, "addExpense")}</h2>
               <button onClick={() => setExpenseModalOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="space-y-3">
@@ -756,10 +756,10 @@ export default function GoatsListPage() {
                 <input type="text" value={expDescription} onChange={(e) => setExpDescription(e.target.value)} className={inputCls} />
               </div>
               <div className="flex gap-2">
-                <button onClick={saveExpense} disabled={savingExpense} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={saveExpense} disabled={savingExpense} className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2 text-sm font-medium transition">
                   {savingExpense ? "..." : t(lang, "save")}
                 </button>
-                <button onClick={() => setExpenseModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-semibold transition">
+                <button onClick={() => setExpenseModalOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2 text-sm font-medium transition">
                   {t(lang, "cancel")}
                 </button>
               </div>
