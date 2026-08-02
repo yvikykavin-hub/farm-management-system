@@ -99,18 +99,18 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                     isActive ? "bg-white/15 text-white" : "text-green-200 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  {/* Fluorescent green left glow - ACTIVE */}
+                  {/* Green curved left accent */}
                   {isActive && (
                     <motion.div
                       layoutId="activeGlow"
-                      className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-[#4ade80] shadow-[0_0_8px_2px_#4ade80,0_0_16px_4px_#22c55e80]"
+                      className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl bg-[#4ade80] shadow-[1px_0_4px_0px_#4ade8060]"
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                   )}
 
-                  {/* Left glow spreading effect */}
+                  {/* Very subtle left green tint */}
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-green-400/20 to-transparent rounded-l-xl pointer-events-none" />
+                    <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-green-400/10 to-transparent rounded-l-xl pointer-events-none" />
                   )}
 
                   {/* Icon */}
@@ -125,12 +125,12 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
                   {/* Label */}
                   <span className="truncate text-sm z-10">{lang === "ta" ? item.labelTa : item.label}</span>
 
-                  {/* Active dot right */}
+                  {/* Small active dot right */}
                   {isActive && (
                     <motion.div
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="ml-auto w-1.5 h-1.5 rounded-full bg-[#4ade80] shadow-[0_0_4px_2px_#4ade80] flex-shrink-0 z-10"
+                      className="ml-auto w-1.5 h-1.5 rounded-full bg-[#4ade80] flex-shrink-0 z-10"
                     />
                   )}
                 </Link>
