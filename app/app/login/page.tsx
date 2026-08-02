@@ -131,45 +131,17 @@ export default function LoginPage() {
     };
 
     try {
-      // Step 1: look up the username server-side.
-      const lookupRes = await fetch("/api/auth/lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: cleanUsername }),
-      });
-
-      if (lookupRes.status === 429) {
-        const data = await lookupRes.json();
-        setRateCheck({ allowed: false, remainingMinutes: data.remainingMinutes });
-        setError(
-          L(
-            `Too many attempts! Please wait ${data.remainingMinutes} minutes.`,
-            `அதிக முயற்சிகள்! ${data.remainingMinutes} நிமிடம் காத்திருங்கள்.`
-          )
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (!lookupRes.ok) {
-        recordFailedAttempt();
-        failLogin(checkRateLimit());
-        setLoading(false);
-        return;
-      }
-
-      const { displayName, token } = await lookupRes.json();
-
-      // Step 2: verify the password server-side. The email address behind this
+      // Single server-side call: look up the username and sign in with
+      // Supabase in one serverless invocation. The email address behind the
       // username never reaches the browser at any point in this flow.
-      const verifyRes = await fetch("/api/auth/verify", {
+      const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ username: cleanUsername, password }),
       });
 
-      if (verifyRes.status === 429) {
-        const data = await verifyRes.json();
+      if (loginRes.status === 429) {
+        const data = await loginRes.json();
         setRateCheck({ allowed: false, remainingMinutes: data.remainingMinutes });
         setError(
           L(
@@ -181,14 +153,14 @@ export default function LoginPage() {
         return;
       }
 
-      if (!verifyRes.ok) {
+      if (!loginRes.ok) {
         recordFailedAttempt();
         failLogin(checkRateLimit());
         setLoading(false);
         return;
       }
 
-      const { session } = await verifyRes.json();
+      const { displayName, session } = await loginRes.json();
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: session.access_token,
         refresh_token: session.refresh_token,
