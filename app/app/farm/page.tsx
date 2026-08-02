@@ -110,7 +110,7 @@ export default function FarmDetails() {
                   type="text"
                   value={surveyNumbers}
                   onChange={(e) => setSurveyNumbers(e.target.value)}
-                  className="border p-3 w-full rounded-lg"
+                  className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                 />
               </div>
 
@@ -123,7 +123,7 @@ export default function FarmDetails() {
                   type="text"
                   value={pattaNumber}
                   onChange={(e) => setPattaNumber(e.target.value)}
-                  className="border p-3 w-full rounded-lg"
+                  className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                 />
               </div>
 
@@ -136,7 +136,7 @@ export default function FarmDetails() {
                   type="text"
                   value={wellDetails}
                   onChange={(e) => setWellDetails(e.target.value)}
-                  className="border p-3 w-full rounded-lg"
+                  className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                 />
               </div>
 
@@ -149,7 +149,7 @@ export default function FarmDetails() {
                   type="text"
                   value={motorDetails}
                   onChange={(e) => setMotorDetails(e.target.value)}
-                  className="border p-3 w-full rounded-lg"
+                  className="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                 />
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function FarmDetails() {
                 <select
                   value={cropName}
                   onChange={(e) => setCropName(e.target.value)}
-                  className="border p-2 rounded-lg min-w-[180px]"
+                  className="border p-2 rounded-lg min-w-[180px] focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                 >
                   <option value="">Select Crop</option>
                   <option value="Coconut">Coconut</option>
@@ -192,7 +192,7 @@ export default function FarmDetails() {
                   placeholder="Acres"
                   value={cropArea}
                   onChange={(e) => setCropArea(e.target.value)}
-                  className="border p-2 rounded-lg w-24"
+                  className="border p-2 rounded-lg w-24 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                 />
 
                 <button

@@ -957,13 +957,13 @@ export default function MilkCollectionSection({
                       return (
                         <tr key={idx} className="border-b border-gray-50">
                           <td className="py-1">
-                            <input type="text" value={row.date} onChange={(e) => updateOcrRow(idx, "date", e.target.value)} className="w-20 border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                            <input type="text" value={row.date} onChange={(e) => updateOcrRow(idx, "date", e.target.value)} className="w-20 border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500" />
                           </td>
                           <td className="py-1">
-                            <input type="number" value={row.morning} onChange={(e) => updateOcrRow(idx, "morning", e.target.value)} className="w-14 border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                            <input type="number" value={row.morning} onChange={(e) => updateOcrRow(idx, "morning", e.target.value)} className="w-14 border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500" />
                           </td>
                           <td className="py-1">
-                            <input type="number" value={row.evening} onChange={(e) => updateOcrRow(idx, "evening", e.target.value)} className="w-14 border border-gray-200 rounded px-1 py-0.5 text-xs" />
+                            <input type="number" value={row.evening} onChange={(e) => updateOcrRow(idx, "evening", e.target.value)} className="w-14 border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500" />
                           </td>
                           <td className="py-1">{total.toFixed(1)}</td>
                         </tr>
@@ -1079,7 +1079,7 @@ export default function MilkCollectionSection({
             <select
               value={chartYear}
               onChange={(e) => setChartYear(parseInt(e.target.value, 10))}
-              className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0"
+              className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
             >
               {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>

@@ -166,7 +166,7 @@ export default function LivestockLandingPage() {
                   <select
                     value={year}
                     onChange={(e) => setYear(parseInt(e.target.value, 10))}
-                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0"
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-900 min-h-[44px] sm:min-h-0 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500"
                   >
                     {YEAR_OPTIONS.map((y) => (
                       <option key={y} value={y}>{y}</option>

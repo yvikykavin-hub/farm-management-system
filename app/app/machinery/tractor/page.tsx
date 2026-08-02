@@ -152,7 +152,7 @@ export default function TractorListPage() {
                   <AnimatedCard key={tractor.id} delay={Math.min(i, 8) * 0.05}>
                     <div
                       onClick={() => router.push(`/machinery/tractor/${tractor.id}`)}
-                      className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-md hover:border-green-400 transition-all duration-200"
+                      className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-green-400 transition-all duration-200"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center overflow-hidden flex-shrink-0">

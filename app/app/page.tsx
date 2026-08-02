@@ -15,6 +15,7 @@ import NotificationBell from "../components/NotificationBell";
 import ChatWidget from "../components/ChatWidget";
 import WeatherWidget from "../components/WeatherWidget";
 import PullToRefresh from "../components/PullToRefresh";
+import { AnimatedNumber } from "../components/AnimatedNumber";
 import { supabase } from "../lib/supabase";
 import { useLang } from "../lib/useLang";
 
@@ -196,9 +197,9 @@ export default function Dashboard() {
           {/* Stats Cards */}
           <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 shrink-0">
             {[
-              { label: t.totalFarms, value: farms.length, color: "text-primary", bg: "bg-green-50", icon: "🌳" },
-              { label: t.totalArea, value: `${totalArea.toFixed(2)} ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
-              { label: t.activeCrops, value: activeCropsCount, color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
+              { label: t.totalFarms, value: farms.length, decimals: 0, suffix: "", color: "text-primary", bg: "bg-green-50", icon: "🌳" },
+              { label: t.totalArea, value: totalArea, decimals: 2, suffix: ` ${t.acres}`, color: "text-blue-700", bg: "bg-blue-50", icon: "📐" },
+              { label: t.activeCrops, value: activeCropsCount, decimals: 0, suffix: "", color: "text-amber-700", bg: "bg-amber-50", icon: "🌾" },
             ].map((card) => (
               <StaggerItem key={card.label}>
                 <div className={`${card.bg} rounded-2xl p-5 border border-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}>
@@ -207,7 +208,9 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-700">{card.label}</p>
                     <span className="text-base">{card.icon}</span>
                   </div>
-                  <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+                  <p className={`text-2xl font-bold ${card.color}`}>
+                    <AnimatedNumber value={card.value} decimals={card.decimals} suffix={card.suffix} />
+                  </p>
                 </div>
               </StaggerItem>
             ))}
@@ -279,7 +282,7 @@ export default function Dashboard() {
                 {farms.map((farm, i) => (
                   <StaggerItem key={farm.id}>
                     <Link href={`/farms/${farm.id}`}>
-                      <div className={`relative overflow-hidden flex flex-wrap justify-between items-center gap-2 p-3 rounded-xl border bg-gradient-to-br ${farmGradients[i % farmGradients.length]} hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] group`}>
+                      <div className={`relative overflow-hidden flex flex-wrap justify-between items-center gap-2 p-3 rounded-2xl border bg-gradient-to-br ${farmGradients[i % farmGradients.length]} hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] group`}>
                         <span className={`absolute left-0 top-0 bottom-0 w-1 ${farmAccentColors[i % farmAccentColors.length]}`} />
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-8 h-8 bg-white/70 dark:bg-slate-800/60 rounded-xl flex items-center justify-center text-lg transition shrink-0">

@@ -497,7 +497,7 @@ export default function FarmDetail() {
 
                   return (
                     <Link key={item.id} href={`/crops/${item.id}`}>
-                      <div className="group relative bg-white rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition cursor-pointer p-3 flex items-center gap-2">
+                      <div className="group relative bg-white rounded-2xl border border-gray-100 hover:border-green-300 hover:bg-green-50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-3 flex items-center gap-2">
                         <span className="text-2xl shrink-0">{crop.icon}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">

@@ -501,8 +501,8 @@ export default function ReportsPage() {
                 <div>
                   <p className="text-xs text-gray-500 mb-1">{L("Date Range (optional, overrides Year)", "தேதி வரம்பு (விருப்பம்)")}</p>
                   <div className="flex gap-2 flex-wrap">
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white text-gray-900" />
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white text-gray-900" />
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500" />
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500" />
                   </div>
                 </div>
                 <button

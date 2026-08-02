@@ -1,29 +1,53 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useInView } from "framer-motion";
 
-export function AnimatedNumber({ value, prefix = "₹" }: { value: number; prefix?: string }) {
+export function AnimatedNumber({
+  value,
+  duration = 1000,
+  suffix = "",
+  decimals = 0,
+}: {
+  value: number;
+  duration?: number;
+  suffix?: string;
+  decimals?: number;
+}) {
   const [display, setDisplay] = useState(0);
-  const startTime = useRef<number | undefined>(undefined);
-  const duration = 1000;
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
 
   useEffect(() => {
-    startTime.current = undefined;
-    let frame: number;
+    if (!isInView) return;
+    if (value === 0) return;
+
+    let startTime: number;
+    const endValue = value;
+
     const animate = (timestamp: number) => {
-      if (!startTime.current) startTime.current = timestamp;
-      const progress = Math.min((timestamp - startTime.current) / duration, 1);
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.floor(eased * value));
-      if (progress < 1) frame = requestAnimationFrame(animate);
+      setDisplay(endValue * eased);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplay(endValue);
+      }
     };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [value]);
+
+    requestAnimationFrame(animate);
+  }, [isInView, value, duration]);
 
   return (
-    <span>
-      {prefix}{display.toLocaleString("en-IN")}
+    <span ref={ref}>
+      {decimals > 0 ? display.toFixed(decimals) : Math.floor(display).toLocaleString("en-IN")}
+      {suffix}
     </span>
   );
 }

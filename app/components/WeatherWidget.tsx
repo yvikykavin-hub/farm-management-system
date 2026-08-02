@@ -34,6 +34,32 @@ const WEATHER_CODE_INFO: Record<number, WeatherIconInfo> = {
 const weatherInfo = (code: number): WeatherIconInfo =>
   WEATHER_CODE_INFO[code] ?? { icon: "🌤️", en: "Weather", ta: "வானிலை" };
 
+// Time-of-day gradient for the weather banner. Each entry pairs the
+// gradient color stops with a matching border tint (light + dark mode).
+const getWeatherGradient = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 8) {
+    // Early morning - warm pink/orange
+    return "from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-900/20 dark:via-amber-900/20 dark:to-yellow-900/20 border-orange-100 dark:border-orange-800/30";
+  } else if (hour >= 8 && hour < 12) {
+    // Morning - bright sky blue
+    return "from-sky-50 via-blue-50 to-cyan-50 dark:from-sky-900/20 dark:via-blue-900/20 dark:to-cyan-900/20 border-sky-100 dark:border-sky-800/30";
+  } else if (hour >= 12 && hour < 15) {
+    // Afternoon - bright warm
+    return "from-amber-50 via-yellow-50 to-lime-50 dark:from-amber-900/20 dark:via-yellow-900/20 dark:to-lime-900/20 border-amber-100 dark:border-amber-800/30";
+  } else if (hour >= 15 && hour < 18) {
+    // Late afternoon - golden
+    return "from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-900/20 dark:via-amber-900/20 dark:to-orange-900/20 border-yellow-100 dark:border-yellow-800/30";
+  } else if (hour >= 18 && hour < 20) {
+    // Evening - purple/pink sunset
+    return "from-purple-50 via-pink-50 to-orange-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-purple-100 dark:border-purple-800/30";
+  } else {
+    // Night - deep blue/indigo
+    return "from-indigo-50 via-blue-50 to-slate-50 dark:from-indigo-900/30 dark:via-blue-900/30 dark:to-slate-900/30 border-indigo-100 dark:border-indigo-800/30";
+  }
+};
+
 const RAIN_CODES = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95];
 const CLOUD_CODES = [1, 2, 3, 45, 48];
 
@@ -105,23 +131,15 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
     return <div className="w-full overflow-hidden rounded-xl shadow-sm h-11 bg-gray-100 animate-pulse" />;
   }
 
-  const hour = new Date().getHours();
-  const isDay = hour >= 6 && hour < 19;
-
   const { icon: weatherIcon, en: weatherEn, ta: weatherTa } = weatherInfo(weather.weatherCode);
   const condition = language === "ta" ? weatherTa : weatherEn;
   const advice = farmAdvice(weather.weatherCode, language);
+  const weatherGradient = getWeatherGradient();
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-sky-100 shadow-sm relative">
+    <div className={`w-full overflow-hidden rounded-xl border shadow-sm relative ${weatherGradient}`}>
       {/* Soft gradient background */}
-      <div
-        className={`absolute inset-0 ${
-          isDay
-            ? "bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50"
-            : "bg-gradient-to-r from-slate-100 via-blue-100 to-indigo-100"
-        }`}
-      />
+      <div className={`absolute inset-0 bg-gradient-to-r ${weatherGradient}`} />
 
       {/* Content */}
       <div className="relative z-10 px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto">
