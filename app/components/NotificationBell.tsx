@@ -455,24 +455,83 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
             </div>
           ) : (
             <div className="p-2 space-y-1.5">
-              {items.map((item) => (
-                <div key={item.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl text-sm border ${severityCls[item.severity]}`}>
-                  <span className="text-base shrink-0">{item.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-xs opacity-70 mt-0.5">{item.message}</p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dismiss(item.id);
-                    }}
-                    className="min-h-[24px] min-w-[24px] flex items-center justify-center text-current opacity-60 hover:opacity-100 shrink-0"
+              {items.map((item) => {
+                const isMotorMyTurn = item.id.startsWith("motor-my-turn");
+                const isMotorNeighborTurn = item.id.startsWith("motor-neighbor-turn");
+                const isMotorNotification = isMotorMyTurn || isMotorNeighborTurn;
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-2.5 rounded-xl text-sm border transition-all duration-200 ${
+                      isMotorMyTurn
+                        ? "bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/30 dark:to-cyan-900/30 border-teal-200 dark:border-teal-700/50"
+                        : isMotorNeighborTurn
+                          ? "bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600/50"
+                          : severityCls[item.severity]
+                    }`}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-start gap-2.5">
+                      {isMotorNotification ? (
+                        <div
+                          className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center ${
+                            isMotorMyTurn ? "bg-teal-100 dark:bg-teal-900/40" : "bg-slate-100 dark:bg-slate-600/40"
+                          }`}
+                        >
+                          <span className="text-base">{item.icon}</span>
+                        </div>
+                      ) : (
+                        <span className="text-base shrink-0">{item.icon}</span>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`font-medium leading-tight ${
+                            isMotorMyTurn
+                              ? "text-teal-800 dark:text-teal-300"
+                              : isMotorNeighborTurn
+                                ? "text-slate-700 dark:text-slate-300"
+                                : ""
+                          }`}
+                        >
+                          {item.title}
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 leading-relaxed ${
+                            isMotorMyTurn
+                              ? "text-teal-600 dark:text-teal-400"
+                              : isMotorNeighborTurn
+                                ? "text-slate-500 dark:text-slate-400"
+                                : "opacity-70"
+                          }`}
+                        >
+                          {item.message}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismiss(item.id);
+                        }}
+                        className="min-h-[24px] min-w-[24px] flex items-center justify-center text-current opacity-60 hover:opacity-100 shrink-0"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {/* Special bottom bar for MY turn */}
+                    {isMotorMyTurn && (
+                      <div className="mt-2 pt-2 border-t border-teal-100 dark:border-teal-800/30 flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                        <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">
+                          {language === "ta" ? "இப்போதே பாசனம் செய்யலாம்" : "Water your fields now"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
