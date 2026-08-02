@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
@@ -44,6 +45,7 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
     const [loading, setLoading] = useState(true);
     const [showSchedule, setShowSchedule] = useState(false);
     const [showAddPartner, setShowAddPartner] = useState(false);
+    const [showTurnDetails, setShowTurnDetails] = useState(false); // collapsed by default
     const { isOpen: deleteOpen, confirmDelete, handleConfirm: handleDeleteConfirm, handleCancel: handleDeleteCancel } = useDeleteConfirm();
 
     // Form states
@@ -227,7 +229,54 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
       return now >= myTurn.start && now <= myTurn.end;
     };
 
+    // Walks the rotation day-by-day from the configured start until it finds
+    // the slot that covers today, so the banner stays correct no matter how
+    // long ago the rotation was originally configured.
+    const getTodaysTurn = () => {
+      if (!sharing?.current_turn_start || !isShared) return null;
+
+      const allParticipants = [
+        { name: "me", days: sharing.current_turn_days },
+        ...partners.map((p) => ({ name: p.partner_name, days: p.turn_days })),
+      ];
+
+      const startIndex = allParticipants.findIndex((p) => p.name === sharing.current_turn_owner);
+      if (startIndex === -1) return null;
+
+      let currentDate = new Date(sharing.current_turn_start);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let participantIndex = startIndex;
+      let iterations = 0;
+
+      while (currentDate <= today && iterations < 100) {
+        const participant = allParticipants[participantIndex % allParticipants.length];
+
+        const endDate = new Date(currentDate);
+        endDate.setDate(endDate.getDate() + participant.days);
+        endDate.setHours(18, 0, 0, 0);
+
+        if (today < endDate) {
+          return {
+            isMyTurn: participant.name === "me",
+            ownerName: participant.name,
+            endsAt: endDate,
+            daysRemaining: Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+          };
+        }
+
+        currentDate = new Date(endDate);
+        participantIndex++;
+        iterations++;
+      }
+
+      return null;
+    };
+
     if (loading) return null;
+
+    const todaysTurn = getTodaysTurn();
 
     return (
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
@@ -255,112 +304,267 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
           </button>
         </div>
 
+        {/* Today's Turn status banner */}
+        {isShared && todaysTurn && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className={`relative overflow-hidden rounded-2xl p-4 mb-4 ${
+              todaysTurn.isMyTurn ? "bg-gradient-to-r from-green-500 to-emerald-500" : "bg-gradient-to-r from-slate-500 to-slate-600"
+            }`}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.25, 0.15] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white"
+            />
+            <motion.div
+              animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-white"
+            />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={todaysTurn.isMyTurn ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    todaysTurn.isMyTurn ? "bg-white/25" : "bg-white/20"
+                  }`}
+                >
+                  <span className="text-2xl">{todaysTurn.isMyTurn ? "🚰" : "👤"}</span>
+                </motion.div>
+
+                <div className="flex-1">
+                  <motion.p
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-white font-bold text-sm leading-tight"
+                  >
+                    {todaysTurn.isMyTurn
+                      ? language === "ta" ? "✅ இன்று உங்கள் முறை!" : "✅ Today is Your Turn!"
+                      : language === "ta" ? `🔄 இன்று ${todaysTurn.ownerName} முறை` : `🔄 Today is ${todaysTurn.ownerName}'s Turn`}
+                  </motion.p>
+                  <motion.p
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-white/80 text-xs mt-0.5"
+                  >
+                    {todaysTurn.isMyTurn
+                      ? language === "ta" ? `${todaysTurn.daysRemaining} நாள் மட்டுமே உள்ளது` : `${todaysTurn.daysRemaining} day(s) remaining`
+                      : language === "ta" ? `${todaysTurn.daysRemaining} நாளில் உங்கள் முறை` : `Your turn in ${todaysTurn.daysRemaining} day(s)`}
+                  </motion.p>
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="bg-white/25 rounded-xl px-2.5 py-1.5 text-center flex-shrink-0"
+                >
+                  <p className="text-white font-bold text-lg leading-none">{todaysTurn.daysRemaining}</p>
+                  <p className="text-white/80 text-xs">{language === "ta" ? "நாள்" : "days"}</p>
+                </motion.div>
+              </div>
+
+              {todaysTurn.isMyTurn && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex items-center gap-1.5 mt-2.5"
+                >
+                  <motion.div
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-2 h-2 rounded-full bg-white"
+                  />
+                  <p className="text-white/90 text-xs">
+                    {language === "ta" ? "இப்போதே தண்ணீர் பாசனம் செய்யலாம்" : "You can water your fields now"}
+                  </p>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Shared motor details */}
         {isShared && (
           <div className="space-y-2">
-            {/* Current turn info */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-              <p className={`${sectionTitleCls} mb-2`}>{language === "ta" ? "தற்போதைய முறை" : "Current Turn"}</p>
+            {/* Collapsible Turn Details */}
+            <div>
+              <button
+                onClick={() => setShowTurnDetails(!showTurnDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              >
+                <span className="flex items-center gap-2">
+                  ⚙️ <span>{language === "ta" ? "முறை விவரங்கள்" : "Turn Details"}</span>
+                </span>
+                <motion.span
+                  animate={{ rotate: showTurnDetails ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-gray-400 text-xs"
+                >
+                  ▼
+                </motion.span>
+              </button>
 
-              <div className="space-y-2">
-                {/* Who has current turn — dropdown */}
-                <div>
-                  <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "தற்போது யாருடைய முறை?" : "Whose turn is it now?"}</label>
-                  <select
-                    value={turnOwner}
-                    onChange={(e) => setTurnOwner(e.target.value)}
-                    className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              <AnimatePresence>
+                {showTurnDetails && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
                   >
-                    <option value="me">{language === "ta" ? "என் முறை" : "My Turn"}</option>
-                    {partners.map((partner) => (
-                      <option key={partner.id} value={partner.partner_name}>
-                        {partner.partner_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Turn start date/time */}
-                <div>
-                  <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "முறை தொடங்கிய நேரம்" : "Turn Started"}</label>
-                  <input
-                    type="datetime-local"
-                    value={turnStart}
-                    onChange={(e) => setTurnStart(e.target.value)}
-                    className={valueInputCls}
-                    style={{ colorScheme: "light", minWidth: 0, width: "100%" }}
-                  />
-                  {turnStart && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(turnStart).toLocaleString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </p>
-                  )}
-                </div>
-
-                {/* Turn duration — hours or days */}
-                <div>
-                  <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "கால அளவு" : "Duration"}</label>
-
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      onClick={() => setDurationType("hours")}
-                      className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-all ${
-                        durationType === "hours" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      {language === "ta" ? "மணி நேரம்" : "Hours"}
-                    </button>
-                    <button
-                      onClick={() => setDurationType("days")}
-                      className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-all ${
-                        durationType === "days" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      {language === "ta" ? "நாட்கள்" : "Days"}
-                    </button>
-                  </div>
-
-                  {durationType === "hours" && (
-                    <div className="flex gap-1 flex-wrap">
-                      {HOUR_OPTIONS.map((hour) => (
-                        <button
-                          key={hour}
-                          onClick={() => setTurnHours(hour)}
-                          className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                            turnHours === hour ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
-                          }`}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 space-y-2 mt-1">
+                      {/* Initial Turn selector */}
+                      <div>
+                        <label className={`${labelCls} mb-0.5 block`}>{language === "ta" ? "தொடக்க முறை" : "Initial Turn"}</label>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 mb-2">
+                          {language === "ta"
+                            ? "இந்த தேதியிலிருந்து யார் முதலில் தொடங்குகிறார்?"
+                            : "Who starts the first turn from the selected date?"}
+                        </p>
+                        <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "முதலில் யார் முறை?" : "Who starts first?"}</label>
+                        <select
+                          value={turnOwner}
+                          onChange={(e) => setTurnOwner(e.target.value)}
+                          className="w-full text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         >
-                          {hour}
-                          {language === "ta" ? "மணி" : "hr"}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                          <option value="me">{language === "ta" ? "என் முறை" : "My Turn"}</option>
+                          {partners.map((partner) => (
+                            <option key={partner.id} value={partner.partner_name}>
+                              {partner.partner_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                  {durationType === "days" && (
-                    <div className="flex gap-1">
-                      {DAY_OPTIONS.map((day) => (
+                      {/* Turn start date/time */}
+                      <div>
+                        <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "முறை தொடங்கிய நேரம்" : "Turn Started"}</label>
+                        <input
+                          type="datetime-local"
+                          value={turnStart}
+                          onChange={(e) => setTurnStart(e.target.value)}
+                          className={valueInputCls}
+                          style={{ colorScheme: "light", minWidth: 0, width: "100%" }}
+                        />
+                        {turnStart && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(turnStart).toLocaleString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Turn duration — hours or days */}
+                      <div>
+                        <label className={`${labelCls} mb-1 block`}>{language === "ta" ? "கால அளவு" : "Duration"}</label>
+
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            onClick={() => setDurationType("hours")}
+                            className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-all ${
+                              durationType === "hours" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                            }`}
+                          >
+                            {language === "ta" ? "மணி நேரம்" : "Hours"}
+                          </button>
+                          <button
+                            onClick={() => setDurationType("days")}
+                            className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-all ${
+                              durationType === "days" ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                            }`}
+                          >
+                            {language === "ta" ? "நாட்கள்" : "Days"}
+                          </button>
+                        </div>
+
+                        {durationType === "hours" && (
+                          <div className="flex gap-1 flex-wrap">
+                            {HOUR_OPTIONS.map((hour) => (
+                              <button
+                                key={hour}
+                                onClick={() => setTurnHours(hour)}
+                                className={`px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                  turnHours === hour ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                                }`}
+                              >
+                                {hour}
+                                {language === "ta" ? "மணி" : "hr"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {durationType === "days" && (
+                          <div className="flex gap-1">
+                            {DAY_OPTIONS.map((day) => (
+                              <button
+                                key={day}
+                                onClick={() => setTurnDays(day)}
+                                className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                                  turnDays === day ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Schedule preview */}
+                      <div>
                         <button
-                          key={day}
-                          onClick={() => setTurnDays(day)}
-                          className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
-                            turnDays === day ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
-                          }`}
+                          onClick={() => setShowSchedule(!showSchedule)}
+                          className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium mt-2"
                         >
-                          {day}
+                          📅 {showSchedule ? (language === "ta" ? "அட்டவணையை மறை" : "Hide Schedule") : language === "ta" ? "அட்டவணை காட்டு" : "View Schedule"}
+                          <span>{showSchedule ? "▲" : "▼"}</span>
                         </button>
-                      ))}
+
+                        {showSchedule && (
+                          <div className="mt-2 space-y-1">
+                            {getSchedule()
+                              .slice(0, 5)
+                              .map((slot, i) => (
+                                <div
+                                  key={i}
+                                  className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs ${
+                                    slot.isMe ? "bg-green-50 dark:bg-green-900/20" : "bg-gray-50 dark:bg-slate-700/50"
+                                  }`}
+                                >
+                                  <span className={`font-medium ${slot.isMe ? "text-green-700 dark:text-green-300" : "text-gray-600 dark:text-gray-400"}`}>
+                                    {slot.isMe ? (language === "ta" ? "🟢 என் முறை" : "🟢 My turn") : `🔴 ${slot.owner}`}
+                                  </span>
+                                  <span className="text-gray-400">
+                                    {slot.start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                    {" → "}
+                                    {slot.end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Shared Partners section */}
@@ -437,41 +641,6 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                       {language === "ta" ? "சேர்" : "Add"}
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Schedule preview */}
-            <div>
-              <button
-                onClick={() => setShowSchedule(!showSchedule)}
-                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium mt-2"
-              >
-                📅 {showSchedule ? (language === "ta" ? "அட்டவணையை மறை" : "Hide Schedule") : language === "ta" ? "அட்டவணை காட்டு" : "View Schedule"}
-                <span>{showSchedule ? "▲" : "▼"}</span>
-              </button>
-
-              {showSchedule && (
-                <div className="mt-2 space-y-1">
-                  {getSchedule()
-                    .slice(0, 5)
-                    .map((slot, i) => (
-                      <div
-                        key={i}
-                        className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs ${
-                          slot.isMe ? "bg-green-50 dark:bg-green-900/20" : "bg-gray-50 dark:bg-slate-700/50"
-                        }`}
-                      >
-                        <span className={`font-medium ${slot.isMe ? "text-green-700 dark:text-green-300" : "text-gray-600 dark:text-gray-400"}`}>
-                          {slot.isMe ? (language === "ta" ? "🟢 என் முறை" : "🟢 My turn") : `🔴 ${slot.owner}`}
-                        </span>
-                        <span className="text-gray-400">
-                          {slot.start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                          {" → "}
-                          {slot.end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                        </span>
-                      </div>
-                    ))}
                 </div>
               )}
             </div>

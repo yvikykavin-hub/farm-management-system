@@ -68,65 +68,68 @@ export default function Sidebar({ lang = "en", setLang }: SidebarProps) {
           ✕
         </button>
 
-        {/* Logo area */}
-        <div className="p-3 border-b border-green-700/30 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center text-lg shrink-0">
-              👨‍🌾
-            </div>
+        {/* Logo - compact */}
+        <div className="flex-shrink-0 px-4 py-3 border-b border-green-700/30">
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/farmer-icon.png" alt="" className="w-9 h-9 rounded-full border-2 border-green-400/30" />
             <div>
-              <h1 className="text-white font-bold text-sm leading-tight">
+              <p className="text-white font-bold text-sm leading-tight">
                 {lang === "ta" ? "மருதம் FMS" : "Marutham FMS"}
-              </h1>
-              <p className="text-green-300 text-xs leading-tight mt-0.5">
-                {lang === "ta" ? "உழைப்பே உயர்வு" : "Rooted in Tradition, Driven by Data"}
               </p>
+              <p className="text-green-300 text-xs">{lang === "ta" ? "உழைப்பே உயர்வு" : "Rooted in Tradition, Driven by Data"}</p>
             </div>
           </div>
         </div>
 
-        {/* Nav — compact, no scroll */}
-        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-hidden">
-          {navItems.map((item) => {
-            const isActive = item.startsWith ? pathname.startsWith(item.href) : pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.label}
-                onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-200 relative border-l-2 ${
-                  isActive
-                    ? "bg-white/10 text-white font-medium border-green-300"
-                    : "text-green-200 border-transparent hover:bg-white/[0.08] hover:text-white"
-                }`}
-              >
-                <span className="text-base flex-shrink-0">{item.icon}</span>
-                <span className="text-xs font-medium truncate">{lang === "ta" ? item.labelTa : item.label}</span>
-                {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-300 flex-shrink-0" />}
-              </Link>
-            );
-          })}
+        {/* Nav items — fill available space */}
+        <nav className="flex-1 px-3 py-3 flex flex-col justify-between overflow-hidden">
+          {/* Main nav items */}
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const isActive = item.startsWith ? pathname.startsWith(item.href) : pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  onClick={() => setIsOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    isActive ? "bg-white/15 text-white shadow-sm" : "text-green-200 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <span className="text-lg flex-shrink-0">{item.icon}</span>
+                  <span className="truncate text-sm">{lang === "ta" ? item.labelTa : item.label}</span>
+                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-70" />}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Small gap indicator */}
+          <div className="my-2">
+            <div className="h-px bg-green-700/40 mx-2 rounded-full" />
+          </div>
         </nav>
 
-        {/* Bottom: language + dark mode + logout */}
-        <div className="p-2 border-t border-green-700/30 space-y-0.5 shrink-0">
+        {/* Bottom section - Language + Dark mode + Logout */}
+        <div className="flex-shrink-0 px-3 pb-3 space-y-1">
           <div className="flex items-center gap-2">
             <button
               onClick={toggleLang}
-              className="flex-1 flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white transition-all duration-200 min-w-0"
+              className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-green-200 hover:bg-white/10 hover:text-white text-sm font-medium transition-all duration-200 min-w-0"
             >
-              <span className="text-base">🌐</span>
-              <span className="text-xs font-medium truncate">{lang === "ta" ? "English" : "தமிழ்"}</span>
+              <span className="text-lg">🌐</span>
+              <span className="truncate">{lang === "ta" ? "English" : "தமிழ்"}</span>
             </button>
             <DarkModeToggle variant="sidebar" />
           </div>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-green-200 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 text-sm font-medium transition-all duration-200"
           >
-            <span className="text-base">🚪</span>
-            <span className="text-xs font-medium">{lang === "ta" ? "வெளியேறு" : "Logout"}</span>
+            <span className="text-lg">🚪</span>
+            <span>{lang === "ta" ? "வெளியேறு" : "Logout"}</span>
           </button>
         </div>
       </aside>

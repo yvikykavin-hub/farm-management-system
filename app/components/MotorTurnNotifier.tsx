@@ -175,6 +175,71 @@ export default function MotorTurnNotifier() {
       }
     };
 
+    // Walks the rotation day-by-day from the configured start until it finds
+    // today's slot, mirroring MotorSharingSection's getTodaysTurn logic.
+    const checkTodaysTurn = async (lang: string) => {
+      const { data: motorData } = await supabase
+        .from("motor_sharing")
+        .select("*, motor_sharing_neighbors(*), farms(name, name_tamil)")
+        .eq("is_shared", true);
+
+      if (!motorData) return;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toDateString();
+
+      for (const motor of motorData) {
+        if (!motor.current_turn_start) continue;
+
+        const allParticipants = [
+          { name: "me", days: motor.current_turn_days || 2 },
+          ...(motor.motor_sharing_neighbors || []).map((n: { neighbor_name: string; turn_days: number }) => ({
+            name: n.neighbor_name,
+            days: n.turn_days || 2,
+          })),
+        ];
+
+        const startIndex = allParticipants.findIndex((p) => p.name === motor.current_turn_owner);
+        if (startIndex === -1) continue;
+
+        let currentDate = new Date(motor.current_turn_start);
+        let participantIndex = startIndex;
+        let isMyTurn = false;
+        let iterations = 0;
+
+        while (currentDate <= today && iterations < 100) {
+          const participant = allParticipants[participantIndex % allParticipants.length];
+
+          const endDate = new Date(currentDate);
+          endDate.setDate(endDate.getDate() + participant.days);
+          endDate.setHours(18, 0, 0, 0);
+
+          if (today < endDate) {
+            isMyTurn = participant.name === "me";
+            break;
+          }
+
+          currentDate = new Date(endDate);
+          participantIndex++;
+          iterations++;
+        }
+
+        if (isMyTurn) {
+          const farmName = lang === "ta" && motor.farms?.name_tamil ? motor.farms.name_tamil : motor.farms?.name || "Farm";
+          const tag = `motor-today-${motor.id}-${todayStr}`;
+
+          await sendNotification(
+            lang === "ta" ? `🚰 ${farmName} - இன்று உங்கள் முறை!` : `🚰 ${farmName} - Today is your motor turn!`,
+            lang === "ta" ? "இப்போதே தண்ணீர் பாசனம் செய்யலாம்" : "You can water your fields now",
+            tag,
+            "/land-details",
+            false
+          );
+        }
+      }
+    };
+
     const checkMilkPayments = async (lang: string) => {
       const { data: pending } = await supabase.from("milk_payments").select("id").eq("payment_status", "Pending").limit(5);
 
@@ -209,6 +274,10 @@ export default function MotorTurnNotifier() {
       try {
         await checkTractorOil(lang);
         await checkMotorTurns(lang, hour, today);
+        // Check today's motor turn (morning only)
+        if (hour >= 6 && hour <= 9) {
+          await checkTodaysTurn(lang);
+        }
         if (now.getDay() === 3) {
           await checkMilkPayments(lang);
         }

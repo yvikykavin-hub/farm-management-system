@@ -312,8 +312,6 @@ export default function LandDetailPage() {
           has_motor: motor,
           motor_details: motor ? motorDetails.trim() || null : null,
           motor_hp: motor ? (motorHp === "other" ? motorHpOther.trim() || null : motorHp || null) : null,
-          water_source: waterSource || null,
-          irrigation_type: irrigationType || null,
         })
         .eq("id", id);
       if (error) {
@@ -334,7 +332,14 @@ export default function LandDetailPage() {
   const saveSoilInfo = async () => {
     setSavingSoil(true);
     try {
-      const { error } = await supabase.from("farms").update({ soil_type: soilType || null }).eq("id", id);
+      const { error } = await supabase
+        .from("farms")
+        .update({
+          soil_type: soilType || null,
+          water_source: waterSource || null,
+          irrigation_type: irrigationType || null,
+        })
+        .eq("id", id);
       if (error) {
         console.error("Error saving soil info:", error);
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
@@ -567,6 +572,56 @@ export default function LandDetailPage() {
                     <label className={labelCls}>{L("Total Area in Acres", "மொத்த பரப்பளவு")}</label>
                     <input type="number" step="0.01" value={area} onChange={(e) => setArea(e.target.value)} className={inputCls} />
                   </div>
+                </div>
+                <button
+                  onClick={saveBasicInfo}
+                  disabled={savingBasic}
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                >
+                  {savingBasic ? "..." : L("Save", "சேமி")}
+                </button>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Soil Details", "மண் விவரங்கள்")}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <label className={labelCls}>{L("Soil Type", "மண் வகை")}</label>
+                    <select value={soilType} onChange={(e) => setSoilType(e.target.value)} className={inputCls}>
+                      {SOIL_TYPES.map((o) => (
+                        <option className="text-gray-900" key={o.value} value={o.value}>{L(o.en, o.ta)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Water Source", "நீர் ஆதாரம்")}</label>
+                    <select value={waterSource} onChange={(e) => setWaterSource(e.target.value)} className={inputCls}>
+                      {WATER_SOURCES.map((o) => (
+                        <option className="text-gray-900" key={o.value} value={o.value}>{L(o.en, o.ta)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>{L("Irrigation Type", "பாசன முறை")}</label>
+                    <select value={irrigationType} onChange={(e) => setIrrigationType(e.target.value)} className={inputCls}>
+                      {IRRIGATION_TYPES.map((o) => (
+                        <option className="text-gray-900" key={o.value} value={o.value}>{L(o.en, o.ta)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={saveSoilInfo}
+                  disabled={savingSoil}
+                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
+                >
+                  {savingSoil ? "..." : L("Save", "சேமி")}
+                </button>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Land Records", "நில பதிவுகள்")}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                   <div>
                     <label className={labelCls}>{L("Survey Number", "சர்வே எண்")}</label>
                     <input type="text" value={surveyNumbers} onChange={(e) => setSurveyNumbers(e.target.value)} className={inputCls} />
@@ -586,7 +641,7 @@ export default function LandDetailPage() {
               </div>
 
               <div className="bg-white rounded-xl shadow-sm p-4">
-                <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Water & Irrigation", "நீர் பாசனம்")}</h2>
+                <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Well & Motor", "கிணறு & மோட்டார்")}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-gray-700">{L("Well", "கிணறு")}</label>
@@ -637,22 +692,6 @@ export default function LandDetailPage() {
                       </div>
                     </>
                   )}
-                  <div>
-                    <label className={labelCls}>{L("Water Source", "நீர் ஆதாரம்")}</label>
-                    <select value={waterSource} onChange={(e) => setWaterSource(e.target.value)} className={inputCls}>
-                      {WATER_SOURCES.map((o) => (
-                        <option className="text-gray-900" key={o.value} value={o.value}>{L(o.en, o.ta)}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>{L("Irrigation Type", "பாசன முறை")}</label>
-                    <select value={irrigationType} onChange={(e) => setIrrigationType(e.target.value)} className={inputCls}>
-                      {IRRIGATION_TYPES.map((o) => (
-                        <option className="text-gray-900" key={o.value} value={o.value}>{L(o.en, o.ta)}</option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
                 <button
                   onClick={saveWaterInfo}
@@ -663,27 +702,6 @@ export default function LandDetailPage() {
                 </button>
 
                 {(well || motor) && <MotorSharingSection ref={motorSharingRef} farmId={id} language={lang} />}
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <h2 className="text-sm font-semibold text-gray-800 mb-2">{L("Soil Info", "மண் தகவல்")}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                  <div>
-                    <label className={labelCls}>{L("Soil Type", "மண் வகை")}</label>
-                    <select value={soilType} onChange={(e) => setSoilType(e.target.value)} className={inputCls}>
-                      {SOIL_TYPES.map((o) => (
-                        <option className="text-gray-900" key={o.value} value={o.value}>{L(o.en, o.ta)}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={saveSoilInfo}
-                  disabled={savingSoil}
-                  className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-1.5 text-xs font-semibold transition shadow-sm"
-                >
-                  {savingSoil ? "..." : L("Save", "சேமி")}
-                </button>
               </div>
             </div>
           )}
