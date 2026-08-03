@@ -12,6 +12,7 @@ import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { SkeletonDashboard } from "../components/Skeleton";
 import DarkModeToggle from "../components/DarkModeToggle";
 import NotificationBell from "../components/NotificationBell";
+import VoiceAgent from "../components/VoiceAgent";
 import ChatWidget from "../components/ChatWidget";
 import WeatherWidget from "../components/WeatherWidget";
 import PullToRefresh from "../components/PullToRefresh";
@@ -188,6 +189,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
+                <VoiceAgent language={lang} />
                 <NotificationBell language={lang} />
                 <DarkModeToggle />
                 {/* Language Toggle */}
