@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { getValidationMessage } from "../lib/validation";
+import { calculateCurrentTurn, formatTurnRemaining, getNextTurnInfo } from "../lib/motorTurnCalculator";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
@@ -233,54 +234,21 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
       return now >= myTurn.start && now <= myTurn.end;
     };
 
-    // Walks the rotation day-by-day from the configured start until it finds
-    // the slot that covers today, so the banner stays correct no matter how
-    // long ago the rotation was originally configured.
-    const getTodaysTurn = () => {
-      if (!sharing?.current_turn_start || !isShared) return null;
-
-      const allParticipants = [
-        { name: "me", days: sharing.current_turn_days },
-        ...partners.map((p) => ({ name: p.partner_name, days: p.turn_days })),
-      ];
-
-      const startIndex = allParticipants.findIndex((p) => p.name === sharing.current_turn_owner);
-      if (startIndex === -1) return null;
-
-      let currentDate = new Date(sharing.current_turn_start);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      let participantIndex = startIndex;
-      let iterations = 0;
-
-      while (currentDate <= today && iterations < 100) {
-        const participant = allParticipants[participantIndex % allParticipants.length];
-
-        const endDate = new Date(currentDate);
-        endDate.setDate(endDate.getDate() + participant.days);
-        endDate.setHours(18, 0, 0, 0);
-
-        if (today < endDate) {
-          return {
-            isMyTurn: participant.name === "me",
-            ownerName: participant.name,
-            endsAt: endDate,
-            daysRemaining: Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
-          };
-        }
-
-        currentDate = new Date(endDate);
-        participantIndex++;
-        iterations++;
-      }
-
-      return null;
-    };
-
     if (loading) return null;
 
-    const todaysTurn = getTodaysTurn();
+    // Turn hand-off happens at 6 PM, not midnight — calculateCurrentTurn walks
+    // the rotation using the real current time so this stays correct no matter
+    // how long ago the rotation was originally configured.
+    const partnersList = partners.map((p) => ({ name: p.partner_name, days: Number(p.turn_days) || 2 }));
+    const turnStatus =
+      isShared && sharing?.current_turn_start
+        ? calculateCurrentTurn(
+            sharing.current_turn_start,
+            sharing.current_turn_owner,
+            Number(sharing.current_turn_days) || 2,
+            partnersList
+          )
+        : null;
 
     return (
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
@@ -309,13 +277,13 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
         </div>
 
         {/* Today's Turn status banner */}
-        {isShared && todaysTurn && (
+        {isShared && turnStatus && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className={`relative overflow-hidden rounded-2xl p-4 mb-4 ${
-              todaysTurn.isMyTurn ? "bg-gradient-to-r from-green-500 to-emerald-500" : "bg-gradient-to-r from-slate-500 to-slate-600"
+              turnStatus.isMyTurn ? "bg-gradient-to-r from-green-500 to-emerald-500" : "bg-gradient-to-r from-slate-500 to-slate-600"
             }`}
           >
             <motion.div
@@ -332,13 +300,13 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
             <div className="relative z-10">
               <div className="flex items-center gap-3">
                 <motion.div
-                  animate={todaysTurn.isMyTurn ? { scale: [1, 1.1, 1] } : {}}
+                  animate={turnStatus.isMyTurn ? { scale: [1, 1.1, 1] } : {}}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    todaysTurn.isMyTurn ? "bg-white/25" : "bg-white/20"
+                    turnStatus.isMyTurn ? "bg-white/25" : "bg-white/20"
                   }`}
                 >
-                  <span className="text-2xl">{todaysTurn.isMyTurn ? "🚰" : "👤"}</span>
+                  <span className="text-2xl">{turnStatus.isMyTurn ? "🚰" : "👤"}</span>
                 </motion.div>
 
                 <div className="flex-1">
@@ -348,9 +316,11 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                     transition={{ delay: 0.2 }}
                     className="text-white font-semibold text-sm leading-tight"
                   >
-                    {todaysTurn.isMyTurn
-                      ? language === "ta" ? "✅ இன்று உங்கள் முறை!" : "✅ Today is Your Turn!"
-                      : language === "ta" ? `🔄 இன்று ${todaysTurn.ownerName} முறை` : `🔄 Today is ${todaysTurn.ownerName}'s Turn`}
+                    {turnStatus.isMyTurn
+                      ? turnStatus.endingSoon
+                        ? language === "ta" ? "⏰ உங்கள் முறை முடியும்!" : "⏰ Your Turn Ends Soon!"
+                        : language === "ta" ? "✅ இன்று உங்கள் முறை!" : "✅ Today is Your Turn!"
+                      : language === "ta" ? `🔄 இன்று ${turnStatus.ownerName} முறை` : `🔄 Today is ${turnStatus.ownerName}'s Turn`}
                   </motion.p>
                   <motion.p
                     initial={{ opacity: 0, x: -8 }}
@@ -358,9 +328,19 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                     transition={{ delay: 0.3 }}
                     className="text-white/80 text-xs mt-0.5"
                   >
-                    {todaysTurn.isMyTurn
-                      ? language === "ta" ? `${todaysTurn.daysRemaining} நாள் மட்டுமே உள்ளது` : `${todaysTurn.daysRemaining} day(s) remaining`
-                      : language === "ta" ? `${todaysTurn.daysRemaining} நாளில் உங்கள் முறை` : `Your turn in ${todaysTurn.daysRemaining} day(s)`}
+                    {turnStatus.isMyTurn
+                      ? formatTurnRemaining(turnStatus, language)
+                      : (() => {
+                          const next = getNextTurnInfo(
+                            sharing?.current_turn_start ?? "",
+                            sharing?.current_turn_owner ?? "",
+                            Number(sharing?.current_turn_days) || 2,
+                            partnersList
+                          );
+                          if (!next) return "";
+                          const days = Math.ceil(next.hoursUntilMyTurn / 24);
+                          return language === "ta" ? `${days} நாளில் உங்கள் முறை` : `Your turn in ${days} day${days > 1 ? "s" : ""}`;
+                        })()}
                   </motion.p>
                 </div>
 
@@ -370,12 +350,21 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                   transition={{ delay: 0.4 }}
                   className="bg-white/25 rounded-xl px-2.5 py-1.5 text-center flex-shrink-0"
                 >
-                  <p className="text-white font-bold text-xl leading-none">{todaysTurn.daysRemaining}</p>
-                  <p className="text-white/80 text-xs">{language === "ta" ? "நாள்" : "days"}</p>
+                  {turnStatus.endingSoon ? (
+                    <>
+                      <p className="text-white font-bold text-xl leading-none">{Math.ceil(turnStatus.hoursRemaining)}</p>
+                      <p className="text-white/80 text-xs">{language === "ta" ? "மணி" : "hrs"}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-white font-bold text-xl leading-none">{turnStatus.daysRemaining}</p>
+                      <p className="text-white/80 text-xs">{language === "ta" ? "நாள்" : "days"}</p>
+                    </>
+                  )}
                 </motion.div>
               </div>
 
-              {todaysTurn.isMyTurn && (
+              {turnStatus.isMyTurn && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -388,7 +377,9 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
                     className="w-2 h-2 rounded-full bg-white"
                   />
                   <p className="text-white/90 text-xs">
-                    {language === "ta" ? "இப்போதே தண்ணீர் பாசனம் செய்யலாம்" : "You can water your fields now"}
+                    {turnStatus.endingSoon
+                      ? language === "ta" ? "விரைவில் பாசனம் முடிக்கவும்!" : "Finish your watering soon!"
+                      : language === "ta" ? "இப்போதே தண்ணீர் பாசனம் செய்யலாம்" : "You can water your fields now"}
                   </p>
                 </motion.div>
               )}

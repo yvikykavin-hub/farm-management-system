@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { getTractorOilStatus } from "../lib/tractorOilStatus";
+import { calculateCurrentTurn, getNextTurnInfo } from "../lib/motorTurnCalculator";
 
 type Severity = "danger" | "warning" | "info";
 
@@ -224,21 +225,31 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         });
       });
 
-      // Motor sharing — turn starting/ending soon
+      // Motor sharing — turn starting/ending soon, and whose turn is TODAY.
+      // Turn hand-off happens at 6 PM, not midnight — calculateCurrentTurn
+      // walks the rotation using the real current time to stay accurate.
       (motorData ?? []).forEach((motor) => {
         if (!motor.current_turn_start) return;
 
-        const turnStart = new Date(motor.current_turn_start);
-        const turnEnd = new Date(turnStart);
-        turnEnd.setDate(turnEnd.getDate() + motor.current_turn_days);
-        turnEnd.setHours(18, 0, 0, 0);
+        const partnersList = (motor.motor_sharing_neighbors || []).map(
+          (n: { partner_name?: string; neighbor_name?: string; turn_days: number }) => ({
+            name: n.partner_name || n.neighbor_name || "Neighbor",
+            days: Number(n.turn_days) || 2,
+          })
+        );
 
-        const now = new Date();
-        const isMyTurn = motor.current_turn_owner === "me";
+        const turnStatus = calculateCurrentTurn(
+          motor.current_turn_start,
+          motor.current_turn_owner,
+          Number(motor.current_turn_days) || 2,
+          partnersList
+        );
+        if (!turnStatus) return;
+
         const motorFarmName = getFarmName(motor.farms as FarmRef);
-        const hoursUntilEnd = (turnEnd.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-        if (isMyTurn && hoursUntilEnd > 0 && hoursUntilEnd <= 2) {
+        // Ending/starting within 2 hours — more urgent variant
+        if (turnStatus.isMyTurn && turnStatus.hoursRemaining > 0 && turnStatus.hoursRemaining <= 2) {
           detected.push({
             // current_turn_start included so dismissing "ending soon" for
             // this turn doesn't also silence the same alert on the next
@@ -248,78 +259,31 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
             icon: "⏰",
             title: lang === "ta" ? `⏰ ${motorFarmName} - மோட்டார் முறை முடியும்!` : `⏰ ${motorFarmName} - Motor Turn Ending Soon!`,
             message:
-              lang === "ta" ? `${Math.round(hoursUntilEnd)} மணி நேரத்தில் முடியும்` : `Ends in ${Math.round(hoursUntilEnd)} hour(s)`,
+              lang === "ta"
+                ? `${Math.round(turnStatus.hoursRemaining)} மணி நேரத்தில் முடியும்`
+                : `Ends in ${Math.round(turnStatus.hoursRemaining)} hour(s)`,
+          });
+        } else if (!turnStatus.isMyTurn && turnStatus.hoursRemaining > 0 && turnStatus.hoursRemaining <= 2) {
+          detected.push({
+            id: `motor-my-turn-${motor.id}-${motor.current_turn_start}`,
+            severity: "warning",
+            icon: "🚰",
+            title:
+              lang === "ta"
+                ? `🚰 ${motorFarmName} - உங்கள் மோட்டார் முறை தொடங்கும்!`
+                : `🚰 ${motorFarmName} - Your Motor Turn Starting Soon!`,
+            message:
+              lang === "ta"
+                ? `${Math.round(turnStatus.hoursRemaining)} மணி நேரத்தில் தொடங்கும்`
+                : `Starts in ${Math.round(turnStatus.hoursRemaining)} hour(s)`,
           });
         }
 
-        if (!isMyTurn) {
-          const hoursUntilMyTurn = (turnEnd.getTime() - now.getTime()) / (1000 * 60 * 60);
-          if (hoursUntilMyTurn > 0 && hoursUntilMyTurn <= 2) {
-            detected.push({
-              id: `motor-my-turn-${motor.id}-${motor.current_turn_start}`,
-              severity: "warning",
-              icon: "🚰",
-              title:
-                lang === "ta"
-                  ? `🚰 ${motorFarmName} - உங்கள் மோட்டார் முறை தொடங்கும்!`
-                  : `🚰 ${motorFarmName} - Your Motor Turn Starting Soon!`,
-              message:
-                lang === "ta"
-                  ? `${Math.round(hoursUntilMyTurn)} மணி நேரத்தில் தொடங்கும்`
-                  : `Starts in ${Math.round(hoursUntilMyTurn)} hour(s)`,
-            });
-          }
-        }
-      });
+        // Whose turn is TODAY — the id is date-scoped so dismissing today's
+        // card doesn't hide tomorrow's.
+        const todayStr = new Date().toISOString().split("T")[0];
 
-      // Motor sharing — whose turn is TODAY, walking the rotation day-by-day
-      // from the configured start (mirrors MotorSharingSection's getTodaysTurn).
-      // The id is date-scoped so dismissing today's card doesn't hide tomorrow's.
-      (motorData ?? []).forEach((motor) => {
-        if (!motor.current_turn_start) return;
-
-        const allParticipants = [
-          { name: "me", days: Number(motor.current_turn_days) || 2 },
-          ...(motor.motor_sharing_neighbors || []).map((n: { partner_name?: string; neighbor_name?: string; turn_days: number }) => ({
-            name: n.partner_name || n.neighbor_name || "Neighbor",
-            days: Number(n.turn_days) || 2,
-          })),
-        ];
-
-        const startIndex = allParticipants.findIndex((p) => p.name === motor.current_turn_owner);
-        if (startIndex === -1) return;
-
-        let currentDate = new Date(motor.current_turn_start);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        let participantIndex = startIndex;
-        let todayOwner = allParticipants[startIndex];
-        let daysRemaining = 0;
-        let iterations = 0;
-
-        while (currentDate <= today && iterations < 365) {
-          const participant = allParticipants[participantIndex % allParticipants.length];
-
-          const endDate = new Date(currentDate);
-          endDate.setDate(endDate.getDate() + participant.days);
-          endDate.setHours(18, 0, 0, 0);
-
-          if (today < endDate) {
-            todayOwner = participant;
-            daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            break;
-          }
-
-          currentDate = new Date(endDate);
-          participantIndex++;
-          iterations++;
-        }
-
-        const motorFarmName = getFarmName(motor.farms as FarmRef);
-        const todayStr = today.toISOString().split("T")[0];
-
-        if (todayOwner.name === "me") {
+        if (turnStatus.isMyTurn) {
           detected.push({
             id: `motor-my-turn-${motor.id}-${todayStr}`,
             severity: "warning",
@@ -327,15 +291,25 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
             title: lang === "ta" ? `${motorFarmName} - இன்று உங்கள் முறை!` : `${motorFarmName} - Today is Your Turn!`,
             message:
               lang === "ta"
-                ? `${daysRemaining} நாள் உள்ளது - இப்போதே பாசனம் செய்யலாம்`
-                : `${daysRemaining} day(s) left - Water your fields now`,
+                ? `${turnStatus.daysRemaining} நாள் உள்ளது - இப்போதே பாசனம் செய்யலாம்`
+                : `${turnStatus.daysRemaining} day(s) left - Water your fields now`,
           });
         } else {
+          const next = getNextTurnInfo(
+            motor.current_turn_start,
+            motor.current_turn_owner,
+            Number(motor.current_turn_days) || 2,
+            partnersList
+          );
+          const daysRemaining = next ? Math.ceil(next.hoursUntilMyTurn / 24) : turnStatus.daysRemaining;
           detected.push({
             id: `motor-neighbor-turn-${motor.id}-${todayStr}`,
             severity: "info",
             icon: "💧",
-            title: lang === "ta" ? `${motorFarmName} - இன்று ${todayOwner.name} முறை` : `${motorFarmName} - Today is ${todayOwner.name}'s Turn`,
+            title:
+              lang === "ta"
+                ? `${motorFarmName} - இன்று ${turnStatus.ownerName} முறை`
+                : `${motorFarmName} - Today is ${turnStatus.ownerName}'s Turn`,
             message: lang === "ta" ? `${daysRemaining} நாளில் உங்கள் முறை வரும்` : `Your turn comes in ${daysRemaining} day(s)`,
           });
         }

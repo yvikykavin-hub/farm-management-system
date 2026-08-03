@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { getTractorOilStatus } from "../lib/tractorOilStatus";
+import { calculateCurrentTurn } from "../lib/motorTurnCalculator";
 
 const NOTIFICATION_CHECK_KEY = "marutham_last_notification_check";
 const DISMISSED_KEY = "marutham_dismissed_notifications";
@@ -124,18 +125,25 @@ export default function MotorTurnNotifier() {
       for (const motor of motorData) {
         if (!motor.current_turn_start) continue;
 
-        const isMyTurn = motor.current_turn_owner === "me";
+        const partnersList = (motor.motor_sharing_neighbors || []).map((n: { neighbor_name: string; turn_days: number }) => ({
+          name: n.neighbor_name,
+          days: Number(n.turn_days) || 2,
+        }));
+
+        // Turn hand-off happens at 6 PM, not midnight — calculateCurrentTurn
+        // walks the rotation using the real current time to stay accurate.
+        const turnStatus = calculateCurrentTurn(
+          motor.current_turn_start,
+          motor.current_turn_owner,
+          Number(motor.current_turn_days) || 2,
+          partnersList
+        );
+        if (!turnStatus) continue;
+
         const farmName = getFarmName(motor.farms as FarmRef);
 
-        const turnStart = new Date(motor.current_turn_start);
-        const turnEnd = new Date(turnStart);
-        turnEnd.setDate(turnEnd.getDate() + motor.current_turn_days);
-        turnEnd.setHours(18, 0, 0, 0);
-
-        const now = new Date();
-
         // 6 PM - turn starts
-        if (isMyTurn && hour === 18) {
+        if (turnStatus.isMyTurn && hour === 18) {
           const tag = `motor-start-${motor.id}-${today}`;
           await sendNotification(
             lang === "ta" ? `🚰 ${farmName} - உங்கள் முறை தொடங்கியது!` : `🚰 ${farmName} - Your motor turn started!`,
@@ -147,7 +155,7 @@ export default function MotorTurnNotifier() {
         }
 
         // 7 AM - morning reminder
-        if (isMyTurn && hour === 7) {
+        if (turnStatus.isMyTurn && hour === 7) {
           const tag = `motor-morning-${motor.id}-${today}`;
           await sendNotification(
             lang === "ta" ? `☀️ ${farmName} - இன்று உங்கள் மோட்டார் நாள்` : `☀️ ${farmName} - Today is your motor turn day`,
@@ -159,24 +167,21 @@ export default function MotorTurnNotifier() {
         }
 
         // 5 PM - 1 hour warning
-        if (isMyTurn && hour === 17) {
-          const turnEndsToday = turnEnd.toDateString() === now.toDateString();
-          if (turnEndsToday) {
-            const tag = `motor-end-${motor.id}-${today}`;
-            await sendNotification(
-              lang === "ta" ? `⏰ ${farmName} - முறை 1 மணி நேரத்தில் முடியும்!` : `⏰ ${farmName} - Turn ends in 1 hour!`,
-              lang === "ta" ? "பாசனத்தை முடிக்கவும்" : "Finish your watering soon",
-              tag,
-              "/land-details",
-              true
-            );
-          }
+        if (turnStatus.isMyTurn && hour === 17 && turnStatus.endsToday) {
+          const tag = `motor-end-${motor.id}-${today}`;
+          await sendNotification(
+            lang === "ta" ? `⏰ ${farmName} - முறை 1 மணி நேரத்தில் முடியும்!` : `⏰ ${farmName} - Turn ends in 1 hour!`,
+            lang === "ta" ? "பாசனத்தை முடிக்கவும்" : "Finish your watering soon",
+            tag,
+            "/land-details",
+            true
+          );
         }
       }
     };
 
-    // Walks the rotation day-by-day from the configured start until it finds
-    // today's slot, mirroring MotorSharingSection's getTodaysTurn logic.
+    // Turn hand-off happens at 6 PM, not midnight — calculateCurrentTurn walks
+    // the rotation using the real current time, mirroring MotorSharingSection.
     const checkTodaysTurn = async (lang: string) => {
       const { data: motorData } = await supabase
         .from("motor_sharing")
@@ -185,47 +190,24 @@ export default function MotorTurnNotifier() {
 
       if (!motorData) return;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toDateString();
+      const todayStr = new Date().toDateString();
 
       for (const motor of motorData) {
         if (!motor.current_turn_start) continue;
 
-        const allParticipants = [
-          { name: "me", days: motor.current_turn_days || 2 },
-          ...(motor.motor_sharing_neighbors || []).map((n: { neighbor_name: string; turn_days: number }) => ({
-            name: n.neighbor_name,
-            days: n.turn_days || 2,
-          })),
-        ];
+        const partnersList = (motor.motor_sharing_neighbors || []).map((n: { neighbor_name: string; turn_days: number }) => ({
+          name: n.neighbor_name,
+          days: Number(n.turn_days) || 2,
+        }));
 
-        const startIndex = allParticipants.findIndex((p) => p.name === motor.current_turn_owner);
-        if (startIndex === -1) continue;
+        const turnStatus = calculateCurrentTurn(
+          motor.current_turn_start,
+          motor.current_turn_owner,
+          Number(motor.current_turn_days) || 2,
+          partnersList
+        );
 
-        let currentDate = new Date(motor.current_turn_start);
-        let participantIndex = startIndex;
-        let isMyTurn = false;
-        let iterations = 0;
-
-        while (currentDate <= today && iterations < 100) {
-          const participant = allParticipants[participantIndex % allParticipants.length];
-
-          const endDate = new Date(currentDate);
-          endDate.setDate(endDate.getDate() + participant.days);
-          endDate.setHours(18, 0, 0, 0);
-
-          if (today < endDate) {
-            isMyTurn = participant.name === "me";
-            break;
-          }
-
-          currentDate = new Date(endDate);
-          participantIndex++;
-          iterations++;
-        }
-
-        if (isMyTurn) {
+        if (turnStatus?.isMyTurn) {
           const farmName = lang === "ta" && motor.farms?.name_tamil ? motor.farms.name_tamil : motor.farms?.name || "Farm";
           const tag = `motor-today-${motor.id}-${todayStr}`;
 
