@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 import { phoneError as getPhoneError } from "../../../lib/validators";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type Cultivation = {
   id: string;
@@ -983,6 +984,7 @@ export default function CropDetail() {
         reportError("Error deleting cultivation", error.message);
         setDeletingCultivation(false);
       } else {
+        await ActivityLog.deleted("Crop", `${crop.labelEn} cultivation deleted`);
         router.push(`/farms/${cultivation.farm_id}`);
       }
     } catch (err) {
@@ -1332,6 +1334,7 @@ export default function CropDetail() {
       });
       if (error) reportError("Error saving income", error.message);
       else {
+        await ActivityLog.added("Income", `${crop.labelEn} income: ₹${incomeAmount}`);
         setIncomeDate("");
         setIncomeAmount("");
         setIncomeBuyer("");
@@ -1778,6 +1781,7 @@ export default function CropDetail() {
     }
     setSavingExpense(true);
     try {
+      const finalExpenseAmount = isSugarcaneLabour ? sugarcaneLabourTotal : parseFloat(expenseAmount) || 0;
       const { error } = await supabase.from("expense_records").insert({
         cultivation_id: id,
         farm_id: cultivation.farm_id,
@@ -1785,13 +1789,14 @@ export default function CropDetail() {
         category: expenseCategory,
         description: expenseDescription.trim() || null,
         vendor_name: expenseVendorName.trim() || null,
-        amount: isSugarcaneLabour ? sugarcaneLabourTotal : parseFloat(expenseAmount) || 0,
+        amount: finalExpenseAmount,
         ...(isSugarcaneLabour
           ? { rate_per_ton: sugarcaneLabourRateNum, total_tons: sugarcaneLabourTonsNum }
           : {}),
       });
       if (error) reportError("Error saving expense", error.message);
       else {
+        await ActivityLog.added("Expense", `${crop.labelEn} ${expenseCategory}: ₹${finalExpenseAmount}`);
         setExpenseDate("");
         setExpenseDescription("");
         setExpenseVendorName("");
@@ -2082,11 +2087,15 @@ export default function CropDetail() {
   };
 
   const deleteExpenseRecord = (recordId: string) => {
+    const target = expenseRecords.find((r) => r.id === recordId);
     confirmDelete(async () => {
     try {
       const { error } = await supabase.from("expense_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
-      else fetchExpenseRecords();
+      else {
+        await ActivityLog.deleted("Expense", `Expense deleted: ₹${target?.amount ?? 0}`);
+        fetchExpenseRecords();
+      }
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }
@@ -2094,11 +2103,15 @@ export default function CropDetail() {
   };
 
   const deleteIncomeRecord = (recordId: string) => {
+    const target = incomeRecords.find((r) => r.id === recordId);
     confirmDelete(async () => {
     try {
       const { error } = await supabase.from("income_records").delete().eq("id", recordId);
       if (error) reportError("Error deleting record", error.message);
-      else fetchIncomeRecords();
+      else {
+        await ActivityLog.deleted("Income", `Income deleted: ₹${target?.amount ?? 0}`);
+        fetchIncomeRecords();
+      }
     } catch (err) {
       reportError("Unexpected error", err instanceof Error ? err.message : String(err));
     }

@@ -11,6 +11,7 @@ import DeleteConfirmDialog from "../../../../components/DeleteConfirmDialog";
 import { useDeleteConfirm } from "../../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../../lib/supabase";
 import { useLang } from "../../../../lib/useLang";
+import { ActivityLog } from "../../../../lib/activityLog";
 
 type Tractor = {
   id: string;
@@ -361,6 +362,7 @@ function OverviewTab({
         toast.error(L("Could not delete", "நீக்க முடியவில்லை"));
       } else {
         toast.success(L("Deleted successfully!", "நீக்கப்பட்டது!"));
+        await ActivityLog.deleted("Tractor", `Tractor deleted: ${tractor.name}`);
         router.push("/machinery/tractor");
       }
     });
@@ -553,6 +555,9 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
         console.error("Error saving diesel:", error);
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
+        if (!editingId) {
+          await ActivityLog.added("Tractor Diesel", `Diesel: ${litres}L - ₹${amount}`);
+        }
         setModalOpen(false);
         fetchRecords();
       }
@@ -754,6 +759,9 @@ function UsageTab({
         console.error("Error saving usage:", error);
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
+        if (!editingId) {
+          await ActivityLog.added("Tractor Usage", `Usage: ${durationHours.toFixed(2)} hours`);
+        }
         setModalOpen(false);
         refetch();
       }
@@ -967,6 +975,9 @@ function EngineOilTab({
         console.error("Error saving engine oil:", error);
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
+        if (!editingId) {
+          await ActivityLog.added("Tractor Oil", `Oil changed at ${payload.hours_at_service.toFixed(1)} hours`);
+        }
         setModalOpen(false);
         refetch();
       }

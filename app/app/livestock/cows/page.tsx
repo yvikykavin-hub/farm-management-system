@@ -17,6 +17,7 @@ import CattleExpensesSection from "../../../components/CattleExpensesSection";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type AnimalType = "cow" | "buffalo";
 
@@ -171,6 +172,7 @@ export default function CowsListPage() {
   };
 
   const handleDelete = (id: string) => {
+    const target = cows.find((c) => c.id === id);
     confirmDelete(async () => {
       const { error } = await supabase.from("cows").delete().eq("id", id);
 
@@ -178,6 +180,8 @@ export default function CowsListPage() {
         toast.error(t(lang, "couldNotDelete"));
       } else {
         toast.success(t(lang, "deletedSuccessfully"));
+        const animalTypeLabel = target?.animal_type === "buffalo" ? "Buffalo" : "Cow";
+        await ActivityLog.deleted("Animal", `${animalTypeLabel} deleted: ${target?.name || "unnamed"}`);
         fetchAll();
       }
     });
@@ -213,6 +217,7 @@ export default function CowsListPage() {
         console.error("Error saving cow: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Animal", `New ${addAnimalType === "buffalo" ? "Buffalo" : "Cow"}: ${form.name.trim() || "unnamed"}`);
         setModalOpen(false);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);

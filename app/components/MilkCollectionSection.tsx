@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../lib/geminiOCR";
 import { t } from "../lib/labels";
 import { milkRateWarning } from "../lib/validators";
+import { ActivityLog } from "../lib/activityLog";
 import EmptyState from "./EmptyState";
 import { SuccessCheckmark } from "./SuccessAnimation";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
@@ -251,6 +252,7 @@ export default function MilkCollectionSection({
         console.error("Error saving rate: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Milk Rate", `${animalType === "buffalo" ? "Buffalo" : "Cow"} rate: ₹${newRate}/L`);
         setRateModalOpen(false);
         setNewRate("");
         setNewRateDate("");
@@ -339,6 +341,7 @@ export default function MilkCollectionSection({
             toast.error(t(lang, "saveFailedMessage"));
           }
         }
+        await ActivityLog.updated("Milk Rate", `${animalType === "buffalo" ? "Buffalo" : "Cow"} rate updated to ₹${editRateValue}/L`);
         setEditingRate(null);
         setAffectedCount(null);
         fetchRates();
@@ -408,6 +411,7 @@ export default function MilkCollectionSection({
           toast.error(t(lang, "saveFailedMessage"));
         } else {
           toast.success(lang === "ta" ? "✅ புதுப்பிக்கப்பட்டது!" : "✅ Updated!");
+          await ActivityLog.updated("Milk Collection", `${animalType === "buffalo" ? "Buffalo" : "Cow"} milk: ${manualTotal.toFixed(1)}L`);
           setManualDate("");
           setManualMorning("");
           setManualEvening("");
@@ -430,6 +434,7 @@ export default function MilkCollectionSection({
           toast.error(t(lang, "saveFailedMessage"));
         } else {
           toast.success(lang === "ta" ? "✅ சேமிக்கப்பட்டது!" : "✅ Saved!");
+          await ActivityLog.added("Milk Collection", `${animalType === "buffalo" ? "Buffalo" : "Cow"} milk: ${manualTotal.toFixed(1)}L`);
           setManualDate("");
           setManualMorning("");
           setManualEvening("");
@@ -605,6 +610,7 @@ export default function MilkCollectionSection({
       }
 
       toast.success(lang === "ta" ? `✅ ${savedCount} நாட்கள் சேமிக்கப்பட்டது!` : `✅ ${savedCount} days saved!`);
+      await ActivityLog.added("Milk Collection", `${animalType === "buffalo" ? "Buffalo" : "Cow"} milk: ${savedCount} days uploaded`);
       setOcrRows([]);
       setOcrImage(null);
       setSelectedFileName(null);
@@ -626,6 +632,7 @@ export default function MilkCollectionSection({
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Milk Collection", "Deleted 1 milk record");
         fetchCollections();
         onChanged?.();
       }
@@ -648,6 +655,7 @@ export default function MilkCollectionSection({
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? `✅ ${selectedIds.length} நீக்கப்பட்டது!` : `✅ ${selectedIds.length} deleted!`);
+        await ActivityLog.deleted("Milk Collection", `Deleted ${selectedIds.length} milk records`);
         setSelectedIds([]);
         setSelectMode(false);
         fetchCollections();

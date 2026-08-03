@@ -15,6 +15,7 @@ import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type Goat = {
   id: string;
@@ -136,6 +137,7 @@ export default function GoatsListPage() {
   };
 
   const handleDelete = (id: string) => {
+    const target = goats.find((g) => g.id === id);
     confirmDelete(async () => {
       const { error } = await supabase.from("goats").delete().eq("id", id);
 
@@ -143,6 +145,7 @@ export default function GoatsListPage() {
         toast.error(t(lang, "couldNotDelete"));
       } else {
         toast.success(t(lang, "deletedSuccessfully"));
+        await ActivityLog.deleted("Animal", `Goat deleted: ${target?.name || "unnamed"}`);
         fetchAll();
       }
     });
@@ -178,6 +181,7 @@ export default function GoatsListPage() {
         console.error("Error saving goat: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Animal", `New Goat: ${form.name.trim() || "unnamed"}`);
         setModalOpen(false);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);
@@ -238,6 +242,7 @@ export default function GoatsListPage() {
         console.error("Error saving sale: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Goat Income", `Goat sold: ₹${total}`);
         setSaleModalOpen(false);
         fetchAll();
       }
@@ -256,6 +261,7 @@ export default function GoatsListPage() {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Goat Income", "Goat sale record deleted");
         fetchAll();
       }
     });
@@ -305,6 +311,7 @@ export default function GoatsListPage() {
         console.error("Error saving expense: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Goat Expense", `${t("en", expType)}: ₹${expAmount}`);
         setExpenseModalOpen(false);
         fetchAll();
       }
@@ -323,6 +330,7 @@ export default function GoatsListPage() {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Goat Expense", "Expense record deleted");
         fetchAll();
       }
     });

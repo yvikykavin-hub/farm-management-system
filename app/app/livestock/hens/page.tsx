@@ -15,6 +15,7 @@ import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type Hen = {
   id: string;
@@ -139,6 +140,7 @@ export default function HensListPage() {
   };
 
   const handleDelete = (id: string) => {
+    const target = hens.find((h) => h.id === id);
     confirmDelete(async () => {
       const { error } = await supabase.from("hens").delete().eq("id", id);
 
@@ -146,6 +148,7 @@ export default function HensListPage() {
         toast.error(t(lang, "couldNotDelete"));
       } else {
         toast.success(t(lang, "deletedSuccessfully"));
+        await ActivityLog.deleted("Animal", `Hen deleted: ${target?.name || "unnamed"}`);
         fetchAll();
       }
     });
@@ -181,6 +184,7 @@ export default function HensListPage() {
         console.error("Error saving hen: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Animal", `New Hen: ${form.name.trim() || "unnamed"}`);
         setModalOpen(false);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);
@@ -253,6 +257,7 @@ export default function HensListPage() {
         console.error("Error saving sale: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Hen Income", `Hen sold: ₹${total}`);
         setSaleModalOpen(false);
         fetchAll();
       }
@@ -271,6 +276,7 @@ export default function HensListPage() {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Hen Income", "Hen sale record deleted");
         fetchAll();
       }
     });
@@ -320,6 +326,7 @@ export default function HensListPage() {
         console.error("Error saving expense: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Hen Expense", `${t("en", expType)}: ₹${expAmount}`);
         setExpenseModalOpen(false);
         fetchAll();
       }
@@ -338,6 +345,7 @@ export default function HensListPage() {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Hen Expense", "Expense record deleted");
         fetchAll();
       }
     });

@@ -10,6 +10,7 @@ import { SuccessCheckmark } from "./SuccessAnimation";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { t } from "../lib/labels";
+import { ActivityLog } from "../lib/activityLog";
 
 type MilkPayment = {
   id: string;
@@ -233,6 +234,11 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ பணம் சேமிக்கப்பட்டது!" : "✅ Payment saved!");
+        if (editingPaymentId) {
+          await ActivityLog.updated("Milk Payment", `Payment updated: ₹${received}`);
+        } else {
+          await ActivityLog.added("Milk Payment", `Payment received: ₹${received}`);
+        }
         closePaymentModal();
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);
@@ -254,6 +260,7 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
       } else {
         fetchPayments();
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Milk Payment", "Payment record deleted");
       }
     });
   };

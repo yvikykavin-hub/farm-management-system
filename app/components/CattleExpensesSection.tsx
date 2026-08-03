@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { t } from "../lib/labels";
+import { ActivityLog } from "../lib/activityLog";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
@@ -111,6 +112,7 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
         console.error("Error saving expense: ", error);
         toast.error(t(lang, "saveFailedMessage"));
       } else {
+        await ActivityLog.added("Cow Expense", `${t("en", expType)}: ₹${expAmount}`);
         setExpenseModalOpen(false);
         fetchExpenses();
       }
@@ -122,6 +124,7 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
   };
 
   const deleteExpense = (eid: string) => {
+    const target = expenses.find((e) => e.id === eid);
     confirmDelete(async () => {
       const { error } = await supabase.from("cow_expenses").delete().eq("id", eid);
       if (error) {
@@ -129,6 +132,7 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? "✅ நீக்கப்பட்டது!" : "✅ Deleted!");
+        await ActivityLog.deleted("Cow Expense", `Expense deleted: ₹${target?.amount ?? 0}`);
         fetchExpenses();
       }
     });
@@ -154,6 +158,7 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
         toast.error(t(lang, "saveFailedMessage"));
       } else {
         toast.success(lang === "ta" ? `✅ ${expSelectedIds.length} நீக்கப்பட்டன` : `✅ ${expSelectedIds.length} deleted`);
+        await ActivityLog.deleted("Cow Expense", `Deleted ${expSelectedIds.length} expenses`);
         setExpSelectedIds([]);
         setExpSelectMode(false);
         fetchExpenses();

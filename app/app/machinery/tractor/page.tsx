@@ -12,6 +12,7 @@ import { SkeletonList } from "../../../components/Skeleton";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 import { getTractorOilStatus, type TractorOilStatus } from "../../../lib/tractorOilStatus";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type Tractor = {
   id: string;
@@ -97,6 +98,7 @@ export default function TractorListPage() {
         toast.error(L("Could not save", "சேமிக்க முடியவில்லை"));
       } else {
         toast.success(L("Tractor added!", "டிராக்டர் சேர்க்கப்பட்டது!"));
+        await ActivityLog.added("Tractor", `New tractor: ${form.name.trim()}`);
         setShowAddForm(false);
         resetForm();
         setShowSuccess(true);

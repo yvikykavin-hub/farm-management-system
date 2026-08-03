@@ -7,6 +7,7 @@ import Sidebar from "../../../components/Sidebar";
 import MotorSharingSection, { type MotorSharingSectionHandle } from "../../../components/MotorSharingSection";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type Farm = {
   id: string;
@@ -220,6 +221,7 @@ export default function FarmDetail() {
       if (error) {
         alert("Error adding cultivation: " + error.message);
       } else {
+        await ActivityLog.added("Crop", `New ${cropInfo(cropType).labelEn} cultivation started`);
         setCropType("");
         setCropArea("");
         setCropStartDate("");

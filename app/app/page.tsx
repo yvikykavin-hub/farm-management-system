@@ -16,6 +16,7 @@ import ChatWidget from "../components/ChatWidget";
 import WeatherWidget from "../components/WeatherWidget";
 import PullToRefresh from "../components/PullToRefresh";
 import { AnimatedNumber } from "../components/AnimatedNumber";
+import { ActivityLog } from "../lib/activityLog";
 import { supabase } from "../lib/supabase";
 import { useLang } from "../lib/useLang";
 
@@ -96,6 +97,7 @@ export default function Dashboard() {
         toast.error("Error saving farm: " + error.message);
       } else {
         toast.success(lang === "ta" ? "சேமிக்கப்பட்டது!" : "Saved successfully!");
+        await ActivityLog.added("Farm", `New farm: ${farmName.trim()}`);
         setFarmName("");
         setArea("");
         setHasWell(true);
@@ -121,6 +123,7 @@ export default function Dashboard() {
         return;
       }
       toast.success(lang === "ta" ? "நிலம் நீக்கப்பட்டது" : "Farm deleted successfully");
+      await ActivityLog.deleted("Farm", `Farm deleted: ${farm.name}`);
       fetchFarms();
     });
   };

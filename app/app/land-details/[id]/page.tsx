@@ -11,6 +11,7 @@ import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
 import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
+import { ActivityLog } from "../../../lib/activityLog";
 
 type Farm = {
   id: string;
@@ -292,6 +293,7 @@ export default function LandDetailPage() {
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
+        await ActivityLog.updated("Land Details", `Land updated: ${name.trim()}`);
         fetchFarm();
       }
     } catch (err) {
@@ -320,6 +322,7 @@ export default function LandDetailPage() {
       } else {
         await motorSharingRef.current?.save();
         showToast(L("Saved!", "சேமிக்கப்பட்டது!"));
+        await ActivityLog.updated("Motor Sharing", `Motor sharing updated: ${name.trim()}`);
         fetchFarm();
       }
     } catch (err) {
@@ -452,6 +455,7 @@ export default function LandDetailPage() {
         console.error("Error saving document:", error);
         toast.error(L("Could not save. Please try again.", "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."));
       } else {
+        await ActivityLog.added("Land Document", `Document: ${docTitle.trim()} (${docType})`);
         setDocumentModalOpen(false);
         fetchDocuments();
       }
@@ -463,10 +467,12 @@ export default function LandDetailPage() {
   };
 
   const deleteDocument = (documentId: string) => {
+    const target = documents.find((d) => d.id === documentId);
     confirmDelete(async () => {
       const { error } = await supabase.from("land_documents").delete().eq("id", documentId);
       if (!error) {
         toast.success(L("Deleted!", "நீக்கப்பட்டது!"));
+        await ActivityLog.deleted("Land Document", `Document deleted: ${target?.title ?? ""}`);
         fetchDocuments();
       }
     });

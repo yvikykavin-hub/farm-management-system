@@ -15,6 +15,7 @@ const navItems = [
   { href: "/machinery", icon: "🚜", label: "Machinery", labelTa: "இயந்திரங்கள்", startsWith: true },
   { href: "/finance", icon: "💰", label: "Finance", labelTa: "நிதி நிலை" },
   { href: "/reports", icon: "📊", label: "Reports", labelTa: "அறிக்கைகள்" },
+  { href: "/activity", icon: "📋", label: "Activity Log", labelTa: "செயல்பாடு பதிவு" },
   { href: "/settings", icon: "⚙️", label: "Settings", labelTa: "அமைப்புகள்" },
 ];
 
