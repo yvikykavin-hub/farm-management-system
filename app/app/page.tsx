@@ -17,6 +17,7 @@ import WeatherWidget from "../components/WeatherWidget";
 import PullToRefresh from "../components/PullToRefresh";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { ActivityLog } from "../lib/activityLog";
+import { getValidationMessage } from "../lib/validation";
 import { supabase } from "../lib/supabase";
 import { useLang } from "../lib/useLang";
 
@@ -80,6 +81,19 @@ export default function Dashboard() {
   const addFarm = async () => {
     if (!farmName.trim() || !area) {
       toast.error(lang === "ta" ? "நிலம் பெயர் மற்றும் பரப்பளவு தேவை" : "Farm name and area are required");
+      return;
+    }
+    if (farmName.trim().length < 2) {
+      toast.error(getValidationMessage("min_chars", lang));
+      return;
+    }
+    if (farmName.length > 50) {
+      toast.error(getValidationMessage("max_chars", lang));
+      return;
+    }
+    const areaVal = Number(area);
+    if (!areaVal || areaVal <= 0) {
+      toast.error(getValidationMessage("min_area", lang));
       return;
     }
 
@@ -236,6 +250,8 @@ export default function Dashboard() {
               <input
                 type="number"
                 step="0.01"
+                min="0.01"
+                onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
                 placeholder={t.areaAcres}
                 value={area}
                 onChange={(e) => setArea(e.target.value)}

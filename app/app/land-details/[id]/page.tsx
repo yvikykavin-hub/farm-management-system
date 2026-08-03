@@ -11,6 +11,7 @@ import DeleteConfirmDialog from "../../../components/DeleteConfirmDialog";
 import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
+import { getValidationMessage } from "../../../lib/validation";
 import { ActivityLog } from "../../../lib/activityLog";
 
 type Farm = {
@@ -275,6 +276,15 @@ export default function LandDetailPage() {
   };
 
   const saveBasicInfo = async () => {
+    if (!name.trim() || name.trim().length < 2) {
+      toast.error(getValidationMessage("min_chars", lang));
+      return;
+    }
+    const areaVal = Number(area);
+    if (!areaVal || areaVal <= 0) {
+      toast.error(getValidationMessage("min_area", lang));
+      return;
+    }
     setSavingBasic(true);
     try {
       const { error } = await supabase
@@ -304,6 +314,10 @@ export default function LandDetailPage() {
   };
 
   const saveWaterInfo = async () => {
+    if (motor && motorHp === "other" && motorHpOther && Number(motorHpOther) < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
     setSavingWater(true);
     try {
       const { error } = await supabase
@@ -585,7 +599,15 @@ export default function LandDetailPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{L("Total Area in Acres", "மொத்த பரப்பளவு")}</label>
-                    <input type="number" step="0.01" value={area} onChange={(e) => setArea(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      className={inputCls}
+                    />
                   </div>
                 </div>
                 <button

@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 import { extractMilkCardData, type MilkCardRow } from "../lib/geminiOCR";
 import { t } from "../lib/labels";
 import { milkRateWarning } from "../lib/validators";
+import { isFutureDate, getValidationMessage } from "../lib/validation";
 import { ActivityLog } from "../lib/activityLog";
 import EmptyState from "./EmptyState";
 import { SuccessCheckmark } from "./SuccessAnimation";
@@ -241,6 +242,19 @@ export default function MilkCollectionSection({
       toast.error(t(lang, "rateDateRequired"));
       return;
     }
+    const newRateVal = parseFloat(newRate);
+    if (!newRateVal || newRateVal <= 0) {
+      toast.error(getValidationMessage("zero_rate", lang));
+      return;
+    }
+    if (newRateVal < 1) {
+      toast.error(getValidationMessage("min_rate", lang));
+      return;
+    }
+    if (isFutureDate(newRateDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
     setSavingRate(true);
     try {
       const { error } = await supabase.from(rateTable).insert({
@@ -314,6 +328,19 @@ export default function MilkCollectionSection({
 
   const saveEditRate = async () => {
     if (!editingRate || !editRateValue || !editRateDate) return;
+    const editRateVal = parseFloat(editRateValue);
+    if (!editRateVal || editRateVal <= 0) {
+      toast.error(getValidationMessage("zero_rate", lang));
+      return;
+    }
+    if (editRateVal < 1) {
+      toast.error(getValidationMessage("min_rate", lang));
+      return;
+    }
+    if (isFutureDate(editRateDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
     setSavingRateEdit(true);
     try {
       const { error } = await supabase
@@ -367,6 +394,28 @@ export default function MilkCollectionSection({
   const saveManualCollection = async () => {
     if (!manualDate || !manualMorning || !manualEvening) {
       toast.error(t(lang, "collectionFieldsRequired"));
+      return;
+    }
+    if (isFutureDate(manualDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    const manualMorningVal = parseFloat(manualMorning) || 0;
+    if (manualMorningVal < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
+    if (manualMorningVal > 999) {
+      toast.error(getValidationMessage("max_litres", lang));
+      return;
+    }
+    const manualEveningVal = parseFloat(manualEvening) || 0;
+    if (manualEveningVal < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
+    if (manualEveningVal > 999) {
+      toast.error(getValidationMessage("max_litres", lang));
       return;
     }
     setSavingManual(true);
@@ -899,15 +948,35 @@ export default function MilkCollectionSection({
           <div className="grid grid-cols-3 gap-2 mb-2">
             <div>
               <label className={labelCls}>{t(lang, "date")}</label>
-              <input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} className={inputCls} />
+              <input
+                type="date"
+                max={new Date().toISOString().split("T")[0]}
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+                className={inputCls}
+              />
             </div>
             <div>
               <label className={labelCls}>{t(lang, "morning")}</label>
-              <input type="number" value={manualMorning} onChange={(e) => setManualMorning(e.target.value)} className={inputCls} />
+              <input
+                type="number"
+                min="0"
+                onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                value={manualMorning}
+                onChange={(e) => setManualMorning(e.target.value)}
+                className={inputCls}
+              />
             </div>
             <div>
               <label className={labelCls}>{t(lang, "evening")}</label>
-              <input type="number" value={manualEvening} onChange={(e) => setManualEvening(e.target.value)} className={inputCls} />
+              <input
+                type="number"
+                min="0"
+                onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                value={manualEvening}
+                onChange={(e) => setManualEvening(e.target.value)}
+                className={inputCls}
+              />
             </div>
           </div>
           <p className="text-xs text-gray-600 mb-2">
@@ -1283,12 +1352,25 @@ export default function MilkCollectionSection({
             <div className="space-y-3">
               <div>
                 <label className={labelCls}>{t(lang, "newRate")}</label>
-                <input type="number" value={newRate} onChange={(e) => setNewRate(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="1"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={newRate}
+                  onChange={(e) => setNewRate(e.target.value)}
+                  className={inputCls}
+                />
                 {milkRateWarning(newRate, lang) && <p className="text-amber-600 text-xs mt-1">{milkRateWarning(newRate, lang)}</p>}
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "effectiveFromDate")}</label>
-                <input type="date" value={newRateDate} onChange={(e) => setNewRateDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={newRateDate}
+                  onChange={(e) => setNewRateDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "notes")}</label>
@@ -1318,11 +1400,24 @@ export default function MilkCollectionSection({
             <div className="space-y-3">
               <div>
                 <label className={labelCls}>{t(lang, "newRate")}</label>
-                <input type="number" value={editRateValue} onChange={(e) => setEditRateValue(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="1"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={editRateValue}
+                  onChange={(e) => setEditRateValue(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "effectiveFromDate")}</label>
-                <input type="date" value={editRateDate} onChange={(e) => setEditRateDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={editRateDate}
+                  onChange={(e) => setEditRateDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               {affectedCount !== null && (
                 <div

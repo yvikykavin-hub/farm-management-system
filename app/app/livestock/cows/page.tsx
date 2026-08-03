@@ -17,6 +17,7 @@ import CattleExpensesSection from "../../../components/CattleExpensesSection";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
+import { isFutureDate, getValidationMessage } from "../../../lib/validation";
 import { ActivityLog } from "../../../lib/activityLog";
 
 type AnimalType = "cow" | "buffalo";
@@ -195,6 +196,14 @@ export default function CowsListPage() {
     setFormErrors(errors);
     if (Object.values(errors).some(Boolean)) {
       toast.error(t(lang, "nameGenderRequired"));
+      return;
+    }
+    if (form.purchase_date && isFutureDate(form.purchase_date)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (form.purchase_price && Number(form.purchase_price) < 0) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
 
@@ -539,11 +548,24 @@ export default function CowsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "purchaseDate")}</label>
-                <input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={form.purchase_date}
+                  onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "purchasePrice")}</label>
-                <input type="number" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={form.purchase_price}
+                  onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "status")}</label>

@@ -11,6 +11,7 @@ import DeleteConfirmDialog from "../../../../components/DeleteConfirmDialog";
 import { useDeleteConfirm } from "../../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../../lib/supabase";
 import { useLang } from "../../../../lib/useLang";
+import { isFutureDate, getValidationMessage } from "../../../../lib/validation";
 import { ActivityLog } from "../../../../lib/activityLog";
 
 type Tractor = {
@@ -539,6 +540,19 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
       toast.error(L("Date, litres, and amount are required.", "தேதி, லிட்டர் மற்றும் தொகை தேவை."));
       return;
     }
+    if (isFutureDate(date)) {
+      toast.error(L(getValidationMessage("future_date", "en"), getValidationMessage("future_date", "ta")));
+      return;
+    }
+    const litresVal = parseFloat(litres);
+    if (!litresVal || litresVal <= 0) {
+      toast.error(L(getValidationMessage("min_litres", "en"), getValidationMessage("min_litres", "ta")));
+      return;
+    }
+    if (Number(amount) < 0) {
+      toast.error(L(getValidationMessage("negative", "en"), getValidationMessage("negative", "ta")));
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -642,15 +656,35 @@ function DieselTab({ L, tractorId }: { L: (en: string, ta: string) => string; tr
             <div className="space-y-3">
               <div>
                 <label className={labelCls}>{L("Date", "தேதி")} *</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{L("Litres", "லிட்டர்")} *</label>
-                <input type="number" value={litres} onChange={(e) => setLitres(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={litres}
+                  onChange={(e) => setLitres(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")} *</label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>
@@ -728,6 +762,10 @@ function UsageTab({
   const save = async () => {
     if (!date || !startTime || !endTime) {
       toast.error(L("Date, start time, and end time are required.", "தேதி, தொடக்க நேரம் மற்றும் முடிவு நேரம் தேவை."));
+      return;
+    }
+    if (isFutureDate(date)) {
+      toast.error(L(getValidationMessage("future_date", "en"), getValidationMessage("future_date", "ta")));
       return;
     }
     const start = new Date(`2000-01-01T${startTime}`);
@@ -854,7 +892,13 @@ function UsageTab({
             <div className="space-y-3">
               <div>
                 <label className={labelCls}>{L("Date", "தேதி")} *</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -956,6 +1000,14 @@ function EngineOilTab({
   const save = async () => {
     if (!date || !amount) {
       toast.error(L("Date and amount are required.", "தேதி மற்றும் தொகை தேவை."));
+      return;
+    }
+    if (isFutureDate(date)) {
+      toast.error(L(getValidationMessage("future_date", "en"), getValidationMessage("future_date", "ta")));
+      return;
+    }
+    if (Number(amount) < 0) {
+      toast.error(L(getValidationMessage("negative", "en"), getValidationMessage("negative", "ta")));
       return;
     }
     setSaving(true);
@@ -1072,7 +1124,13 @@ function EngineOilTab({
             <div className="space-y-3">
               <div>
                 <label className={labelCls}>{L("Date", "தேதி")} *</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{L("Oil Brand", "ஆயில் பிராண்ட்")}</label>
@@ -1080,7 +1138,14 @@ function EngineOilTab({
               </div>
               <div>
                 <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")} *</label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{L("Notes", "குறிப்பு")}</label>

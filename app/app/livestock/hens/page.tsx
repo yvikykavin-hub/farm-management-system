@@ -15,6 +15,7 @@ import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
+import { isFutureDate, getValidationMessage } from "../../../lib/validation";
 import { ActivityLog } from "../../../lib/activityLog";
 
 type Hen = {
@@ -164,6 +165,14 @@ export default function HensListPage() {
       toast.error(t(lang, "nameGenderRequired"));
       return;
     }
+    if (form.purchase_date && isFutureDate(form.purchase_date)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (form.purchase_price && Number(form.purchase_price) < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
 
     setSaving(true);
     try {
@@ -237,6 +246,29 @@ export default function HensListPage() {
       toast.error(t(lang, "dateRequired"));
       return;
     }
+    if (isFutureDate(saleDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (saleType === "weight") {
+      if (saleWeight && Number(saleWeight) < 0) {
+        toast.error(getValidationMessage("negative", lang));
+        return;
+      }
+      if (saleRateKg && Number(saleRateKg) < 0) {
+        toast.error(getValidationMessage("negative", lang));
+        return;
+      }
+    } else {
+      if (saleBirdCount && Number(saleBirdCount) < 0) {
+        toast.error(getValidationMessage("negative", lang));
+        return;
+      }
+      if (saleRateBird && Number(saleRateBird) < 0) {
+        toast.error(getValidationMessage("negative", lang));
+        return;
+      }
+    }
     setSavingSale(true);
     try {
       const total = totalManuallyEdited ? parseFloat(saleTotal) || 0 : computedTotal;
@@ -307,6 +339,14 @@ export default function HensListPage() {
   const saveExpense = async () => {
     if (!expHenId || !expDate || !expAmount) {
       toast.error(t(lang, "dateAmountRequired"));
+      return;
+    }
+    if (isFutureDate(expDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (Number(expAmount) < 0) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
     setSavingExpense(true);
@@ -649,11 +689,24 @@ export default function HensListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "purchaseDate")}</label>
-                <input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={form.purchase_date}
+                  onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "purchasePrice")}</label>
-                <input type="number" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={form.purchase_price}
+                  onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "weight")}</label>
@@ -705,7 +758,13 @@ export default function HensListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
-                <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
 
               <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
@@ -727,22 +786,50 @@ export default function HensListPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>{t(lang, "weight")}</label>
-                    <input type="number" value={saleWeight} onChange={(e) => setSaleWeight(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      min="0"
+                      onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                      value={saleWeight}
+                      onChange={(e) => setSaleWeight(e.target.value)}
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "rateperKg")}</label>
-                    <input type="number" value={saleRateKg} onChange={(e) => setSaleRateKg(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      min="0"
+                      onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                      value={saleRateKg}
+                      onChange={(e) => setSaleRateKg(e.target.value)}
+                      className={inputCls}
+                    />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>{t(lang, "numberOfBirds")}</label>
-                    <input type="number" value={saleBirdCount} onChange={(e) => setSaleBirdCount(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      min="0"
+                      onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                      value={saleBirdCount}
+                      onChange={(e) => setSaleBirdCount(e.target.value)}
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>{t(lang, "rateperBird")}</label>
-                    <input type="number" value={saleRateBird} onChange={(e) => setSaleRateBird(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      min="0"
+                      onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                      value={saleRateBird}
+                      onChange={(e) => setSaleRateBird(e.target.value)}
+                      className={inputCls}
+                    />
                   </div>
                 </div>
               )}
@@ -806,7 +893,13 @@ export default function HensListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
-                <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={expDate}
+                  onChange={(e) => setExpDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -820,7 +913,14 @@ export default function HensListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "amount")}</label>
-                <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={expAmount}
+                  onChange={(e) => setExpAmount(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "description")}</label>

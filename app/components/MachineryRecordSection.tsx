@@ -3,6 +3,7 @@
 import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { isFutureDate, getValidationMessage } from "../lib/validation";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
@@ -111,6 +112,16 @@ export default function MachineryRecordSection({
     const missing = fields.some((f) => f.required && !formValues[f.key]);
     if (missing) {
       toast.error(L("Please fill all required fields.", "தேவையான அனைத்து புலங்களையும் நிரப்பவும்."));
+      return;
+    }
+    const hasFutureDate = fields.some((f) => f.type === "date" && isFutureDate(formValues[f.key] || ""));
+    if (hasFutureDate) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    const hasNegativeNumber = fields.some((f) => f.type === "number" && formValues[f.key] && Number(formValues[f.key]) < 0);
+    if (hasNegativeNumber) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
     setSaving(true);
@@ -260,6 +271,9 @@ export default function MachineryRecordSection({
                   ) : (
                     <input
                       type={f.type}
+                      min={f.type === "number" ? "0" : undefined}
+                      max={f.type === "date" ? new Date().toISOString().split("T")[0] : undefined}
+                      onKeyDown={f.type === "number" ? (e) => { if (e.key === "-") e.preventDefault(); } : undefined}
                       value={formValues[f.key] ?? ""}
                       onChange={(e) => setFormValues({ ...formValues, [f.key]: e.target.value })}
                       className={inputCls}

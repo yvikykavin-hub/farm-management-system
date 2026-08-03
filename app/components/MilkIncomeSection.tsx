@@ -10,6 +10,7 @@ import { SuccessCheckmark } from "./SuccessAnimation";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { t } from "../lib/labels";
+import { isFutureDate, isDateAfter, getValidationMessage } from "../lib/validation";
 import { ActivityLog } from "../lib/activityLog";
 
 type MilkPayment = {
@@ -207,6 +208,19 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
   const savePayment = async () => {
     if (!pmDate || !pmReceived) {
       toast.error(t(lang, "paymentFieldsRequired"));
+      return;
+    }
+    if (isFutureDate(pmDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    const pmReceivedVal = parseFloat(pmReceived) || 0;
+    if (pmReceivedVal < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
+    if (pmFrom && pmTo && !isDateAfter(pmTo, pmFrom)) {
+      toast.error(getValidationMessage("period_invalid", lang));
       return;
     }
     setSavingPayment(true);
@@ -529,6 +543,7 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
                 <label className={labelCls}>📅 {t(lang, "paymentDateWednesday")} *</label>
                 <input
                   type="date"
+                  max={new Date().toISOString().split("T")[0]}
                   value={pmDate}
                   onChange={(e) => {
                     setPmDate(e.target.value);
@@ -586,6 +601,8 @@ export default function MilkIncomeSection({ animalType, lang }: { animalType: "c
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
                   value={pmReceived}
                   onChange={(e) => setPmReceived(e.target.value)}
                   placeholder="0.00"

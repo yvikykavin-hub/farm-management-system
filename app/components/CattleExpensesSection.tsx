@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { t } from "../lib/labels";
+import { isFutureDate, getValidationMessage } from "../lib/validation";
 import { ActivityLog } from "../lib/activityLog";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
@@ -92,6 +93,19 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
   const saveExpense = async () => {
     if (!expDate || !expAmount) {
       toast.error(t(lang, "dateAmountRequired"));
+      return;
+    }
+    if (isFutureDate(expDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    const expAmountVal = parseFloat(expAmount) || 0;
+    if (expAmountVal < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
+    if (expAmountVal > 9999999) {
+      toast.error(getValidationMessage("max_amount", lang));
       return;
     }
     setSavingExpense(true);
@@ -290,7 +304,13 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
-                <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={expDate}
+                  onChange={(e) => setExpDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               {isFeedType && (
                 <div className="grid grid-cols-2 gap-3">
@@ -306,7 +326,14 @@ export default function CattleExpensesSection({ lang }: { lang: "ta" | "en" }) {
               )}
               <div>
                 <label className={labelCls}>{t(lang, "amount")}</label>
-                <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={expAmount}
+                  onChange={(e) => setExpAmount(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "vendorName")}</label>

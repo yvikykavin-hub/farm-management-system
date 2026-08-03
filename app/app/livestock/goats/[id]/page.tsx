@@ -10,6 +10,7 @@ import { useDeleteConfirm } from "../../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../../lib/supabase";
 import { t } from "../../../../lib/labels";
 import { useLang } from "../../../../lib/useLang";
+import { isFutureDate, isDateAfter, getValidationMessage } from "../../../../lib/validation";
 
 type Goat = {
   id: string;
@@ -92,6 +93,22 @@ export default function GoatDetailPage() {
   const saveOverview = async () => {
     if (!ovForm.name.trim() || !ovForm.gender) {
       toast.error(t(lang, "nameGenderRequired"));
+      return;
+    }
+    if (ovForm.purchase_date && isFutureDate(ovForm.purchase_date)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (ovForm.purchase_price && Number(ovForm.purchase_price) < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
+    if (ovForm.current_status === "sold" && ovForm.sold_date && ovForm.purchase_date && !isDateAfter(ovForm.sold_date, ovForm.purchase_date)) {
+      toast.error(getValidationMessage("sold_before_purchase", lang));
+      return;
+    }
+    if (ovForm.current_status === "sold" && ovForm.sold_price && Number(ovForm.sold_price) < 0) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
     setSavingOverview(true);
@@ -241,11 +258,24 @@ export default function GoatDetailPage() {
                 </div>
                 <div>
                   <label className={labelCls}>{t(lang, "purchaseDate")}</label>
-                  <input type="date" value={ovForm.purchase_date} onChange={(e) => setOvForm({ ...ovForm, purchase_date: e.target.value })} className={inputCls} />
+                  <input
+                    type="date"
+                    max={new Date().toISOString().split("T")[0]}
+                    value={ovForm.purchase_date}
+                    onChange={(e) => setOvForm({ ...ovForm, purchase_date: e.target.value })}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>{t(lang, "purchasePrice")}</label>
-                  <input type="number" value={ovForm.purchase_price} onChange={(e) => setOvForm({ ...ovForm, purchase_price: e.target.value })} className={inputCls} />
+                  <input
+                    type="number"
+                    min="0"
+                    onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                    value={ovForm.purchase_price}
+                    onChange={(e) => setOvForm({ ...ovForm, purchase_price: e.target.value })}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>{t(lang, "weight")}</label>
@@ -263,11 +293,24 @@ export default function GoatDetailPage() {
                   <>
                     <div>
                       <label className={labelCls}>{t(lang, "soldDate")}</label>
-                      <input type="date" value={ovForm.sold_date} onChange={(e) => setOvForm({ ...ovForm, sold_date: e.target.value })} className={inputCls} />
+                      <input
+                        type="date"
+                        max={new Date().toISOString().split("T")[0]}
+                        value={ovForm.sold_date}
+                        onChange={(e) => setOvForm({ ...ovForm, sold_date: e.target.value })}
+                        className={inputCls}
+                      />
                     </div>
                     <div>
                       <label className={labelCls}>{t(lang, "soldPrice")}</label>
-                      <input type="number" value={ovForm.sold_price} onChange={(e) => setOvForm({ ...ovForm, sold_price: e.target.value })} className={inputCls} />
+                      <input
+                        type="number"
+                        min="0"
+                        onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                        value={ovForm.sold_price}
+                        onChange={(e) => setOvForm({ ...ovForm, sold_price: e.target.value })}
+                        className={inputCls}
+                      />
                     </div>
                   </>
                 )}

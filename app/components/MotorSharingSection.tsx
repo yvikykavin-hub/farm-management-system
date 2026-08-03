@@ -4,6 +4,7 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
+import { getValidationMessage } from "../lib/validation";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 
@@ -145,7 +146,10 @@ const MotorSharingSection = forwardRef<MotorSharingSectionHandle, { farmId: stri
     useImperativeHandle(ref, () => ({ save: saveSharing }));
 
     const addPartner = async () => {
-      if (!newPartnerName.trim()) return;
+      if (!newPartnerName.trim() || newPartnerName.trim().length < 2) {
+        toast.error(getValidationMessage("partner_name", language));
+        return;
+      }
       if (!sharing?.id) {
         toast.error(
           language === "ta" ? "முதலில் மேலே உள்ள 'மாற்றங்களை சேமி' பொத்தானை அழுத்தவும்" : "Please click 'Save Changes' above first"

@@ -12,6 +12,7 @@ import { SkeletonList } from "../../../components/Skeleton";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 import { getTractorOilStatus, type TractorOilStatus } from "../../../lib/tractorOilStatus";
+import { getValidationMessage } from "../../../lib/validation";
 import { ActivityLog } from "../../../lib/activityLog";
 
 type Tractor = {
@@ -75,7 +76,10 @@ export default function TractorListPage() {
   const resetForm = () => setForm(emptyForm);
 
   const handleAddTractor = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      toast.error(getValidationMessage("required", lang));
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.from("tractors").insert({

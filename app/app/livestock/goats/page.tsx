@@ -15,6 +15,7 @@ import { useDeleteConfirm } from "../../../hooks/useDeleteConfirm";
 import { supabase } from "../../../lib/supabase";
 import { t } from "../../../lib/labels";
 import { useLang } from "../../../lib/useLang";
+import { isFutureDate, getValidationMessage } from "../../../lib/validation";
 import { ActivityLog } from "../../../lib/activityLog";
 
 type Goat = {
@@ -161,6 +162,14 @@ export default function GoatsListPage() {
       toast.error(t(lang, "nameGenderRequired"));
       return;
     }
+    if (form.purchase_date && isFutureDate(form.purchase_date)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (form.purchase_price && Number(form.purchase_price) < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
 
     setSaving(true);
     try {
@@ -223,6 +232,18 @@ export default function GoatsListPage() {
   const saveSale = async () => {
     if (!saleGoatId || !saleDate) {
       toast.error(t(lang, "dateRequired"));
+      return;
+    }
+    if (isFutureDate(saleDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (saleWeight && Number(saleWeight) < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
+    if (saleRate && Number(saleRate) < 0) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
     setSavingSale(true);
@@ -292,6 +313,14 @@ export default function GoatsListPage() {
   const saveExpense = async () => {
     if (!expGoatId || !expDate || !expAmount) {
       toast.error(t(lang, "dateAmountRequired"));
+      return;
+    }
+    if (isFutureDate(expDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (Number(expAmount) < 0) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
     setSavingExpense(true);
@@ -626,11 +655,24 @@ export default function GoatsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "purchaseDate")}</label>
-                <input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={form.purchase_date}
+                  onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "purchasePrice")}</label>
-                <input type="number" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={form.purchase_price}
+                  onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "weight")}</label>
@@ -682,16 +724,36 @@ export default function GoatsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
-                <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>{t(lang, "weight")}</label>
-                  <input type="number" value={saleWeight} onChange={(e) => setSaleWeight(e.target.value)} className={inputCls} />
+                  <input
+                    type="number"
+                    min="0"
+                    onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                    value={saleWeight}
+                    onChange={(e) => setSaleWeight(e.target.value)}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>{t(lang, "rateperKg")}</label>
-                  <input type="number" value={saleRate} onChange={(e) => setSaleRate(e.target.value)} className={inputCls} />
+                  <input
+                    type="number"
+                    min="0"
+                    onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                    value={saleRate}
+                    onChange={(e) => setSaleRate(e.target.value)}
+                    className={inputCls}
+                  />
                 </div>
               </div>
               <div>
@@ -753,7 +815,13 @@ export default function GoatsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "date")}</label>
-                <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className={inputCls} />
+                <input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={expDate}
+                  onChange={(e) => setExpDate(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -767,7 +835,14 @@ export default function GoatsListPage() {
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "amount")}</label>
-                <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className={inputCls} />
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                  value={expAmount}
+                  onChange={(e) => setExpAmount(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>{t(lang, "description")}</label>

@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { supabase } from "../../../lib/supabase";
 import { useLang } from "../../../lib/useLang";
 import { phoneError as getPhoneError } from "../../../lib/validators";
+import { isFutureDate, getValidationMessage } from "../../../lib/validation";
 import { ActivityLog } from "../../../lib/activityLog";
 
 type Cultivation = {
@@ -1321,6 +1322,14 @@ export default function CropDetail() {
       toast.error(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
       return;
     }
+    if (isFutureDate(incomeDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (Number(incomeAmount) < 0) {
+      toast.error(getValidationMessage("negative", lang));
+      return;
+    }
     setSavingIncome(true);
     try {
       const { error } = await supabase.from("income_records").insert({
@@ -1777,6 +1786,14 @@ export default function CropDetail() {
       }
     } else if (!expenseDate || !expenseAmount) {
       toast.error(L("Date and amount are required", "தேதி மற்றும் தொகை தேவை"));
+      return;
+    }
+    if (isFutureDate(expenseDate)) {
+      toast.error(getValidationMessage("future_date", lang));
+      return;
+    }
+    if (!isSugarcaneLabour && Number(expenseAmount) < 0) {
+      toast.error(getValidationMessage("negative", lang));
       return;
     }
     setSavingExpense(true);
@@ -3471,11 +3488,24 @@ export default function CropDetail() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                       <div>
                         <label className={labelCls}>{L("Date", "தேதி")}</label>
-                        <input type="date" value={incomeDate} onChange={(e) => setIncomeDate(e.target.value)} className={inputCls} />
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split("T")[0]}
+                          value={incomeDate}
+                          onChange={(e) => setIncomeDate(e.target.value)}
+                          className={inputCls}
+                        />
                       </div>
                       <div>
                         <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")}</label>
-                        <input type="number" value={incomeAmount} onChange={(e) => setIncomeAmount(e.target.value)} className={inputCls} />
+                        <input
+                          type="number"
+                          min="0"
+                          onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                          value={incomeAmount}
+                          onChange={(e) => setIncomeAmount(e.target.value)}
+                          className={inputCls}
+                        />
                       </div>
                       <div>
                         <label className={labelCls}>{L("Buyer Name", "வாங்குபவர் பெயர்")}</label>
@@ -3683,7 +3713,13 @@ export default function CropDetail() {
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
                       <div>
                         <label className={labelCls}>{L("Date", "தேதி")}</label>
-                        <input type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} className={inputCls} />
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split("T")[0]}
+                          value={expenseDate}
+                          onChange={(e) => setExpenseDate(e.target.value)}
+                          className={inputCls}
+                        />
                       </div>
                       <div>
                         <label className={labelCls}>{L("Category", "வகை")}</label>
@@ -3717,7 +3753,14 @@ export default function CropDetail() {
                       ) : (
                         <div>
                           <label className={labelCls}>{L("Amount (₹)", "தொகை (₹)")}</label>
-                          <input type="number" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} className={inputCls} />
+                          <input
+                            type="number"
+                            min="0"
+                            onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                            value={expenseAmount}
+                            onChange={(e) => setExpenseAmount(e.target.value)}
+                            className={inputCls}
+                          />
                         </div>
                       )}
                     </div>

@@ -226,3 +226,14 @@ button.no-press:active {
 .dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.15); }
 .dark .bg-pink-50 { background-color: rgba(236, 72, 153, 0.15); }
 .dark .bg-gray-200 { background-color: #334155; }
+
+/* Prevent scroll on number inputs */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
