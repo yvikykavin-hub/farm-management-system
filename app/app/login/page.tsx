@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
 import DarkModeToggle from "../../components/DarkModeToggle";
+import LoginLoadingOverlay from "../../components/LoginLoadingOverlay";
 import { clearLockedCookie } from "../../lib/lockCookie";
 
 const REMEMBER_ME_KEY = "marutham_remember_me";
@@ -79,6 +81,8 @@ export default function LoginPage() {
     typeof window !== "undefined" ? checkRateLimit() : { allowed: true, remaining: MAX_ATTEMPTS }
   );
   const [rememberMe, setRememberMe] = useState(false);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+  const [loggedInName, setLoggedInName] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,9 +190,14 @@ export default function LoginPage() {
 
       toast.success(L(`Welcome ${displayName}! 👋`, `வணக்கம் ${displayName}! 👋`));
 
+      setLoggedInName(displayName || "");
+      setShowLoadingOverlay(true);
+
       setLoading(false);
-      router.push("/");
-      router.refresh();
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 4500);
     } catch {
       setError(L("An error occurred. Please try again.", "பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்."));
       setLoading(false);
@@ -291,13 +300,27 @@ export default function LoginPage() {
             </p>
           )}
 
-          <button
+          <motion.button
             type="submit"
             disabled={loading || !rateCheck.allowed}
-            className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2.5 text-sm font-semibold transition"
+            whileTap={{ scale: 0.97 }}
+            className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2"
           >
-            {loading ? L("Signing in...", "உள்நுழைகிறது...") : L("Sign In", "உள்நுழை")}
-          </button>
+            {loading ? (
+              <>
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="inline-block text-base"
+                >
+                  🌾
+                </motion.span>
+                {L("Signing in...", "உள்நுழைகிறது...")}
+              </>
+            ) : (
+              L("Sign In", "உள்நுழை")
+            )}
+          </motion.button>
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-4">
@@ -308,6 +331,8 @@ export default function LoginPage() {
           {lang === "ta" && " ஒப்புக்கொள்கிறீர்கள்"}
         </p>
       </div>
+
+      <LoginLoadingOverlay show={showLoadingOverlay} displayName={loggedInName} language={lang} />
     </div>
   );
 }
