@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 
-const LATITUDE = 11.4823;
-const LONGITUDE = 77.7947;
+// Karukkampalayam, Sivagiri, Erode (Kodumudi Taluk)
+const LATITUDE = 11.0943;
+const LONGITUDE = 77.8141;
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 const WEATHER_API_URL =
@@ -36,28 +37,50 @@ const weatherInfo = (code: number): WeatherIconInfo =>
 
 // Time-of-day gradient for the weather banner. Each entry pairs the
 // gradient color stops with a matching border tint (light + dark mode).
-const getWeatherGradient = () => {
+// Includes the bg-gradient-to-r/border utilities themselves (not just the
+// color stops) so this string is a complete, self-contained className.
+const getWeatherGradient = (): string => {
   const hour = new Date().getHours();
 
   if (hour >= 5 && hour < 8) {
-    // Early morning - warm pink/orange
-    return "from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-900/20 dark:via-amber-900/20 dark:to-yellow-900/20 border-orange-100 dark:border-orange-800/30";
+    // Early morning - warm sunrise
+    return "bg-gradient-to-r from-orange-50 via-amber-50 to-yellow-50 border border-orange-200 dark:from-orange-900/30 dark:via-amber-900/20 dark:to-yellow-900/20 dark:border-orange-800/30";
   } else if (hour >= 8 && hour < 12) {
-    // Morning - bright sky blue
-    return "from-sky-50 via-blue-50 to-cyan-50 dark:from-sky-900/20 dark:via-blue-900/20 dark:to-cyan-900/20 border-sky-100 dark:border-sky-800/30";
+    // Morning - bright sky
+    return "bg-gradient-to-r from-sky-50 via-blue-50 to-cyan-50 border border-sky-200 dark:from-sky-900/30 dark:via-blue-900/20 dark:to-cyan-900/20 dark:border-sky-800/30";
   } else if (hour >= 12 && hour < 15) {
-    // Afternoon - bright warm
-    return "from-amber-50 via-yellow-50 to-lime-50 dark:from-amber-900/20 dark:via-yellow-900/20 dark:to-lime-900/20 border-amber-100 dark:border-amber-800/30";
+    // Afternoon - warm bright
+    return "bg-gradient-to-r from-amber-50 via-yellow-50 to-lime-50 border border-amber-200 dark:from-amber-900/30 dark:via-yellow-900/20 dark:to-lime-900/20 dark:border-amber-800/30";
   } else if (hour >= 15 && hour < 18) {
     // Late afternoon - golden
-    return "from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-900/20 dark:via-amber-900/20 dark:to-orange-900/20 border-yellow-100 dark:border-yellow-800/30";
-  } else if (hour >= 18 && hour < 20) {
-    // Evening - purple/pink sunset
-    return "from-purple-50 via-pink-50 to-orange-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-purple-100 dark:border-purple-800/30";
+    return "bg-gradient-to-r from-yellow-50 via-amber-50 to-orange-50 border border-yellow-200 dark:from-yellow-900/30 dark:via-amber-900/20 dark:to-orange-900/20 dark:border-yellow-800/30";
+  } else if (hour >= 18 && hour < 21) {
+    // Evening - purple sunset
+    return "bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border border-purple-200 dark:from-purple-900/30 dark:via-pink-900/20 dark:to-orange-900/20 dark:border-purple-800/30";
   } else {
-    // Night - deep blue/indigo
-    return "from-indigo-50 via-blue-50 to-slate-50 dark:from-indigo-900/30 dark:via-blue-900/30 dark:to-slate-900/30 border-indigo-100 dark:border-indigo-800/30";
+    // Night - deep blue
+    return "bg-gradient-to-r from-indigo-50 via-blue-50 to-slate-50 border border-indigo-200 dark:from-indigo-900/30 dark:via-blue-900/20 dark:to-slate-800/30 dark:border-indigo-800/30";
   }
+};
+
+// Weather-condition overlay — blends with (or overrides) the time gradient
+// above. Also self-contained; an empty string means "use the time gradient
+// as-is" (clear/sunny has no special-case override).
+const getWeatherOverlay = (code: number): string => {
+  // Rain
+  if ([51, 53, 55, 61, 63, 65, 71, 73, 75, 80, 81, 82].includes(code)) {
+    return "bg-gradient-to-r from-slate-100 via-blue-50 to-slate-100 border border-slate-200 dark:from-slate-800/40 dark:via-blue-900/20 dark:to-slate-800/40 dark:border-slate-700/30";
+  }
+  // Thunderstorm
+  if ([95, 96, 99].includes(code)) {
+    return "bg-gradient-to-r from-gray-100 via-slate-100 to-gray-100 border border-gray-300 dark:from-gray-800/50 dark:via-slate-800/40 dark:to-gray-800/50 dark:border-gray-700/30";
+  }
+  // Cloudy
+  if ([2, 3, 45, 48].includes(code)) {
+    return "bg-gradient-to-r from-gray-50 via-slate-50 to-gray-50 border border-gray-200 dark:from-gray-800/30 dark:via-slate-800/20 dark:to-gray-800/30 dark:border-gray-700/30";
+  }
+  // Clear/sunny → use time gradient
+  return "";
 };
 
 const RAIN_CODES = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95];
@@ -134,12 +157,13 @@ export default function WeatherWidget({ language = "en" }: { language?: "ta" | "
   const { icon: weatherIcon, en: weatherEn, ta: weatherTa } = weatherInfo(weather.weatherCode);
   const condition = language === "ta" ? weatherTa : weatherEn;
   const advice = farmAdvice(weather.weatherCode, language);
-  const weatherGradient = getWeatherGradient();
+  const weatherOverlay = getWeatherOverlay(weather.weatherCode);
+  const finalGradient = weatherOverlay || getWeatherGradient();
 
   return (
-    <div className={`w-full overflow-hidden rounded-xl border shadow-sm relative ${weatherGradient}`}>
-      {/* Soft gradient background */}
-      <div className={`absolute inset-0 bg-gradient-to-r ${weatherGradient}`} />
+    <div className={`w-full overflow-hidden rounded-xl shadow-sm relative ${finalGradient}`}>
+      {/* Subtle overlay for depth — gradient lives only on the outer div above */}
+      <div className="absolute inset-0 bg-white/10 dark:bg-black/10" />
 
       {/* Content */}
       <div className="relative z-10 px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto">
