@@ -38,6 +38,26 @@ Time: இன்று/today=${today}, நேத்து/yesterday=${yesterday}
 Animal: பசு/மாடு=cow, எருமை=buffalo,
         ஆடு=goat, கோழி=hen
 
+EXPENSE CATEGORY — pick the category key based on animal_type.
+Return the EXACT category key from the matching list below, never
+a translated or made-up value.
+
+COW/BUFFALO EXPENSE TYPES:
+rice_feed: rice feed, rice bran, அரிசி தீவனம்
+normal_feed: normal feed, fodder, grass, தீவனம், புல்
+medicine: medicine, tablet, மருந்து, மாத்திரை
+vaccination: vaccine, தடுப்பூசி
+veterinary: vet, doctor, டாக்டர்
+ai: artificial insemination, கருவூட்டல்
+shed_maintenance: shed repair, தொழுவம் பழுது
+other: other, மற்றவை
+
+GOAT EXPENSE TYPES:
+feed, brownLeafRolls, medicine, vaccination, veterinary, other
+
+HEN EXPENSE TYPES:
+feed, medicine, vaccination, shedMaintenance, miscellaneous, other
+
 RULES (VERY IMPORTANT):
 1. NEVER ask questions
 2. ALWAYS return JSON
@@ -46,6 +66,7 @@ RULES (VERY IMPORTANT):
    - Missing animal → cow
    - Missing amount → 0
    - Missing session → use 0
+   - Missing/unclear category → normal_feed for cow/buffalo, feed for goat/hen
 4. Return your BEST GUESS always
 5. No markdown, no explanation
 
@@ -57,7 +78,7 @@ RETURN FORMAT:
   "morning_litres": 0,
   "evening_litres": 0,
   "amount": 0,
-  "category": "Feed|Medicine|Veterinary|Labour|Other",
+  "category": "<exact key from the matching EXPENSE TYPES list above>",
   "description": "",
   "confidence": 0.0-1.0
 }

@@ -284,15 +284,37 @@ export default function NotificationBell({ language = "en" }: { language?: "ta" 
         const todayStr = new Date().toISOString().split("T")[0];
 
         if (turnStatus.isMyTurn) {
+          // Staged wording so the card reads differently on the last day of
+          // the turn (exact 6 PM hand-off time) vs. an ordinary day with
+          // multiple days still remaining.
+          let myTurnTitle: string;
+          let myTurnMessage: string;
+          if (turnStatus.endsToday) {
+            myTurnTitle = lang === "ta" ? `🚰 ${motorFarmName} - இன்று முறை முடியும்` : `🚰 ${motorFarmName} - Turn Ends Today`;
+            myTurnMessage =
+              lang === "ta"
+                ? "உங்கள் பகிர்வு மோட்டார் முறை இன்று மாலை 6:00 மணிக்கு முடியும்."
+                : "Your shared motor turn ends today at 6:00 PM.";
+          } else if (turnStatus.daysRemaining === 1) {
+            myTurnTitle = lang === "ta" ? `🚰 ${motorFarmName} - நாளை முறை முடியும்` : `🚰 ${motorFarmName} - Turn Ends Tomorrow`;
+            myTurnMessage =
+              lang === "ta"
+                ? "உங்கள் பகிர்வு மோட்டார் முறை நாளை மாலை 6:00 மணிக்கு முடியும்."
+                : "Your shared motor turn ends tomorrow at 6:00 PM.";
+          } else {
+            myTurnTitle = lang === "ta" ? `${motorFarmName} - இன்று உங்கள் முறை!` : `${motorFarmName} - Today is Your Turn!`;
+            myTurnMessage =
+              lang === "ta"
+                ? `${turnStatus.daysRemaining} நாள் உள்ளது - இப்போதே பாசனம் செய்யலாம்`
+                : `${turnStatus.daysRemaining} day(s) left - Water your fields now`;
+          }
+
           detected.push({
             id: `motor-my-turn-${motor.id}-${todayStr}`,
             severity: "warning",
             icon: "🚰",
-            title: lang === "ta" ? `${motorFarmName} - இன்று உங்கள் முறை!` : `${motorFarmName} - Today is Your Turn!`,
-            message:
-              lang === "ta"
-                ? `${turnStatus.daysRemaining} நாள் உள்ளது - இப்போதே பாசனம் செய்யலாம்`
-                : `${turnStatus.daysRemaining} day(s) left - Water your fields now`,
+            title: myTurnTitle,
+            message: myTurnMessage,
           });
         } else {
           const next = getNextTurnInfo(

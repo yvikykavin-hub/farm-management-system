@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { ActivityLog } from "../lib/activityLog";
-import { processKeywords } from "../lib/voiceKeywords";
+import { processKeywords, detectExpenseCategory } from "../lib/voiceKeywords";
 
 interface VoiceBottomSheetProps {
   isOpen: boolean;
@@ -28,13 +28,51 @@ interface FormData {
 
 type AnimalOption = { id: string; name: string };
 
-const CATEGORY_OPTIONS = [
-  { key: "Feed", en: "Feed", ta: "தீவனம்" },
-  { key: "Medicine", en: "Medicine", ta: "மருந்து" },
-  { key: "Veterinary", en: "Veterinary", ta: "கால்நடை டாக்டர்" },
-  { key: "Labour", en: "Labour", ta: "கூலி" },
-  { key: "Other", en: "Other", ta: "மற்றவை" },
-];
+type CategoryOption = { key: string; icon: string; en: string; ta: string };
+
+// Per-animal expense subcategories for the CONFIRM screen — keys match
+// exactly what saveLivestockExpense writes to expense_type (snake_case DB
+// values for cow/buffalo's shared cow_expenses table; the goat/hen pages'
+// own label keys for goat_expenses/hen_expenses).
+const getCategoryOptions = (animalType: string): CategoryOption[] => {
+  if (animalType === "cow" || animalType === "buffalo") {
+    return [
+      { key: "rice_feed", icon: "🌾", en: "Rice Feed", ta: "அரிசி தீவனம்" },
+      { key: "normal_feed", icon: "🌿", en: "Normal Feed", ta: "சாதாரண தீவனம்" },
+      { key: "medicine", icon: "💊", en: "Medicine", ta: "மருந்து" },
+      { key: "vaccination", icon: "💉", en: "Vaccination", ta: "தடுப்பூசி" },
+      { key: "veterinary", icon: "👨‍⚕️", en: "Veterinary", ta: "டாக்டர்" },
+      { key: "ai", icon: "🔬", en: "AI", ta: "கருவூட்டல்" },
+      { key: "shed_maintenance", icon: "🏚️", en: "Shed", ta: "தொழுவம்" },
+      { key: "other", icon: "📦", en: "Other", ta: "மற்றவை" },
+    ];
+  }
+  if (animalType === "goat") {
+    return [
+      { key: "feed", icon: "🌿", en: "Feed", ta: "தீவனம்" },
+      { key: "brownLeafRolls", icon: "🍂", en: "Leaf Rolls", ta: "இலை சுருள்" },
+      { key: "medicine", icon: "💊", en: "Medicine", ta: "மருந்து" },
+      { key: "vaccination", icon: "💉", en: "Vaccination", ta: "தடுப்பூசி" },
+      { key: "veterinary", icon: "👨‍⚕️", en: "Veterinary", ta: "டாக்டர்" },
+      { key: "other", icon: "📦", en: "Other", ta: "மற்றவை" },
+    ];
+  }
+  if (animalType === "hen") {
+    return [
+      { key: "feed", icon: "🌾", en: "Feed", ta: "தீவனம்" },
+      { key: "medicine", icon: "💊", en: "Medicine", ta: "மருந்து" },
+      { key: "vaccination", icon: "💉", en: "Vaccination", ta: "தடுப்பூசி" },
+      { key: "shedMaintenance", icon: "🏚️", en: "Shed", ta: "கூடு பழுது" },
+      { key: "miscellaneous", icon: "🔧", en: "Misc", ta: "இதர" },
+      { key: "other", icon: "📦", en: "Other", ta: "மற்றவை" },
+    ];
+  }
+  return [];
+};
+
+// Same fallback default detectExpenseCategory("", animalType) would produce —
+// used to seed formData.category before any transcript keyword has matched.
+const defaultCategoryFor = (animalType: string): string => detectExpenseCategory("", animalType);
 
 export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBottomSheetProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
@@ -52,17 +90,26 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
   // component state read inside that closure would always be stale, so a ref
   // is kept in lockstep with onresult instead.
   const latestTranscriptRef = useRef("");
+  // Some mobile browsers (Android Chrome, iOS Safari) silently end
+  // SpeechRecognition after a couple seconds of near-silence even with
+  // continuous=true. onend can't tell "user tapped STOP" apart from "browser
+  // gave up" on its own, so this flag is the source of truth: only a real tap
+  // on the STOP button sets it, and onend uses it to decide whether to
+  // transparently restart listening or actually finish.
+  const manualStopRef = useRef(false);
 
   const L = (en: string, ta: string) => (language === "ta" ? ta : en);
   const today = new Date().toISOString().split("T")[0];
 
   const stopListening = useCallback(() => {
+    manualStopRef.current = true;
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
     if (timerRef.current) {
       clearInterval(timerRef.current);
+      timerRef.current = undefined;
     }
   }, []);
 
@@ -76,6 +123,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
     setSelectedAnimalId("");
     if (timerRef.current) {
       clearInterval(timerRef.current);
+      timerRef.current = undefined;
     }
   }, []);
 
@@ -137,7 +185,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
         morning_litres: keywordResult.morning_litres || 0,
         evening_litres: keywordResult.evening_litres || 0,
         amount: keywordResult.amount || 0,
-        category: keywordResult.category || "Other",
+        category: keywordResult.category || defaultCategoryFor(keywordResult.animal_type),
         description: "",
       });
       setVoiceState("confirm");
@@ -156,14 +204,20 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
 
       if (data.success && data.result) {
         const r = data.result;
+        const resolvedAnimal = r.animal_type || "cow";
+        // Gemini is asked to return an exact category key, but LLM output
+        // isn't guaranteed — fall back to the keyword detector (over this
+        // same transcript) if it returns something outside the valid set.
+        const validKeys = getCategoryOptions(resolvedAnimal).map((c) => c.key);
+        const resolvedCategory = validKeys.includes(r.category) ? r.category : detectExpenseCategory(text, resolvedAnimal);
         setFormData({
           module: r.module === "milk_collection" ? "milk_collection" : "livestock_expense",
-          animal_type: r.animal_type || "cow",
+          animal_type: resolvedAnimal,
           date: r.date || today,
           morning_litres: Number(r.morning_litres) || 0,
           evening_litres: Number(r.evening_litres) || 0,
           amount: Number(r.amount) || 0,
-          category: r.category || "Other",
+          category: resolvedCategory,
           description: r.description || "",
         });
         setVoiceState("confirm");
@@ -175,7 +229,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
           morning_litres: 0,
           evening_litres: 0,
           amount: 0,
-          category: "Other",
+          category: defaultCategoryFor("cow"),
           description: "",
         });
         setVoiceState("confirm");
@@ -189,7 +243,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
         morning_litres: 0,
         evening_litres: 0,
         amount: 0,
-        category: "Other",
+        category: defaultCategoryFor("cow"),
         description: "",
       });
       setVoiceState("confirm");
@@ -205,73 +259,109 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
-    const recognition = new SR();
-    recognitionRef.current = recognition;
-
-    // CONTINUOUS MODE - no auto cutoff, user taps STOP when done.
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = language === "ta" ? "ta-IN" : "en-IN";
-    recognition.maxAlternatives = 1;
-
+    manualStopRef.current = false;
     let finalText = "";
     latestTranscriptRef.current = "";
 
-    recognition.onstart = () => {
-      setVoiceState("listening");
-      setLiveTranscript("");
-      setRecordingTime(0);
+    // Wrapped in a function (rather than one recognition instance) because
+    // some browsers refuse to .start() an instance that has already fired
+    // onend — an unexpected auto-stop is recovered from by building a fresh
+    // instance and starting it again, invisibly to the user.
+    const beginRecognition = () => {
+      const recognition = new SR();
+      recognitionRef.current = recognition;
 
-      timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    };
+      // CONTINUOUS MODE - no auto cutoff, user taps STOP when done.
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = language === "ta" ? "ta-IN" : "en-IN";
+      recognition.maxAlternatives = 1;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
-      let interim = "";
-      let final = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          final += t + " ";
-        } else {
-          interim += t;
+      recognition.onstart = () => {
+        setVoiceState("listening");
+        // Only reset the timer/transcript UI on the very first start of this
+        // session — a restart after a mobile auto-stop should carry on from
+        // where it left off, not visually reset to 0:00.
+        if (!timerRef.current) {
+          setLiveTranscript(latestTranscriptRef.current);
+          setRecordingTime(0);
+          timerRef.current = setInterval(() => {
+            setRecordingTime((prev) => prev + 1);
+          }, 1000);
         }
-      }
+      };
 
-      if (final) finalText += final;
-      const combined = (finalText + interim).trim();
-      latestTranscriptRef.current = combined;
-      setLiveTranscript(combined);
-    };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        let final = "";
 
-    recognition.onend = () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      const text = latestTranscriptRef.current.trim();
-      if (text) {
-        setFinalTranscript(text);
-        processVoice(text);
-      } else {
-        setVoiceState("idle");
-      }
-    };
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            final += t + " ";
+          } else {
+            interim += t;
+          }
+        }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onerror = (event: any) => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (event.error !== "aborted") {
+        if (final) finalText += final;
+        const combined = (finalText + interim).trim();
+        latestTranscriptRef.current = combined;
+        setLiveTranscript(combined);
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onerror = (event: any) => {
+        // "no-speech" fires during ordinary pauses while the user is still
+        // thinking — never treat it as an error, just keep listening.
+        // onend still fires right after in most browsers, and is handled
+        // there by transparently restarting since manualStopRef is unset.
+        if (event.error === "no-speech" || event.error === "aborted") {
+          return;
+        }
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = undefined;
+        }
+        recognitionRef.current = null;
         toast.error(L("Voice error. Try again.", "பிழை. மீண்டும் முயற்சிக்கவும்."));
         setVoiceState("idle");
-      }
+      };
+
+      recognition.onend = () => {
+        // Not a manual stop — the browser gave up on its own (mobile
+        // "no-speech" timeout, brief network hiccup, etc). Restart silently
+        // so recording effectively continues until the user taps STOP.
+        if (!manualStopRef.current) {
+          try {
+            beginRecognition();
+            return;
+          } catch {
+            // Restart failed — fall through and finalize with whatever was
+            // captured so far rather than leaving the UI stuck.
+          }
+        }
+
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = undefined;
+        }
+        recognitionRef.current = null;
+
+        const text = latestTranscriptRef.current.trim();
+        if (text) {
+          setFinalTranscript(text);
+          processVoice(text);
+        } else {
+          setVoiceState("idle");
+        }
+      };
+
+      recognition.start();
     };
 
-    recognition.start();
+    beginRecognition();
   };
 
   const handleSave = async () => {
@@ -385,6 +475,12 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
     };
     const table = tableMap[formData.animal_type] || "cow_expenses";
     const amount = Number(formData.amount) || 0;
+    // formData.category is already the correct value to save to DB — for
+    // cow/buffalo it's the exact cow_expenses.expense_type key (rice_feed,
+    // normal_feed, ...), for goat/hen it's that page's own label key
+    // (feed, brownLeafRolls, shedMaintenance, ...). Falls back defensively
+    // in case formData somehow reached here with an empty category.
+    const category = formData.category || defaultCategoryFor(formData.animal_type);
 
     // cow_expenses is shared across cow/buffalo (no animal_type column of its
     // own); goat_expenses/hen_expenses instead key off a specific goat_id/hen_id.
@@ -392,7 +488,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
       const { error } = await supabase.from("cow_expenses").insert({
         farm_location: "Home",
         expense_date: formData.date,
-        expense_type: formData.category || "Other",
+        expense_type: category,
         amount,
         description: formData.description || null,
       });
@@ -402,7 +498,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
         goat_id: selectedAnimalId,
         farm_location: "Home",
         expense_date: formData.date,
-        expense_type: formData.category || "Other",
+        expense_type: category,
         amount,
         description: formData.description || null,
       });
@@ -412,7 +508,7 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
         hen_id: selectedAnimalId,
         farm_location: "Home",
         expense_date: formData.date,
-        expense_type: formData.category || "Other",
+        expense_type: category,
         amount,
         description: formData.description || null,
       });
@@ -505,7 +601,9 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
 
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{L("Tap to start speaking", "பேச தட்டவும்")}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{L("Tap STOP when you finish", "முடிந்ததும் STOP தட்டவும்")}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        {L("Tap mic → Speak → Tap STOP when done", "தட்டவும் - பேசுங்கள் - மீண்டும் தட்டி நிறுத்துங்கள்")}
+                      </p>
                     </div>
 
                     {/* Example phrases */}
@@ -552,10 +650,11 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
                       />
                       <button
                         onClick={stopListening}
-                        className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-red-600 shadow-xl flex flex-col items-center justify-center text-white active:scale-95"
+                        className="relative z-10 w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-red-600 shadow-xl flex flex-col items-center justify-center text-white active:scale-95 transition-transform"
                       >
-                        <div className="w-5 h-5 rounded bg-white mb-1" />
-                        <span className="text-xs font-bold">STOP</span>
+                        {/* Square stop icon */}
+                        <div className="w-6 h-6 rounded-md bg-white mb-1.5" />
+                        <span className="text-xs font-bold tracking-wide">{L("STOP", "நிறுத்து")}</span>
                       </button>
                     </div>
 
@@ -643,7 +742,16 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
                         ].map((a) => (
                           <button
                             key={a.key}
-                            onClick={() => setFormData({ ...formData, animal_type: a.key })}
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                animal_type: a.key,
+                                // The previous category key may not exist for the newly
+                                // picked animal's subcategory set — reseed it so a stale
+                                // selection never gets silently saved.
+                                category: defaultCategoryFor(a.key),
+                              })
+                            }
                             className={`py-2 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all ${
                               formData.animal_type === a.key ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
                             }`}
@@ -750,16 +858,17 @@ export default function VoiceBottomSheet({ isOpen, onClose, language }: VoiceBot
 
                         <div>
                           <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{L("Category", "வகை")}</label>
-                          <div className="flex flex-wrap gap-2">
-                            {CATEGORY_OPTIONS.map((c) => (
+                          <div className="grid grid-cols-4 gap-2">
+                            {getCategoryOptions(formData.animal_type).map((c) => (
                               <button
                                 key={c.key}
                                 onClick={() => setFormData({ ...formData, category: c.key })}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                className={`py-2 px-1 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all active:scale-95 ${
                                   formData.category === c.key ? "bg-green-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
                                 }`}
                               >
-                                {L(c.en, c.ta)}
+                                <span>{c.icon}</span>
+                                <span>{L(c.en, c.ta)}</span>
                               </button>
                             ))}
                           </div>

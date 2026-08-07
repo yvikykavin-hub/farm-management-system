@@ -151,32 +151,154 @@ const SESSION_KEYWORDS: Record<string, "morning" | "evening"> = {
   இரவிலே: "evening",
 };
 
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  Feed: [
-    "feed", "fodder", "grass", "hay",
-    "grain", "bran", "silage",
-    "தீவனம்", "புல்", "கொட்டை",
-    "வைக்கோல்", "தவிடு", "உணவு",
+// ================================
+// EXPENSE SUBCATEGORIES (per animal)
+// Maps voice keywords → the exact value each livestock page's expense
+// form saves. Cow/buffalo keys are the raw cow_expenses.expense_type
+// values (snake_case, mirroring CattleExpensesSection's EXPENSE_TYPE_VALUES);
+// goat/hen keys are the label keys those pages' own dropdowns use.
+// ================================
+
+export const COW_EXPENSE_KEYWORDS: Record<string, string[]> = {
+  rice_feed: [
+    "rice feed", "rice", "அரிசி",
+    "அரிசி தீவனம்", "rice bran",
+    "rice husk", "அரிசி தவிடு",
+    "கண்ணி", "rice straw",
   ],
-  Medicine: [
-    "medicine", "tablet", "injection",
-    "vaccine", "drug", "medical",
-    "மருந்து", "ஊசி", "மாத்திரை",
-    "தடுப்பூசி", "சிகிச்சை",
+  normal_feed: [
+    "normal feed", "feed", "fodder",
+    "grass", "hay", "தீவனம்",
+    "சாதாரண தீவனம்", "புல்",
+    "வைக்கோல்", "கொட்டை",
+    "dry feed", "உலர் தீவனம்",
+    "green fodder", "பச்சை தீவனம்",
   ],
-  Veterinary: [
-    "doctor", "vet", "veterinary",
-    "veterinarian", "checkup",
+  medicine: [
+    "medicine", "tablet", "drug",
+    "மருந்து", "மாத்திரை",
+    "syrup", "ointment", "cream",
+    "களிம்பு", "சிரப்",
+  ],
+  vaccination: [
+    "vaccination", "vaccine", "shot",
+    "தடுப்பூசி", "வாக்சின்",
+    "immunization", "booster",
+  ],
+  veterinary: [
+    "veterinary", "vet", "doctor",
     "டாக்டர்", "கால்நடை டாக்டர்",
-    "வைத்தியர்", "பரிசோதனை",
+    "checkup", "treatment",
+    "சிகிச்சை", "பரிசோதனை",
+    "வைத்தியர்",
   ],
-  Labour: [
-    "labour", "labor", "worker",
-    "help", "assistant", "wages",
-    "கூலி", "ஆள்", "வேலையாள்",
-    "உதவியாள்", "கூலிஆள்",
+  ai: [
+    "ai", "artificial insemination",
+    "insemination", "breeding",
+    "கருவூட்டல்", "செயற்கை கருவூட்டல்",
+    "bull service", "மாட்டு சேவை",
+  ],
+  shed_maintenance: [
+    "shed", "maintenance", "repair",
+    "தொழுவம்", "கொட்டகை",
+    "shed maintenance", "barn",
+    "கட்டிட பழுது", "சாணி அடிக்க",
+  ],
+  other: [
+    "other", "misc", "miscellaneous",
+    "மற்றவை", "இதர",
   ],
 };
+
+export const GOAT_EXPENSE_KEYWORDS: Record<string, string[]> = {
+  feed: [
+    "feed", "fodder", "grass",
+    "தீவனம்", "புல்", "இலை",
+    "leaves", "dry leaves", "உலர் இலை",
+  ],
+  brownLeafRolls: [
+    "brown leaf", "leaf rolls",
+    "brown leaves", "dry leaf rolls",
+    "கருமை இலை", "உலர் இலை சுருள்",
+  ],
+  medicine: [
+    "medicine", "tablet", "drug",
+    "மருந்து", "மாத்திரை",
+  ],
+  vaccination: [
+    "vaccination", "vaccine",
+    "தடுப்பூசி", "வாக்சின்",
+  ],
+  veterinary: [
+    "vet", "doctor", "veterinary",
+    "டாக்டர்", "கால்நடை டாக்டர்",
+  ],
+  other: [
+    "other", "misc",
+    "மற்றவை", "இதர",
+  ],
+};
+
+export const HEN_EXPENSE_KEYWORDS: Record<string, string[]> = {
+  feed: [
+    "feed", "grain", "corn", "maize",
+    "தீவனம்", "தானியம்", "சோளம்",
+    "poultry feed", "கோழி தீவனம்",
+  ],
+  medicine: [
+    "medicine", "tablet", "drug",
+    "மருந்து", "மாத்திரை",
+  ],
+  vaccination: [
+    "vaccination", "vaccine",
+    "தடுப்பூசி", "வாக்சின்",
+  ],
+  shedMaintenance: [
+    "shed", "coop", "maintenance",
+    "கோழி கூடு", "கொட்டகை பழுது",
+    "poultry shed", "repair",
+  ],
+  miscellaneous: [
+    "miscellaneous", "misc",
+    "equipment", "tools",
+    "உபகரணம்", "மற்றவை",
+  ],
+  other: [
+    "other", "மற்றவை", "இதர",
+  ],
+};
+
+// Category keyword maps keyed by animal type — "buffalo" shares the cow's
+// expense schema since both save into the same cow_expenses table.
+const EXPENSE_KEYWORD_MAPS: Record<string, Record<string, string[]>> = {
+  cow: COW_EXPENSE_KEYWORDS,
+  buffalo: COW_EXPENSE_KEYWORDS,
+  goat: GOAT_EXPENSE_KEYWORDS,
+  hen: HEN_EXPENSE_KEYWORDS,
+};
+
+/** The valid category keys for a given animal type, in declaration order. */
+export function getExpenseCategoryKeys(animalType: string): string[] {
+  return Object.keys(EXPENSE_KEYWORD_MAPS[animalType] || COW_EXPENSE_KEYWORDS);
+}
+
+/** Detects the expense subcategory from free text for a given animal type. */
+export function detectExpenseCategory(text: string, animalType: string): string {
+  const lowerText = text.toLowerCase();
+  const keywordMap = EXPENSE_KEYWORD_MAPS[animalType] || COW_EXPENSE_KEYWORDS;
+
+  for (const [category, keywords] of Object.entries(keywordMap)) {
+    if (keywords.some((k) => lowerText.includes(k.toLowerCase()))) {
+      return category;
+    }
+  }
+
+  // Default
+  if (animalType === "cow" || animalType === "buffalo") {
+    return "normal_feed";
+  }
+  return "feed";
+}
 
 // ================================
 // NUMBER EXTRACTION
@@ -366,22 +488,20 @@ export function processKeywords(transcript: string): KeywordResult {
     }
   }
 
-  // ── Detect Category (Expense) ──
+  // ── Detect Category (Expense) — animal-specific subcategories ──
   let category: string | undefined;
 
   if (moduleType === "livestock_expense") {
-    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-      if (keywords.some((k) => text.includes(k.toLowerCase()))) {
-        category = cat;
-        confidence += 20;
-        break;
-      }
-    }
+    const keywordMap = animal_type === "cow" || animal_type === "buffalo" ? COW_EXPENSE_KEYWORDS
+      : animal_type === "goat" ? GOAT_EXPENSE_KEYWORDS
+      : animal_type === "hen" ? HEN_EXPENSE_KEYWORDS
+      : COW_EXPENSE_KEYWORDS;
+    const matched = Object.entries(keywordMap).some(([, keywords]) => keywords.some((k) => text.includes(k.toLowerCase())));
 
-    if (!category) {
-      category = "Other";
-      // No penalty - default to Other
-    }
+    category = detectExpenseCategory(text, animal_type);
+    if (matched) confidence += 20;
+    // No penalty when nothing matched — detectExpenseCategory already
+    // returns a sensible per-animal default (normal_feed / feed).
   }
 
   return {

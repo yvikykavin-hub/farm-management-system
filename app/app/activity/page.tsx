@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import Sidebar from "../../components/Sidebar";
 import PullToRefresh from "../../components/PullToRefresh";
 import { SkeletonList } from "../../components/Skeleton";
 import { supabase } from "../../lib/supabase";
 import { useLang } from "../../lib/useLang";
+
+const MAX_LOG_ENTRIES = 50;
 
 type ActivityLogRow = {
   id: string;
@@ -54,6 +57,31 @@ export default function ActivityPage() {
   const [filterModule, setFilterModule] = useState("all");
   const [filterDate, setFilterDate] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const cleanupOldLogs = async () => {
+    const { count } = await supabase.from("activity_logs").select("*", { count: "exact", head: true });
+    if (!count || count <= MAX_LOG_ENTRIES) return;
+
+    // The Nth-newest row's created_at is the cutoff — everything older gets deleted.
+    const { data: cutoff } = await supabase
+      .from("activity_logs")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .range(MAX_LOG_ENTRIES - 1, MAX_LOG_ENTRIES - 1)
+      .single();
+    if (!cutoff) return;
+
+    const { error } = await supabase.from("activity_logs").delete().lt("created_at", cutoff.created_at);
+    if (error) console.error("Activity log cleanup failed:", error);
+  };
+
+  // Keeps the table from growing forever — runs once per page load, before
+  // the first fetch, so a freshly-trimmed table is what gets displayed.
+  useEffect(() => {
+    cleanupOldLogs();
+  }, []);
 
   useEffect(() => {
     fetchLogs();
@@ -63,8 +91,10 @@ export default function ActivityPage() {
   const fetchLogs = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+    setSelectedIds([]);
+    setSelectMode(false);
 
-    let query = supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(100);
+    let query = supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(MAX_LOG_ENTRIES);
 
     if (filterUser !== "all") {
       query = query.eq("username", filterUser);
@@ -91,6 +121,30 @@ export default function ActivityPage() {
 
     if (isRefresh) setRefreshing(false);
     else setLoading(false);
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => (prev.length === logs.length ? [] : logs.map((l) => l.id)));
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const deleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+
+    const { error } = await supabase.from("activity_logs").delete().in("id", selectedIds);
+
+    if (error) {
+      toast.error(L("Delete failed. Try again.", "நீக்க முடியவில்லை."));
+      return;
+    }
+
+    setLogs((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+    toast.success(L(`${selectedIds.length} entries deleted`, `${selectedIds.length} பதிவுகள் நீக்கப்பட்டன`));
+    setSelectedIds([]);
+    setSelectMode(false);
   };
 
   const getActionIcon = (action: string) => {
@@ -248,6 +302,45 @@ export default function ActivityPage() {
               </div>
             </motion.div>
 
+            {/* Select toolbar */}
+            {!loading && logs.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectMode(!selectMode);
+                      setSelectedIds([]);
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-colors ${
+                      selectMode
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                    }`}
+                  >
+                    {selectMode ? L("Cancel", "ரத்து") : L("Select", "தேர்வு")}
+                  </button>
+
+                  {selectMode && (
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-xs px-3 py-1.5 rounded-xl font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                    >
+                      {selectedIds.length === logs.length ? L("Deselect All", "எல்லாம் நீக்கு") : L("Select All", "எல்லாம் தேர்வு")}
+                    </button>
+                  )}
+                </div>
+
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={deleteSelected}
+                    className="text-xs px-3 py-1.5 rounded-xl font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center gap-1"
+                  >
+                    🗑️ {L(`Delete (${selectedIds.length})`, `நீக்கு (${selectedIds.length})`)}
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Log entries */}
             {loading ? (
               <SkeletonList count={5} />
@@ -275,9 +368,29 @@ export default function ActivityPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -8 }}
                       transition={{ delay: Math.min(index * 0.03, 0.3), duration: 0.3 }}
-                      className="bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow duration-200"
+                      onClick={() => {
+                        if (selectMode) toggleSelect(log.id);
+                      }}
+                      className={`bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-slate-700 transition-all duration-200 ${
+                        selectMode ? "cursor-pointer active:scale-[0.98]" : "hover:shadow-md"
+                      } ${selectedIds.includes(log.id) ? "border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/10" : ""}`}
                     >
                       <div className="flex items-start gap-3">
+                        {/* Checkbox in select mode */}
+                        {selectMode && (
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-all ${
+                              selectedIds.includes(log.id) ? "bg-green-600 border-green-600" : "border-gray-300 dark:border-slate-500"
+                            }`}
+                          >
+                            {selectedIds.includes(log.id) && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 5 L4 7 L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                          </div>
+                        )}
+
                         {/* Action icon */}
                         <div
                           className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm ${getActionStyle(log.action)}`}
@@ -315,9 +428,9 @@ export default function ActivityPage() {
             )}
 
             {/* Bottom note */}
-            {logs.length === 100 && (
+            {logs.length === MAX_LOG_ENTRIES && (
               <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                {L("Showing latest 100 entries", "கடைசி 100 பதிவுகள் காட்டுகிறது")}
+                {L(`Showing latest ${MAX_LOG_ENTRIES} entries`, `கடைசி ${MAX_LOG_ENTRIES} பதிவுகள் காட்டுகிறது`)}
               </p>
             )}
           </div>

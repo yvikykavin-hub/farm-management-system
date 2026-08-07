@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { getTractorOilStatus } from "../lib/tractorOilStatus";
-import { calculateCurrentTurn } from "../lib/motorTurnCalculator";
+import { calculateCurrentTurn, type TurnStatus } from "../lib/motorTurnCalculator";
 
 const NOTIFICATION_CHECK_KEY = "marutham_last_notification_check";
 const DISMISSED_KEY = "marutham_dismissed_notifications";
@@ -34,6 +34,66 @@ const getFarmName = (farm: FarmRef): string => {
     return farm.name_tamil;
   }
   return farm?.name || (lang === "ta" ? "உங்கள் பண்ணை" : "Your Farm");
+};
+
+// Builds the right bilingual title/body for whichever stage of a shared
+// motor's turn is currently active — separate wording for "ends today",
+// "ends tomorrow", "still active with days left", and "not my turn" so a
+// farmer glancing at the notification knows exactly where things stand
+// without opening the app.
+const getMotorNotificationText = (
+  turnStatus: TurnStatus,
+  farmName: string,
+  lang: string
+): { title: string; body: string; urgent: boolean } => {
+  const L = (en: string, ta: string) => (lang === "ta" ? ta : en);
+
+  if (turnStatus.endsToday && turnStatus.isMyTurn) {
+    return {
+      title: L(`🚰 ${farmName} - Turn Ends Today`, `🚰 ${farmName} - இன்று முறை முடியும்`),
+      body: L(
+        "Your shared motor turn ends today at 6:00 PM. Finish watering soon.",
+        "உங்கள் பகிர்வு மோட்டார் முறை இன்று மாலை 6:00 மணிக்கு முடியும். விரைவில் பாசனம் முடிக்கவும்."
+      ),
+      urgent: true,
+    };
+  }
+
+  if (turnStatus.daysRemaining === 1 && turnStatus.isMyTurn) {
+    return {
+      title: L(`🚰 ${farmName} - Turn Ends Tomorrow`, `🚰 ${farmName} - நாளை முறை முடியும்`),
+      body: L(
+        "Your shared motor turn ends tomorrow at 6:00 PM.",
+        "உங்கள் பகிர்வு மோட்டார் முறை நாளை மாலை 6:00 மணிக்கு முடியும்."
+      ),
+      urgent: false,
+    };
+  }
+
+  if (turnStatus.isMyTurn && turnStatus.daysRemaining > 1) {
+    return {
+      title: L(`🚰 ${farmName} - Your Turn is Active`, `🚰 ${farmName} - உங்கள் முறை தொடர்கிறது`),
+      body: L(
+        `Your shared motor turn is currently active. ${turnStatus.daysRemaining} days remaining.`,
+        `உங்கள் பகிர்வு மோட்டார் முறை தொடர்கிறது. ${turnStatus.daysRemaining} நாள் மீதம் உள்ளது.`
+      ),
+      urgent: false,
+    };
+  }
+
+  if (!turnStatus.isMyTurn) {
+    return {
+      title: L(`💧 ${farmName} - ${turnStatus.ownerName}'s Turn`, `💧 ${farmName} - ${turnStatus.ownerName} முறை`),
+      body: L(`Today is ${turnStatus.ownerName}'s motor turn.`, `இன்று ${turnStatus.ownerName} மோட்டார் முறை.`),
+      urgent: false,
+    };
+  }
+
+  return {
+    title: L(`🚰 ${farmName} - Motor Turn`, `🚰 ${farmName} - மோட்டார் முறை`),
+    body: "",
+    urgent: false,
+  };
 };
 
 export default function MotorTurnNotifier() {
@@ -142,36 +202,50 @@ export default function MotorTurnNotifier() {
 
         const farmName = getFarmName(motor.farms as FarmRef);
 
-        // 6 PM - turn starts
+        // 6 PM - turn starts right now. This is its own distinct moment
+        // (not covered by getMotorNotificationText's ends-today/tomorrow/
+        // active stages), so it keeps its own dedicated message.
         if (turnStatus.isMyTurn && hour === 18) {
           const tag = `motor-start-${motor.id}-${today}`;
           await sendNotification(
-            lang === "ta" ? `🚰 ${farmName} - உங்கள் முறை தொடங்கியது!` : `🚰 ${farmName} - Your motor turn started!`,
-            lang === "ta" ? "இப்போதே தண்ணீர் பாசனம் செய்யலாம்" : "You can start watering now",
+            lang === "ta" ? `🚰 ${farmName} - உங்கள் முறை இப்போது தொடங்கியது!` : `🚰 ${farmName} - Your Turn Starts Now!`,
+            lang === "ta"
+              ? "உங்கள் பகிர்வு மோட்டார் முறை இன்று மாலை 6:00 மணிக்கு தொடங்கியது. இப்போதே பாசனம் செய்யலாம்."
+              : "Your shared motor turn starts today at 6:00 PM. You can begin watering now.",
             tag,
             "/land-details",
             true
           );
         }
 
-        // 7 AM - morning reminder
+        // 7 AM - morning reminder, staged by how many days are left in the
+        // turn so it reads differently on the last day vs. day one.
         if (turnStatus.isMyTurn && hour === 7) {
           const tag = `motor-morning-${motor.id}-${today}`;
-          await sendNotification(
-            lang === "ta" ? `☀️ ${farmName} - இன்று உங்கள் மோட்டார் நாள்` : `☀️ ${farmName} - Today is your motor turn day`,
-            "",
-            tag,
-            "/land-details",
-            false
-          );
+          if (turnStatus.endsToday) {
+            await sendNotification(
+              lang === "ta" ? `⏰ ${farmName} - உங்கள் முறையின் கடைசி நாள்` : `⏰ ${farmName} - Last Day of Your Turn`,
+              lang === "ta"
+                ? "உங்கள் பகிர்வு மோட்டார் முறை இன்று மாலை 6:00 மணிக்கு முடியும். பாசனத்தை முடித்துவிடுங்கள்."
+                : "Your shared motor turn ends today at 6:00 PM. Make sure to complete your watering.",
+              tag,
+              "/land-details",
+              false
+            );
+          } else {
+            const { title, body } = getMotorNotificationText(turnStatus, farmName, lang);
+            await sendNotification(title, body, tag, "/land-details", false);
+          }
         }
 
         // 5 PM - 1 hour warning
         if (turnStatus.isMyTurn && hour === 17 && turnStatus.endsToday) {
           const tag = `motor-end-${motor.id}-${today}`;
           await sendNotification(
-            lang === "ta" ? `⏰ ${farmName} - முறை 1 மணி நேரத்தில் முடியும்!` : `⏰ ${farmName} - Turn ends in 1 hour!`,
-            lang === "ta" ? "பாசனத்தை முடிக்கவும்" : "Finish your watering soon",
+            lang === "ta" ? `⏰ ${farmName} - 1 மணியில் முறை முடியும்!` : `⏰ ${farmName} - Turn Ends in 1 Hour!`,
+            lang === "ta"
+              ? "உங்கள் பகிர்வு மோட்டார் முறை இன்று மாலை 6:00 மணிக்கு முடியும். இப்போதே பாசனம் முடிக்கவும்."
+              : "Your shared motor turn ends today at 6:00 PM. Finish your watering now.",
             tag,
             "/land-details",
             true
